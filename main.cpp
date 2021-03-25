@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <iostream>
 
 #define LENGTH 7
 #define BLACK_PAWN -1
@@ -43,37 +44,30 @@ int main() {
 	// Size is size of the board sprite
 	// TODO: scale board to window size
 	RenderWindow window(VideoMode(1160, 1160), "Chess");
-	Texture board, blackPawn, whitePawn, blackRook, whiteRook,
-		blackKnight, whiteKnight, blackBishop, whiteBishop,
-		blackQueen, whiteQueen, blackKing, whiteKing;
+	Texture board, pieces;
 
+	// Board texture is 1160 x 1160 px
 	board.loadFromFile("Sprites/board.png");
-	blackPawn.loadFromFile("Sprites/blackPawn.png");
-	whitePawn.loadFromFile("Sprites/whitePawn.png");
-	blackRook.loadFromFile("Sprites/blackRook.png");
-	whiteRook.loadFromFile("Sprites/whiteRook.png");
-	blackKnight.loadFromFile("Sprites/blackKnight.png");
-	whiteKnight.loadFromFile("Sprites/whiteKnight.png");
-	blackBishop.loadFromFile("Sprites/blackBishop.png");
-	whiteBishop.loadFromFile("Sprites/whiteBishop.png");
-	blackQueen.loadFromFile("Sprites/blackQueen.png");
-	whiteQueen.loadFromFile("Sprites/whiteQueen.png");
-	blackKing.loadFromFile("Sprites/blackKing.png");
-	whiteKing.loadFromFile("Sprites/whiteKing.png");
+	// Pieces texture is 2000 x 667 px
+	pieces.loadFromFile("Sprites/pieces.png");
+	// One piece sprite is 333 x 333 px
+	const int pieceRes = pieces.getSize().y / 2;
+	std::cout << "Piece resolution: " << pieceRes << std::endl;
+	const int squareRes = board.getSize().y / 8;
+	std::cout << "Square resolution: " << squareRes << std::endl;
+	const float pieceScale = (float)squareRes / pieceRes;
+	std::cout << "Piece scale: " << pieceScale << std::endl;
+	
+
+	Sprite pieceSprites[12];
+	for (int i = 0; i < 12; i++) {
+		Sprite sprite(pieces, IntRect(i/2 * pieceRes, (i % 2) * pieceRes, pieceRes, pieceRes));
+		sprite.setPosition(i/2 * squareRes, (i % 2) * squareRes);
+		sprite.setScale(pieceScale, pieceScale);
+		pieceSprites[i] = sprite;
+	}
 
 	Sprite Board(board);
-	Sprite BlackPawn(blackPawn);
-	Sprite WhitePawn(whitePawn);
-	Sprite BlackRook(blackRook);
-	Sprite WhiteRook(whiteRook);
-	Sprite BlackKnight(blackKnight);
-	Sprite WhiteKnight(whiteKnight);
-	Sprite BlackBishop(blackBishop);
-	Sprite WhiteBishop(whiteBishop);
-	Sprite BlackQueen(blackQueen);
-	Sprite WhiteQueen(whiteQueen);
-	Sprite BlackKing(blackKing);
-	Sprite WhiteKing(whiteKing);
 
 
 	
@@ -89,6 +83,11 @@ int main() {
 
 		window.clear();
 		window.draw(Board);
+
+		for (int i = 0; i < 12; i++) {
+			window.draw(pieceSprites[i]);
+		}
+
 		window.display();
 	}
 	return 0;
