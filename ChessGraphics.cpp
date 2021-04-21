@@ -3,14 +3,15 @@
 
 // Constructor loads the textures from Sprites directory
 // and initiates the sprites
-ChessGraphics::ChessGraphics()
+ChessGraphics::ChessGraphics(unsigned int res)
 {
+	windowRes = res;
 	// Board texture is 1160 x 1160 px
 	board.loadFromFile("Sprites/board.png");
 	// Pieces texture is 2000 x 667 px
 	pieces.loadFromFile("Sprites/pieces.png");
 	// One piece sprite is 333 x 333 px
-	const int pieceRes = pieces.getSize().y / 2;
+	pieceRes = pieces.getSize().y / 2;
 	std::cout << "Piece resolution: " << pieceRes << std::endl;
 	squareRes = board.getSize().y / 8;
 	std::cout << "Square resolution: " << squareRes << std::endl;
@@ -25,6 +26,11 @@ ChessGraphics::ChessGraphics()
 	}
 
 	boardSprite = Sprite(board);
+}
+
+void ChessGraphics::setWindowRes(unsigned int res)
+{
+	windowRes = res;
 }
 
 Sprite& ChessGraphics::getPieceSprite(short p)
@@ -69,5 +75,15 @@ void ChessGraphics::setPieceSquare(short piece, unsigned int column, unsigned in
 // For setting piece's screen position directly, e.g. to mouse
 void ChessGraphics::setPiecePosition(short piece, float x, float y)
 {
+	float scale = board.getSize().x / (float)windowRes;
+	float offset = (windowRes / 8.0f) * 0.5f;
+	x = (x - offset) * scale;
+	y = (y - offset) * scale;
 	getPieceSprite(piece).setPosition(x, y);
+}
+
+void ChessGraphics::getSquareAt(float x, float y, unsigned short& column, unsigned short& row)
+{
+	column = (short)(x / (windowRes / 8.0f));
+	row = 7 - (short)(y / (windowRes / 8.0f));
 }

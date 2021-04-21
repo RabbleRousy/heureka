@@ -9,13 +9,17 @@ class ChessGraphics
 private:
 	static const Piece PIECE;
 	Texture board, pieces;
-public:
+	unsigned int windowRes;
+	unsigned int pieceRes;
 	unsigned int squareRes;
+public:
 	Sprite boardSprite;
 	Sprite pieceSprites[12];
-	ChessGraphics();
+	ChessGraphics(unsigned int res);
+	void setWindowRes(unsigned int res);
 	Sprite& getPieceSprite(short piece);
 	void setPieceSquare(short piece, unsigned int column, unsigned int row);
 	void setPiecePosition(short piece, float x, float y);
+	void getSquareAt(float x, float y, unsigned short& column, unsigned short& row);
 };
 

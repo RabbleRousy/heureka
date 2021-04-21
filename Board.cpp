@@ -109,7 +109,8 @@ bool Board::readPosFromFEN(std::string fen) {
 			break;
 		}
 	}
-	return true;
+	// Return true if FEN parsing reached end of board
+	return (row == 0 && column == 8);
 }
 
 std::string Board::getFENfromPos() {
@@ -119,7 +120,7 @@ std::string Board::getFENfromPos() {
 // Returns the piece at the desired position (can be NONE)
 // Row = bottom to top
 // Column = left to right
-short Board::getPiece(unsigned int column, unsigned int row)
+short Board::getPiece(unsigned short column, unsigned short row)
 {
 	if (row > 7 || column > 7) return 0;
 	return squares[column][row];
@@ -128,8 +129,30 @@ short Board::getPiece(unsigned int column, unsigned int row)
 // Sets the piece at the desired position
 // Row = bottom to top
 // Column = left to right
-void Board::setPiece(unsigned int column, unsigned int row, short p)
+void Board::setPiece(unsigned short column, unsigned short row, short p)
 {
 	if (row > 7 || column > 7) return;
 	squares[column][row] = p;
+}
+
+void Board::removePiece(unsigned short column, unsigned short row) {
+	if (row > 7 || column > 7) return;
+	squares[column][row] = PIECE.NONE;
+}
+
+bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]) {
+	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7
+		|| (from[0] == to[0] && from[1] == to[1])) {
+		// ERROR WARNING
+		return false;
+	}
+	short pieceFrom = getPiece(from[0], from[1]);
+	short pieceTo = getPiece(to[0], to[1]);
+	if (PIECE.getType(pieceFrom) == PIECE.NONE) {
+		return false;
+	}
+
+	setPiece(to[0], to[1], pieceFrom);
+	removePiece(from[0], from[1]);
+	return true;
 }
