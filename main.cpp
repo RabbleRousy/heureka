@@ -35,7 +35,6 @@ int main() {
 	bool pieceSelected = false;
 	unsigned short selectedSquare[2];
 	Vector2i mousePos;
-	int mouseDelta[2];
 
 	window.draw(graphics.boardSprite);
 	window.display();
@@ -71,7 +70,7 @@ int main() {
 				
 				// On mouse down
 				if (e.type == Event::MouseButtonPressed) {
-					std::cout << "Mouse down at " << mousePos.x << "/" << mousePos.y << std::endl;
+					//std::cout << "Mouse down at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If a piece is currently selected, try move and unselect
 					if (pieceSelected && board.tryMakeMove(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
@@ -86,7 +85,7 @@ int main() {
 				}
 				// On mouse released
 				else if (e.type == Event::MouseButtonReleased) {
-					std::cout << "Mouse released at " << mousePos.x << "/" << mousePos.y << std::endl;
+					//std::cout << "Mouse released at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If there was a selected piece, try to place it
 					if (pieceSelected) {
 						if (board.tryMakeMove(selectedSquare, clickedSquare)) {

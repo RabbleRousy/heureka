@@ -14,5 +14,6 @@ public:
 	void setPiece(unsigned short column, unsigned short row, short piece);
 	void removePiece(unsigned short column, unsigned short row);
 	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2]);
+	std::string squareName(unsigned short column, unsigned short row);
 };
 

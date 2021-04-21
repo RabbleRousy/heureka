@@ -141,9 +141,10 @@ void Board::removePiece(unsigned short column, unsigned short row) {
 }
 
 bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]) {
-	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7
-		|| (from[0] == to[0] && from[1] == to[1])) {
-		// ERROR WARNING
+	if (from[0] == to[0] && from[1] == to[1])
+		return false;
+	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7) {
+		std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
 		return false;
 	}
 	short pieceFrom = getPiece(from[0], from[1]);
@@ -154,5 +155,68 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 
 	setPiece(to[0], to[1], pieceFrom);
 	removePiece(from[0], from[1]);
+	std::cout << "Made move: " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << "\n";
 	return true;
+}
+
+std::string Board::squareName(unsigned short column, unsigned short row) {
+	if (row > 7 || column > 7) return "";
+	std::string name;
+	switch (column) {
+	case 0:
+		name = "a";
+		break;
+	case 1:
+		name = "b";
+		break;
+	case 2:
+		name = "c";
+		break;
+	case 3:
+		name = "d";
+		break;
+	case 4:
+		name = "e";
+		break;
+	case 5:
+		name = "f";
+		break;
+	case 6:
+		name = "g";
+		break;
+	case 7:
+		name = "h";
+		break;
+	default:
+		return "";
+	}
+	switch (row) {
+	case 0:
+		name += "1";
+		break;
+	case 1:
+		name += "2";
+		break;
+	case 2:
+		name += "3";
+		break;
+	case 3:
+		name += "4";
+		break;
+	case 4:
+		name += "5";
+		break;
+	case 5:
+		name += "6";
+		break;
+	case 6:
+		name += "7";
+		break;
+	case 7:
+		name += "8";
+		break;
+	default:
+		return "";
+	}
+	return name;
 }
