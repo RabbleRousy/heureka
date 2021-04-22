@@ -5,16 +5,17 @@
 
 using namespace sf;
 
+// Called when resize event fired
 void keepAspectRatio(Window& window) {
-	// set screen size
+	// Set screen size
 	float screenWidth = 1160.0f;
 	float screenHeight = 1160.0f;
-	// get the resized size
+	// Get the resized size
 	sf::Vector2u size = window.getSize();
-	// setup my wanted aspect ratio
+	// Setup desired aspect ratio
 	float  heightRatio = screenHeight / screenWidth;
 	float  widthRatio = screenWidth / screenHeight;
-	// adapt the resized window to my wanted aspect ratio
+	// Adapt the resized window to desired aspect ratio
 	if (size.y * widthRatio <= size.x)
 	{
 		size.x = size.y * widthRatio;
@@ -23,7 +24,6 @@ void keepAspectRatio(Window& window) {
 	{
 		size.y = size.x * heightRatio;
 	}
-	// set the new size
 	window.setSize(size);
 }
 
