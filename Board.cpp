@@ -205,6 +205,51 @@ void Board::generateMoves()
 					possibleMoves.push_back(move);
 				}
 			}
+			// Diagonal Moves
+			else if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::ROOK) {
+				short* directions = Move::rookDirections;
+				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN) {
+					directions = Move::bishopDirections;
+				}
+				// Each directions a bishop can go
+				for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
+					short* dir = stepsToDirection(directions[dirIndex]);
+					//std::cout << "Checking bishop moves in direction [" << dir[0] << "][" << dir[1] << "]\n";
+					int newX = i;
+					int newY = j;
+					int steps = 0;
+					// Go into one of the directions as long as possible and save possible moves along the way
+					while (true) {
+						// Go one step into the direction
+						newX += dir[0];
+						newY += dir[1];
+						std::cout << "Checking move to " << squareName(newX, newY) << "...\n";
+						// If move goes out of bounds, discard
+						if (newX > 7 || newX < 0 || newY > 7 || newY < 0)
+							break;
+						// If move would capture friendly piece, discard
+						if (Piece::getColor(getPiece(newX, newY)) == currentPlayer)
+							break;
+
+						// Move accepted
+						steps |= directions[dirIndex] & 0b1111;
+						steps <<= 4;
+						std::cout << "Move to " << squareName(newX, newY) << " accepted. (steps = " << steps << ", dir = ["
+							<< dir[0] << "][" << dir[1] << "])\n";
+						Move move(i, j, steps);
+						possibleMoves.push_back(move);
+
+						// If capturing piece, still stop after accepting
+						if (Piece::getType(getPiece(newX, newY)) != Piece::NONE)
+							break;
+					}
+					// For queen, do bishop moves and then rook moves
+					if (dirIndex == 3 && pieceType == Piece::QUEEN && directions == Move::bishopDirections) {
+						dirIndex = 0;
+						directions = Move::rookDirections;
+					}
+				}
+			}
 		}
 	}
 }
@@ -347,4 +392,15 @@ const int Move::knightMoves[8] = {
 		(DOWN << 4) | DOWN | LEFT,
 		(LEFT << 4) | UP | LEFT,
 		(LEFT << 4) | DOWN | LEFT
+};
+
+short Move::bishopDirections[4] = {
+	UP | RIGHT,
+	UP | LEFT,
+	DOWN | RIGHT,
+	DOWN | LEFT
+};
+
+short Move::rookDirections[4] = {
+	UP, DOWN, LEFT, RIGHT
 };

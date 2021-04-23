@@ -21,6 +21,14 @@ struct Move {
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps
 	static const int knightMoves[8];
+
+	// All the directions a bishop may go
+	// Each direction is a diagonal step
+	static short bishopDirections[4];
+
+	// All the directions a rook may go
+	// Each direction is a horizontal or vertical step
+	static short rookDirections[4];
 };
 
 class Board
