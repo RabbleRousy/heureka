@@ -1,6 +1,7 @@
 #pragma once
 #include "Piece.h"
 #include <vector>
+#include <stack>
 
 #define UP 0b0001
 #define DOWN 0b0100
@@ -16,7 +17,10 @@ struct Move {
 	// Each step is a 4 bit code, and the integer holds up to 8 steps (first is right)
 	int steps;
 
-	Move(unsigned short startX, unsigned short startY, int steps);
+	// Wether it was an en passant capture
+	bool enpassant;
+
+	Move(unsigned short startX, unsigned short startY, int steps, bool enpassant = false);
 
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps
@@ -39,7 +43,7 @@ public:
 	Board(std::string fen);
 	short currentPlayer;
 	std::vector<Move> possibleMoves;
-	std::vector<Move> moveHistory;
+	std::stack<Move> moveHistory;
 	void clearBoard();
 	bool readPosFromFEN(std::string fen);
 	std::string getFENfromPos();
@@ -48,6 +52,7 @@ public:
 	void removePiece(unsigned short column, unsigned short row);
 	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2]);
 	void generateMoves();
+	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL);
 	void stepsToDirection(int steps, short dir[2]);
 	void swapCurrentPlayer();
 	std::string squareName(unsigned short column, unsigned short row);

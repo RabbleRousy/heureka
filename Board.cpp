@@ -167,7 +167,14 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 
 		setPiece(to[0], to[1], pieceFrom);
 		removePiece(from[0], from[1]);
+
+		if (possibleMoves[i].enpassant) {
+			removePiece(from[0] + dir[0], from[1]);
+		}
+
 		std::cout << "Made move: " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << "\n";
+
+		moveHistory.push(possibleMoves[i]);
 		swapCurrentPlayer();
 		generateMoves();
 		return true;
@@ -181,7 +188,8 @@ void Board::generateMoves()
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			short pieceType = Piece::getType(squares[i][j]);
-			if (pieceType == Piece::NONE || Piece::getColor(squares[i][j]) != currentPlayer)
+			short pieceColor = Piece::getColor(squares[i][j]);
+			if (pieceType == Piece::NONE || pieceColor != currentPlayer)
 				continue;
 
 			std::cout << "Computing moves for " << Piece::name(squares[i][j]) << " on " << squareName(i, j) << " ...\n";
@@ -189,73 +197,125 @@ void Board::generateMoves()
 			if (pieceType == Piece::KNIGHT) {
 				for (int moveIndex = 0; moveIndex < 8; moveIndex++) {
 					int steps = Move::knightMoves[moveIndex];
-					short dir[2];
-					stepsToDirection(steps, dir);
-					int newX = i + dir[0];
-					int newY = j + dir[1];
-					// If move goes out of bounds, discard
-					if (newX > 7 || newX < 0 || newY > 7 || newY < 0)
-						continue;
-					// If move would capture friendly piece, discard
-					if (Piece::getColor(getPiece(newX, newY)) == currentPlayer)
-						continue;
-
-					// Move accepted
-					std::cout << "Move to " << squareName(newX, newY) << " accepted. (steps = " << steps << ", dir = ["
-						<< dir[0] << "][" << dir[1] << "])\n";
-					Move move(i, j, steps);
-					possibleMoves.push_back(move);
+					tryAddMove(i, j, steps, true);
 				}
 			}
-			// Pawn Moves
+			//-------------- PAWN MOVES -------------------------
 			else if (pieceType == Piece::PAWN) {
+
+				//-------- ONE STEP AHEAD ---------------------------
+				int step = (pieceColor == Piece::WHITE) ? UP : DOWN;
+				
+				if (tryAddMove(i, j, step, false)) {
+					//-------- ANOTHER STEP AHEAD ------------------------
+					// If pawn is still on its start square
+					if ((pieceColor == Piece::WHITE && j == 1) || (pieceColor == Piece::BLACK) && j == 6) {
+						step <<= 4;
+						step |= (pieceColor == Piece::WHITE) ? UP : DOWN;
+						tryAddMove(i, j, step, false);
+					}
+				}
+				short dir[2];
+				short targetPiece;
+				// Clear step from double step
+				step &= 0b00001111;
+				step <<= 4;
+				//-------- CAPTURE LEFT ----------------------
+				if (i != 0) {
+					step |= LEFT;
+					stepsToDirection(step, dir);
+					targetPiece = getPiece(i + dir[0], j + dir[1]);
+					bool regularCapture = Piece::getType(targetPiece) != Piece::NONE && Piece::getColor(targetPiece) != currentPlayer;
+					bool enPassant = false;
+					if (!regularCapture) {
+						// Check for en passant
+						// White on 5th rank or black on 4th rank
+						if ((pieceColor == Piece::WHITE && j == 4) || (pieceColor == Piece::BLACK && j == 3)) {
+							// Check if enemy pawn is to your left
+							short pieceOnEnpassantSquare = getPiece(i - 1, j);
+							if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(targetPiece) != currentPlayer) {
+								// Check wether it moved 2 steps last turn
+								enPassant = (moveHistory.top().startSquare[0] == i - 1) && (moveHistory.top().startSquare[1] == j + 2 * dir[1]);
+							}
+						}
+					}
+					// Target square has to be occupied by enemy piece
+					if (regularCapture || enPassant) {
+						// Move accepted
+						std::cout << "Move to " << squareName(i + dir[0], j + dir[1]) << " accepted. (steps = " << step << ", dir = ["
+							<< dir[0] << "][" << dir[1] << "])\n";
+						Move move(i, j, step, enPassant);
+						possibleMoves.push_back(move);
+					}
+				}
+				
+				//--------- CAPTURE RIGHT ---------------------
+				if (i != 7) {
+					// Clear step from capture left
+					step &= 0b11110000;
+					step |= RIGHT;
+					stepsToDirection(step, dir);
+					targetPiece = getPiece(i + dir[0], j + dir[1]);
+					bool regularCapture = Piece::getType(targetPiece) != Piece::NONE && Piece::getColor(targetPiece) != currentPlayer;
+					bool enPassant = false;
+					if (!regularCapture) {
+						// Check for en passant
+						// White on 5th rank or black on 4th rank
+						if ((pieceColor == Piece::WHITE && j == 4) || (pieceColor == Piece::BLACK && j == 3)) {
+							// Check if enemy pawn is to your right
+							// TODO: check that he moved last turn
+							short pieceOnEnpassantSquare = getPiece(i + 1, j);
+							if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(targetPiece) != currentPlayer) {
+								// Check wether it moved 2 steps last turn
+								enPassant = (moveHistory.top().startSquare[0] == i + 1) && (moveHistory.top().startSquare[1] == j + 2 * dir[1]);
+							}
+						}
+					}
+					// Target square has to be occupied by enemy piece
+					if (regularCapture || enPassant) {
+						// Move accepted
+						std::cout << "Move to " << squareName(i + dir[0], j + dir[1]) << " accepted. (steps = " << step << ", dir = ["
+							<< dir[0] << "][" << dir[1] << "])\n";
+						Move move(i, j, step, enPassant);
+						possibleMoves.push_back(move);
+					}
+				}
 				
 			}
-			// All other moves (king missing)
-			else if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::ROOK) {
+			// All other moves
+			else {
 				short* directions = Move::rookDirections;
-				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN) {
+				// Switch to diagonal moves (first) for bishop (and queen and king)
+				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::KING) {
 					directions = Move::bishopDirections;
 				}
 				// Each directions a bishop can go
 				for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
-					short dir[2];
-					stepsToDirection(directions[dirIndex], dir);
 					//std::cout << "Checking bishop moves in direction [" << dir[0] << "][" << dir[1] << "]\n";
-					int newX = i;
-					int newY = j;
-					int steps = 0;
 					// Go into one of the directions as long as possible and save possible moves along the way
+					int steps = 0;
 					while (true) {
 						// Go one step into the direction
-						newX += dir[0];
-						newY += dir[1];
-						// If move goes out of bounds, discard
-						if (newX > 7 || newX < 0 || newY > 7 || newY < 0)
+						steps |= directions[dirIndex];
+						short target[2];
+						if (tryAddMove(i, j, steps, true, target))
+						{
+							steps <<= 4;
+							// If capturing piece, still stop after accepting
+							if (Piece::getType(getPiece(target[0], target[1])) != Piece::NONE)
+								break;
+							// If king, also stop after accepting
+							if (pieceType == Piece::KING) {
+								break;
+							}
+						}
+						else {
 							break;
+						}
 
-						std::cout << "Checking move to " << squareName(newX, newY) << "...\n";
-
-						// If move would capture friendly piece, discard
-						if (Piece::getColor(getPiece(newX, newY)) == currentPlayer)
-							break;
-
-						// Move accepted
-						steps |= directions[dirIndex] & 0b1111;
-						steps <<= 4;
-
-						std::cout << "Move to " << squareName(newX, newY) << " accepted. (steps = " << steps << ", dir = ["
-							<< dir[0] << "][" << dir[1] << "])\n";
-
-						Move move(i, j, steps);
-						possibleMoves.push_back(move);
-
-						// If capturing piece, still stop after accepting
-						if (Piece::getType(getPiece(newX, newY)) != Piece::NONE)
-							break;
 					}
-					// For queen, do bishop moves and then rook moves
-					if (dirIndex == 3 && pieceType == Piece::QUEEN && directions == Move::bishopDirections) {
+					// For queen and king, do bishop moves and then rook moves
+					if (dirIndex == 3 && (pieceType == Piece::QUEEN || pieceType == Piece::KING) && directions == Move::bishopDirections) {
 						dirIndex = -1;
 						directions = Move::rookDirections;
 					}
@@ -263,6 +323,43 @@ void Board::generateMoves()
 			}
 		}
 	}
+}
+
+bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, short target[2])
+{
+	short dir[2];
+	stepsToDirection(steps, dir);
+
+	bool returnTarget = !(target == NULL);
+
+	if (!returnTarget) {
+		target = new short[2];
+	}
+
+	target[0] = x + dir[0];
+	target[1] = y + dir[1];
+
+	// If move goes out of bounds, discard
+	if (target[0] > 7 || target[0] < 0 || target[1] > 7 || target[1] < 0)
+		return false;
+	// If move would capture friendly piece, discard
+	if (Piece::getColor(getPiece(target[0], target[1])) == currentPlayer)
+		return false;
+	// If move would capture, but it's not allowed (pawn forward), discard
+	if (!canCapture && Piece::getType(getPiece(target[0], target[1])) != Piece::NONE)
+		return false;
+
+	// Move accepted
+	std::cout << "Move to " << squareName(target[0], target[1]) << " accepted. (steps = " << steps << ", dir = ["
+		<< dir[0] << "][" << dir[1] << "])\n";
+	Move move(x, y, steps);
+	possibleMoves.push_back(move);
+
+	if (!returnTarget) {
+		delete[] target;
+	}
+
+	return true;
 }
 
 // Converts an integer (step) to a short[2] x and y direction
@@ -386,11 +483,12 @@ std::string Board::squareName(unsigned short column, unsigned short row) {
 	return name;
 }
 
-Move::Move(unsigned short startX, unsigned short startY, int s)
+Move::Move(unsigned short startX, unsigned short startY, int s, bool ep)
 {
 	startSquare[0] = startX;
 	startSquare[1] = startY;
 	steps = s;
+	enpassant = ep;
 }
 
 const int Move::knightMoves[8] = {
