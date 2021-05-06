@@ -157,7 +157,8 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 	{
 		if (possibleMoves[i].startSquare[0] != from[0] || possibleMoves[i].startSquare[1] != from[1])
 			continue;
-		short* dir = stepsToDirection(possibleMoves[i].steps);
+		short dir[2];
+		stepsToDirection(possibleMoves[i].steps, dir);
 		unsigned short result[2];
 		result[0] = from[0] + dir[0];
 		result[1] = from[1] + dir[1];
@@ -188,7 +189,8 @@ void Board::generateMoves()
 			if (pieceType == Piece::KNIGHT) {
 				for (int moveIndex = 0; moveIndex < 8; moveIndex++) {
 					int steps = Move::knightMoves[moveIndex];
-					short* dir = stepsToDirection(steps);
+					short dir[2];
+					stepsToDirection(steps, dir);
 					int newX = i + dir[0];
 					int newY = j + dir[1];
 					// If move goes out of bounds, discard
@@ -205,7 +207,11 @@ void Board::generateMoves()
 					possibleMoves.push_back(move);
 				}
 			}
-			// Diagonal Moves
+			// Pawn Moves
+			else if (pieceType == Piece::PAWN) {
+				
+			}
+			// All other moves (king missing)
 			else if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::ROOK) {
 				short* directions = Move::rookDirections;
 				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN) {
@@ -213,7 +219,8 @@ void Board::generateMoves()
 				}
 				// Each directions a bishop can go
 				for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
-					short* dir = stepsToDirection(directions[dirIndex]);
+					short dir[2];
+					stepsToDirection(directions[dirIndex], dir);
 					//std::cout << "Checking bishop moves in direction [" << dir[0] << "][" << dir[1] << "]\n";
 					int newX = i;
 					int newY = j;
@@ -223,10 +230,12 @@ void Board::generateMoves()
 						// Go one step into the direction
 						newX += dir[0];
 						newY += dir[1];
-						std::cout << "Checking move to " << squareName(newX, newY) << "...\n";
 						// If move goes out of bounds, discard
 						if (newX > 7 || newX < 0 || newY > 7 || newY < 0)
 							break;
+
+						std::cout << "Checking move to " << squareName(newX, newY) << "...\n";
+
 						// If move would capture friendly piece, discard
 						if (Piece::getColor(getPiece(newX, newY)) == currentPlayer)
 							break;
@@ -234,8 +243,10 @@ void Board::generateMoves()
 						// Move accepted
 						steps |= directions[dirIndex] & 0b1111;
 						steps <<= 4;
+
 						std::cout << "Move to " << squareName(newX, newY) << " accepted. (steps = " << steps << ", dir = ["
 							<< dir[0] << "][" << dir[1] << "])\n";
+
 						Move move(i, j, steps);
 						possibleMoves.push_back(move);
 
@@ -245,7 +256,7 @@ void Board::generateMoves()
 					}
 					// For queen, do bishop moves and then rook moves
 					if (dirIndex == 3 && pieceType == Piece::QUEEN && directions == Move::bishopDirections) {
-						dirIndex = 0;
+						dirIndex = -1;
 						directions = Move::rookDirections;
 					}
 				}
@@ -254,9 +265,9 @@ void Board::generateMoves()
 	}
 }
 
-short* Board::stepsToDirection(int steps) {
+// Converts an integer (step) to a short[2] x and y direction
+void Board::stepsToDirection(int steps, short dir[2]) {
 	//std::cout << "Converting steps " << steps << " to direction... ";
-	short* dir = new short[2];
 	dir[0] = 0;
 	dir[1] = 0;
 	int i = 0;
@@ -304,7 +315,6 @@ short* Board::stepsToDirection(int steps) {
 		//std::cout << "Shifted. Steps is now " << steps << ".\n";*/
 	}
 	//std::cout << "[" << dir[0] << "][" << dir[1] << "]\n";
-	return dir;
 }
 
 void Board::swapCurrentPlayer() {

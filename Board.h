@@ -48,7 +48,7 @@ public:
 	void removePiece(unsigned short column, unsigned short row);
 	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2]);
 	void generateMoves();
-	short* stepsToDirection(int steps);
+	void stepsToDirection(int steps, short dir[2]);
 	void swapCurrentPlayer();
 	std::string squareName(unsigned short column, unsigned short row);
 };
