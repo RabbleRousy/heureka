@@ -39,11 +39,17 @@ int main() {
 	window.draw(graphics.boardSprite);
 	window.display();
 
+	bool debugPossibleMoves;
+	std::string input;
+	std::cout << "Do you want to debug the move generation? Enter Y for yes.\n";
+	std::cin >> input;
+	debugPossibleMoves = input == "Y";
+
 	std::string fen;
 	std::cout << "Please enter start position in FEN notation:" << std::endl;
 	std::cin >> fen;
 
-	Board board(fen);
+	Board board(debugPossibleMoves, fen);
 
 	
 	// Main loop

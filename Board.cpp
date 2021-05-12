@@ -3,8 +3,8 @@
 #include <iostream>
 #include <string>
 
-Board::Board(std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory()
+Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), debugPossibleMoves(m)
 {
 	if (!readPosFromFEN(fen)) {
 		std::cout << "Loading default position..." << std::endl;
@@ -145,7 +145,7 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 	if (from[0] == to[0] && from[1] == to[1])
 		return false;
 	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7) {
-		std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
+		//std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
 		return false;
 	}
 	short pieceFrom = getPiece(from[0], from[1]);
@@ -165,6 +165,8 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 		if (result[0] != to[0] || result[1] != to[1])
 			continue;
 
+		//--------- MOVE FOUND ----------------------
+
 		setPiece(to[0], to[1], pieceFrom);
 		removePiece(from[0], from[1]);
 
@@ -172,7 +174,53 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 			removePiece(from[0] + dir[0], from[1]);
 		}
 
-		std::cout << "Made move: " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << "\n";
+		if (Piece::getType(pieceFrom) == Piece::KING && (dir[0] == 2 || dir[0] == -2) ) {
+			// Castle detected, Rook has to be moved
+			switch (dir[0])
+			{
+			case 2: 
+				removePiece(7, from[1]);
+				setPiece(5, from[1], Piece::ROOK | currentPlayer);
+				break;
+			case -2:
+				removePiece(0, from[1]);
+				setPiece(3, from[1], Piece::ROOK | currentPlayer);
+				break;
+			default:
+				break;
+			}
+		}
+
+		std::cout << ((currentPlayer == Piece::WHITE) ? "White" : "Black") << " played " << Move::toString(possibleMoves[i]) << "\n";
+
+		//----------- UPDATE CASTLE RIGHTS ---------------------
+		if (castleRights != 0) {
+			if (pieceFrom == Piece::KING) {
+				castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
+			}
+			else if (pieceFrom == Piece::ROOK) {
+				if (currentPlayer == Piece::WHITE && from[1] == 0) {
+					if (from[0] == 0) {
+						// Remove right for white's long castle
+						castleRights &= 0b1011;
+					} else if (from[0] == 7) {
+						// Remove right for white's short castle
+						castleRights &= 0b0111;
+					}
+				}
+				else if (currentPlayer == Piece::BLACK && from[1] == 7) {
+					if (from[0] == 0) {
+						// Remove right for black's long castle
+						castleRights &= 0b1110;
+					}
+					else if (from[0] == 7) {
+						// Remove right for black's short castle
+						castleRights &= 0b1101;
+					}
+				}
+			}
+		}
+		
 
 		moveHistory.push(possibleMoves[i]);
 		swapCurrentPlayer();
@@ -192,8 +240,8 @@ void Board::generateMoves()
 			if (pieceType == Piece::NONE || pieceColor != currentPlayer)
 				continue;
 
-			std::cout << "Computing moves for " << Piece::name(squares[i][j]) << " on " << squareName(i, j) << " ...\n";
-			// Knight Moves
+			//std::cout << "Computing moves for " << Piece::name(squares[i][j]) << " on " << squareName(i, j) << " ...\n";
+			//-------------- KNIGHT MOVES -----------------------
 			if (pieceType == Piece::KNIGHT) {
 				for (int moveIndex = 0; moveIndex < 8; moveIndex++) {
 					int steps = Move::knightMoves[moveIndex];
@@ -242,10 +290,11 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						std::cout << "Move to " << squareName(i + dir[0], j + dir[1]) << " accepted. (steps = " << step << ", dir = ["
-							<< dir[0] << "][" << dir[1] << "])\n";
-						Move move(i, j, step, enPassant);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
 						possibleMoves.push_back(move);
+						if (debugPossibleMoves) {
+							std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
+						}
 					}
 				}
 				
@@ -274,15 +323,16 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						std::cout << "Move to " << squareName(i + dir[0], j + dir[1]) << " accepted. (steps = " << step << ", dir = ["
-							<< dir[0] << "][" << dir[1] << "])\n";
-						Move move(i, j, step, enPassant);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
 						possibleMoves.push_back(move);
+						if (debugPossibleMoves) {
+							std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
+						}
 					}
 				}
 				
 			}
-			// All other moves
+			//----------- ALL OTHER MOVES ----------------------
 			else {
 				short* directions = Move::rookDirections;
 				// Switch to diagonal moves (first) for bishop (and queen and king)
@@ -321,6 +371,56 @@ void Board::generateMoves()
 					}
 				}
 			}
+			//----------- CASTLING MOVES -----------------------
+			if (pieceType == Piece::KING) {
+				int steps = 0;
+				if (currentPlayer == Piece::WHITE) {
+					if ((castleRights & 0b1000) == 0b1000) {
+						//std::cout << "White's short castle \n";
+						// White's short castle
+						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
+							steps = (RIGHT << 4) | RIGHT;
+							if (debugPossibleMoves) {
+								std::cout << "White's short castle accepted.\n";
+							}
+						}
+					}
+					if ((castleRights & 0b0100) == 0b0100) {
+						// White's long castle
+						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
+							steps = (LEFT << 4) | LEFT;
+							if (debugPossibleMoves) {
+								std::cout << "White's long castle accepted.\n";
+							}
+						}
+					}
+				}
+				else {
+					if ((castleRights & 0b0010) == 0b0010) {
+						// Black's short castle
+						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
+							steps = (RIGHT << 4) | RIGHT;
+							if (debugPossibleMoves) {
+								std::cout << "Black's short castle accepted.\n";
+							}
+						}
+					}
+					if ((castleRights & 0b0001) == 0b0001) {
+						// Black's long castle
+						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
+							int steps = (LEFT << 4) | LEFT;
+							if (debugPossibleMoves) {
+								std::cout << "Black's long castle accepted.\n";
+							}
+						}
+					}
+				}
+
+				if (steps != 0) {
+					Move move(Piece::KING | currentPlayer, Piece::NONE, i, j, steps);
+					possibleMoves.push_back(move);
+				}
+			}
 		}
 	}
 }
@@ -345,14 +445,20 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	// If move would capture friendly piece, discard
 	if (Piece::getColor(getPiece(target[0], target[1])) == currentPlayer)
 		return false;
+
+	// Get target piece
+	short capture = getPiece(target[0], target[1]);
+
 	// If move would capture, but it's not allowed (pawn forward), discard
-	if (!canCapture && Piece::getType(getPiece(target[0], target[1])) != Piece::NONE)
+	if (!canCapture && Piece::getType(capture) != Piece::NONE)
 		return false;
 
 	// Move accepted
-	std::cout << "Move to " << squareName(target[0], target[1]) << " accepted. (steps = " << steps << ", dir = ["
-		<< dir[0] << "][" << dir[1] << "])\n";
-	Move move(x, y, steps);
+	if (debugPossibleMoves) {
+		std::cout << "Move to " << squareName(target[0], target[1]) << " accepted. (steps = " << steps << ", dir = ["
+			<< dir[0] << "][" << dir[1] << "])\n";
+	}
+	Move move(getPiece(x,y), capture, x, y, steps);
 	possibleMoves.push_back(move);
 
 	if (!returnTarget) {
@@ -483,12 +589,49 @@ std::string Board::squareName(unsigned short column, unsigned short row) {
 	return name;
 }
 
-Move::Move(unsigned short startX, unsigned short startY, int s, bool ep)
+Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, bool ep)
+	: piece(p), capturedPiece(capture), steps(s), enpassant(ep)
 {
 	startSquare[0] = startX;
 	startSquare[1] = startY;
-	steps = s;
-	enpassant = ep;
+}
+
+std::string Move::toString(Move m)
+{
+	std::string name;
+	switch (Piece::getType(m.piece)) {
+	case Piece::KING:
+		name = "K";
+		break;
+	case Piece::QUEEN:
+		name = "Q";
+		break;
+	case Piece::ROOK:
+		name = "R";
+		break;
+	case Piece::BISHOP:
+		name = "B";
+		break;
+	case Piece::KNIGHT:
+		name = "N";
+		break;
+	default:
+		name = "";
+	}
+
+	if (Piece::getType(m.capturedPiece) != Piece::NONE) {
+		// If piece is pawn, add column name
+		if (name == "") {
+			name += Board::squareName(m.startSquare[0], m.startSquare[1])[0];
+		}
+		name += "x";
+	}
+
+	short dir[2];
+	Board::stepsToDirection(m.steps, dir);
+	name += Board::squareName(m.startSquare[0] + dir[0], m.startSquare[1] + dir[1]);
+
+	return name;
 }
 
 const int Move::knightMoves[8] = {

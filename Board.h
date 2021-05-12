@@ -10,6 +10,12 @@
 
 // Represents a move on the board
 struct Move {
+	// The piece that moved
+	short piece;
+
+	// Captured piece, Piece::NONE if no capture
+	short capturedPiece;
+
 	// Square where the move starts from
 	unsigned short startSquare[2];
 
@@ -20,7 +26,7 @@ struct Move {
 	// Wether it was an en passant capture
 	bool enpassant;
 
-	Move(unsigned short startX, unsigned short startY, int steps, bool enpassant = false);
+	Move(short piece, short capture, unsigned short startX, unsigned short startY, int steps, bool enpassant = false);
 
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps
@@ -33,15 +39,21 @@ struct Move {
 	// All the directions a rook may go
 	// Each direction is a horizontal or vertical step
 	static short rookDirections[4];
+
+	// Converts move to string
+	static std::string toString(Move m);
 };
 
 class Board
 {
 private:
 	short squares[8][8];
+	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
+	short castleRights = 0b1111;
 public:
-	Board(std::string fen);
+	Board(bool m, std::string fen);
 	short currentPlayer;
+	bool debugPossibleMoves;
 	std::vector<Move> possibleMoves;
 	std::stack<Move> moveHistory;
 	void clearBoard();
@@ -53,8 +65,8 @@ public:
 	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2]);
 	void generateMoves();
 	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL);
-	void stepsToDirection(int steps, short dir[2]);
+	static void stepsToDirection(int steps, short dir[2]);
 	void swapCurrentPlayer();
-	std::string squareName(unsigned short column, unsigned short row);
+	static std::string squareName(unsigned short column, unsigned short row);
 };
 
