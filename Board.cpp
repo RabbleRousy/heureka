@@ -339,17 +339,18 @@ void Board::generateMoves()
 				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::KING) {
 					directions = Move::bishopDirections;
 				}
-				// Each directions a bishop can go
+
 				for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
-					//std::cout << "Checking bishop moves in direction [" << dir[0] << "][" << dir[1] << "]\n";
 					// Go into one of the directions as long as possible and save possible moves along the way
 					int steps = 0;
-					while (true) {
+					int stepCounter = 0;
+					while (stepCounter < 7) {
 						// Go one step into the direction
 						steps |= directions[dirIndex];
 						short target[2];
 						if (tryAddMove(i, j, steps, true, target))
 						{
+							stepCounter++;
 							steps <<= 4;
 							// If capturing piece, still stop after accepting
 							if (Piece::getType(getPiece(target[0], target[1])) != Piece::NONE)
@@ -366,6 +367,7 @@ void Board::generateMoves()
 					}
 					// For queen and king, do bishop moves and then rook moves
 					if (dirIndex == 3 && (pieceType == Piece::QUEEN || pieceType == Piece::KING) && directions == Move::bishopDirections) {
+						std::cout << "foo";
 						dirIndex = -1;
 						directions = Move::rookDirections;
 					}
@@ -454,12 +456,12 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		return false;
 
 	// Move accepted
-	if (debugPossibleMoves) {
-		std::cout << "Move to " << squareName(target[0], target[1]) << " accepted. (steps = " << steps << ", dir = ["
-			<< dir[0] << "][" << dir[1] << "])\n";
-	}
 	Move move(getPiece(x,y), capture, x, y, steps);
 	possibleMoves.push_back(move);
+
+	if (debugPossibleMoves) {
+		std::cout << "Move " << Move::toString(move) << " accepted.\n";
+	}
 
 	if (!returnTarget) {
 		delete[] target;
@@ -588,70 +590,3 @@ std::string Board::squareName(unsigned short column, unsigned short row) {
 	}
 	return name;
 }
-
-Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, bool ep)
-	: piece(p), capturedPiece(capture), steps(s), enpassant(ep)
-{
-	startSquare[0] = startX;
-	startSquare[1] = startY;
-}
-
-std::string Move::toString(Move m)
-{
-	std::string name;
-	switch (Piece::getType(m.piece)) {
-	case Piece::KING:
-		name = "K";
-		break;
-	case Piece::QUEEN:
-		name = "Q";
-		break;
-	case Piece::ROOK:
-		name = "R";
-		break;
-	case Piece::BISHOP:
-		name = "B";
-		break;
-	case Piece::KNIGHT:
-		name = "N";
-		break;
-	default:
-		name = "";
-	}
-
-	if (Piece::getType(m.capturedPiece) != Piece::NONE) {
-		// If piece is pawn, add column name
-		if (name == "") {
-			name += Board::squareName(m.startSquare[0], m.startSquare[1])[0];
-		}
-		name += "x";
-	}
-
-	short dir[2];
-	Board::stepsToDirection(m.steps, dir);
-	name += Board::squareName(m.startSquare[0] + dir[0], m.startSquare[1] + dir[1]);
-
-	return name;
-}
-
-const int Move::knightMoves[8] = {
-		(UP << 4) | UP | RIGHT ,
-		(UP << 4) | UP | LEFT,
-		(RIGHT << 4) | UP | RIGHT,
-		(RIGHT << 4) | DOWN | RIGHT,
-		(DOWN << 4) | DOWN | RIGHT,
-		(DOWN << 4) | DOWN | LEFT,
-		(LEFT << 4) | UP | LEFT,
-		(LEFT << 4) | DOWN | LEFT
-};
-
-short Move::bishopDirections[4] = {
-	UP | RIGHT,
-	UP | LEFT,
-	DOWN | RIGHT,
-	DOWN | LEFT
-};
-
-short Move::rookDirections[4] = {
-	UP, DOWN, LEFT, RIGHT
-};

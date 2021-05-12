@@ -86,7 +86,7 @@ int main() {
 						pieceSelected = true;
 						selectedSquare[0] = clickedSquare[0];
 						selectedSquare[1] = clickedSquare[1];
-						std::cout << "Selected piece at square " << selectedSquare[0] << "/" << selectedSquare[1] << std::endl;
+						//std::cout << "Selected piece at square " << selectedSquare[0] << "/" << selectedSquare[1] << std::endl;
 					}
 				}
 				// On mouse released
