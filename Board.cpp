@@ -367,7 +367,6 @@ void Board::generateMoves()
 					}
 					// For queen and king, do bishop moves and then rook moves
 					if (dirIndex == 3 && (pieceType == Piece::QUEEN || pieceType == Piece::KING) && directions == Move::bishopDirections) {
-						std::cout << "foo";
 						dirIndex = -1;
 						directions = Move::rookDirections;
 					}
