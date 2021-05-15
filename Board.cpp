@@ -4,7 +4,7 @@
 #include <string>
 
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), debugPossibleMoves(m)
+	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), debugPossibleMoves(m), wantsToPromote(false)
 {
 	if (!readPosFromFEN(fen)) {
 		std::cout << "Loading default position..." << std::endl;
@@ -141,13 +141,46 @@ void Board::removePiece(unsigned short column, unsigned short row) {
 	squares[column][row] = Piece::NONE;
 }
 
-bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]) {
+bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2], short promotionChoice) {
 	if (from[0] == to[0] && from[1] == to[1])
 		return false;
 	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7) {
 		//std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
 		return false;
 	}
+
+	if (wantsToPromote && promotionChoice != 0) {
+		// If promotion was already demanded, next call will have promotionChoice set
+		wantsToPromote = false;
+		promoMoveBuffer.flags &= 0b1000;
+		switch (promotionChoice)
+		{
+		case Piece::QUEEN:
+			promoMoveBuffer.flags |= Move::Promotion::ToQueen;
+			break;
+		case Piece::ROOK:
+			promoMoveBuffer.flags |= Move::Promotion::ToRook;
+			break;
+		case Piece::BISHOP:
+			promoMoveBuffer.flags |= Move::Promotion::ToBishop;
+			break;
+		case Piece::KNIGHT:
+			promoMoveBuffer.flags |= Move::Promotion::ToKnight;
+			break;
+		default:
+			break;
+		}
+
+		short dir[2];
+		stepsToDirection(promoMoveBuffer.steps, dir);
+		setPiece(promoMoveBuffer.startSquare[0] + dir[0], promoMoveBuffer.startSquare[1] + dir[1], promotionChoice | currentPlayer);
+
+		moveHistory.push(promoMoveBuffer);
+		swapCurrentPlayer();
+		generateMoves();
+		return true;
+	}
+
 	short pieceFrom = getPiece(from[0], from[1]);
 	short pieceTo = getPiece(to[0], to[1]);
 	if (Piece::getType(pieceFrom) == Piece::NONE) {
@@ -170,8 +203,18 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 		setPiece(to[0], to[1], pieceFrom);
 		removePiece(from[0], from[1]);
 
-		if (possibleMoves[i].enpassant) {
+		// En passant 
+		if (possibleMoves[i].isEnPassant()) {
 			removePiece(from[0] + dir[0], from[1]);
+		}
+
+		// Promotion
+		if (possibleMoves[i].isPromotion()) {
+			// Promotion needs to be completed by player
+			wantsToPromote = true;
+			promoMoveBuffer = possibleMoves[i];
+			// Correct promotion move will be added afterwards
+			return false;
 		}
 
 		if (Piece::getType(pieceFrom) == Piece::KING && (dir[0] == 2 || dir[0] == -2) ) {
@@ -195,9 +238,11 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 
 		//----------- UPDATE CASTLE RIGHTS ---------------------
 		if (castleRights != 0) {
+			// If king moved, delete that player's castle rights
 			if (Piece::getType(pieceFrom) == Piece::KING) {
 				castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
 			}
+			// If rook moved
 			else if (Piece::getType(pieceFrom) == Piece::ROOK) {
 				if (currentPlayer == Piece::WHITE && from[1] == 0) {
 					if (from[0] == 0) {
@@ -214,6 +259,29 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 						castleRights &= 0b1110;
 					}
 					else if (from[0] == 7) {
+						// Remove right for black's short castle
+						castleRights &= 0b1101;
+					}
+				}
+			}
+			// If rook got captured
+			else if (Piece::getType(pieceTo) == Piece::ROOK) {
+				if (currentPlayer == Piece::BLACK && to[1] == 0) {
+					if (to[0] == 0) {
+						// Remove right for white's long castle
+						castleRights &= 0b1011;
+					}
+					else if (to[0] == 7) {
+						// Remove right for white's short castle
+						castleRights &= 0b0111;
+					}
+				}
+				else if (currentPlayer == Piece::WHITE && to[1] == 7) {
+					if (to[0] == 0) {
+						// Remove right for black's long castle
+						castleRights &= 0b1110;
+					}
+					else if (to[0] == 7) {
 						// Remove right for black's short castle
 						castleRights &= 0b1101;
 					}
@@ -290,7 +358,7 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant ? 0b1000 : 0);
 						possibleMoves.push_back(move);
 						if (debugPossibleMoves) {
 							std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
@@ -323,7 +391,7 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant ? 0b1000 : 0);
 						possibleMoves.push_back(move);
 						if (debugPossibleMoves) {
 							std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
@@ -454,9 +522,29 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	if (!canCapture && Piece::getType(capture) != Piece::NONE)
 		return false;
 
+	// Check if promotion is possible
+	bool promote = false;
+	if (Piece::getType(getPiece(x, y)) == Piece::PAWN) {
+		promote = (target[1] == 7 && currentPlayer == Piece::WHITE) || (target[1] == 0 && currentPlayer == Piece::BLACK);
+	}
+
 	// Move accepted
-	Move move(getPiece(x,y), capture, x, y, steps);
-	possibleMoves.push_back(move);
+	Move move(getPiece(x, y), capture, x, y, steps);
+	if (!promote) {
+		possibleMoves.push_back(move);
+	}
+	else {
+		// If it's a promotion, add one move for each type of promotion
+		move.flags = Move::Promotion::ToBishop;
+		possibleMoves.push_back(move);
+		move.flags = Move::Promotion::ToKnight;
+		possibleMoves.push_back(move);
+		move.flags = Move::Promotion::ToQueen;
+		possibleMoves.push_back(move);
+		move.flags = Move::Promotion::ToRook;
+		possibleMoves.push_back(move);
+	}
+	
 
 	if (debugPossibleMoves) {
 		std::cout << "Move " << Move::toString(move) << " accepted.\n";

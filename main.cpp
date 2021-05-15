@@ -75,7 +75,7 @@ int main() {
 				clickedSquare[1] = 7 - (short)(mousePos.y / (window.getSize().y / 8));
 				
 				// On mouse down
-				if (e.type == Event::MouseButtonPressed) {
+				if (e.type == Event::MouseButtonPressed && !board.wantsToPromote) {
 					//std::cout << "Mouse down at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If a piece is currently selected, try move and unselect
 					if (pieceSelected && board.tryMakeMove(selectedSquare, clickedSquare)) {
@@ -91,9 +91,23 @@ int main() {
 				}
 				// On mouse released
 				else if (e.type == Event::MouseButtonReleased) {
+					// Promotion selection
+					if (board.wantsToPromote) {
+						if (clickedSquare[0] == 3 && clickedSquare[1] == 4) {
+							board.tryMakeMove(selectedSquare, clickedSquare, Piece::QUEEN);
+						} else if (clickedSquare[0] == 4 && clickedSquare[1] == 4) {
+							board.tryMakeMove(selectedSquare, clickedSquare, Piece::ROOK);
+						}
+						else if (clickedSquare[0] == 3 && clickedSquare[1] == 3) {
+							board.tryMakeMove(selectedSquare, clickedSquare, Piece::BISHOP);
+						}
+						else if (clickedSquare[0] == 4 && clickedSquare[1] == 3) {
+							board.tryMakeMove(selectedSquare, clickedSquare, Piece::KNIGHT);
+						}
+					}
 					//std::cout << "Mouse released at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If there was a selected piece, try to place it
-					if (pieceSelected) {
+					else if (pieceSelected) {
 						if (board.tryMakeMove(selectedSquare, clickedSquare)) {
 							pieceSelected = false;
 						}
@@ -133,6 +147,28 @@ int main() {
 				}
 			}
 		}
+
+		if (board.wantsToPromote) {
+			// White transparency over board
+			RectangleShape highlightSquare(Vector2f(window.getSize().x, window.getSize().y));
+			highlightSquare.setFillColor(Color(255, 255, 255, 100));
+			highlightSquare.setPosition(0, 0);
+			window.draw(highlightSquare);
+
+			// Display ossible promotion peaces
+			graphics.setPieceSquare(Piece::QUEEN | board.currentPlayer, 3, 4);
+			window.draw(graphics.getPieceSprite(Piece::QUEEN | board.currentPlayer));
+
+			graphics.setPieceSquare(Piece::ROOK | board.currentPlayer, 4, 4);
+			window.draw(graphics.getPieceSprite(Piece::ROOK | board.currentPlayer));
+
+			graphics.setPieceSquare(Piece::BISHOP | board.currentPlayer, 3, 3);
+			window.draw(graphics.getPieceSprite(Piece::BISHOP | board.currentPlayer));
+
+			graphics.setPieceSquare(Piece::KNIGHT | board.currentPlayer, 4, 3);
+			window.draw(graphics.getPieceSprite(Piece::KNIGHT | board.currentPlayer));
+		}
+
 		window.display();
 	}
 	return 0;

@@ -2,8 +2,14 @@
 #include "Piece.h"
 #include "Board.h"
 
-Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, bool ep)
-	: piece(p), capturedPiece(capture), steps(s), enpassant(ep)
+Move::Move() : piece(0), capturedPiece(0), steps(0), flags(0)
+{
+	startSquare[0] = 0;
+	startSquare[1] = 0;
+}
+
+Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, short f)
+	: piece(p), capturedPiece(capture), steps(s), flags(f)
 {
 	startSquare[0] = startX;
 	startSquare[1] = startY;
@@ -17,6 +23,16 @@ std::string Move::toString(Move m)
 	name += Board::squareName(m.startSquare[0] + dir[0], m.startSquare[1] + dir[1]);
 
 	return name;
+}
+
+bool Move::isEnPassant()
+{
+	return (flags & 0b1000) == 0b1000;
+}
+
+bool Move::isPromotion()
+{
+	return (flags & 0b111) != 0;
 }
 
 const int Move::knightMoves[8] = {
