@@ -195,10 +195,10 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 
 		//----------- UPDATE CASTLE RIGHTS ---------------------
 		if (castleRights != 0) {
-			if (pieceFrom == Piece::KING) {
+			if (Piece::getType(pieceFrom) == Piece::KING) {
 				castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
 			}
-			else if (pieceFrom == Piece::ROOK) {
+			else if (Piece::getType(pieceFrom) == Piece::ROOK) {
 				if (currentPlayer == Piece::WHITE && from[1] == 0) {
 					if (from[0] == 0) {
 						// Remove right for white's long castle
