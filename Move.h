@@ -31,7 +31,7 @@ struct Move {
 
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps
-	static const int knightMoves[8];
+	static short knightMoves[8];
 
 	// All the directions a bishop may go
 	// Each direction is a diagonal step

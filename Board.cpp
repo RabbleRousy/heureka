@@ -60,6 +60,8 @@ bool Board::readPosFromFEN(std::string fen) {
 			break;
 		case 'K':
 			squares[column][row] = Piece::KING | Piece::WHITE;
+			whiteKingPos[0] = column;
+			whiteKingPos[1] = row;
 			column++;
 			break;
 		case 'Q':
@@ -84,6 +86,8 @@ bool Board::readPosFromFEN(std::string fen) {
 			break;
 		case 'k':
 			squares[column][row] = Piece::KING | Piece::BLACK;
+			blackKingPos[0] = column;
+			blackKingPos[1] = row;
 			column++;
 			break;
 		case 'q':
@@ -234,7 +238,7 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 			}
 		}
 
-		std::cout << ((currentPlayer == Piece::WHITE) ? "White" : "Black") << " played " << Move::toString(possibleMoves[i]) << "\n";
+		std::cout << ((currentPlayer == Piece::WHITE) ? "\nWhite" : "\nBlack") << " played " << Move::toString(possibleMoves[i]) << "\n\n";
 
 		//----------- UPDATE CASTLE RIGHTS ---------------------
 		if (castleRights != 0) {
@@ -289,6 +293,17 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 			}
 		}
 		
+		//----------- UPDATE KING POS --------------------------
+		if (Piece::getType(pieceFrom) == Piece::KING) {
+			if (currentPlayer == Piece::WHITE) {
+				whiteKingPos[0] = to[0];
+				whiteKingPos[1] = to[1];
+			}
+			else {
+				blackKingPos[0] = to[0];
+				blackKingPos[1] = to[1];
+			}
+		}
 
 		moveHistory.push(possibleMoves[i]);
 		swapCurrentPlayer();
@@ -358,10 +373,12 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant ? 0b1000 : 0);
-						possibleMoves.push_back(move);
-						if (debugPossibleMoves) {
-							std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
+						if (!kingInCheckAfter(move)) {
+							possibleMoves.push_back(move);
+							if (debugPossibleMoves) {
+								std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
+							}
 						}
 					}
 				}
@@ -391,10 +408,12 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant ? 0b1000 : 0);
-						possibleMoves.push_back(move);
-						if (debugPossibleMoves) {
-							std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
+						if (!kingInCheckAfter(move)) {
+							possibleMoves.push_back(move);
+							if (debugPossibleMoves) {
+								std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
+							}
 						}
 					}
 				}
@@ -442,24 +461,42 @@ void Board::generateMoves()
 			}
 			//----------- CASTLING MOVES -----------------------
 			if (pieceType == Piece::KING) {
-				int steps = 0;
+				Move move(Piece::KING | currentPlayer, Piece::NONE, i, j, 0);
 				if (currentPlayer == Piece::WHITE) {
 					if ((castleRights & 0b1000) == 0b1000) {
 						//std::cout << "White's short castle \n";
 						// White's short castle
 						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
-							steps = (RIGHT << 4) | RIGHT;
-							if (debugPossibleMoves) {
-								std::cout << "White's short castle accepted.\n";
+							move.steps = RIGHT;
+							if (kingInCheckAfter(move)) {
+								move.steps = 0;
+							}
+							else {
+								move.steps = (RIGHT << 4) | RIGHT;
+								if (!kingInCheckAfter(move)) {
+									possibleMoves.push_back(move);
+									if (debugPossibleMoves) {
+										std::cout << "White's short castle accepted.\n";
+									}
+								}
 							}
 						}
 					}
 					if ((castleRights & 0b0100) == 0b0100) {
 						// White's long castle
 						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
-							steps = (LEFT << 4) | LEFT;
-							if (debugPossibleMoves) {
-								std::cout << "White's long castle accepted.\n";
+							move.steps = LEFT;
+							if (kingInCheckAfter(move)) {
+								move.steps = 0;
+							}
+							else {
+								move.steps = (LEFT << 4) | LEFT;
+								if (!kingInCheckAfter(move)) {
+									possibleMoves.push_back(move);
+									if (debugPossibleMoves) {
+										std::cout << "White's long castle accepted.\n";
+									}
+								}
 							}
 						}
 					}
@@ -468,26 +505,39 @@ void Board::generateMoves()
 					if ((castleRights & 0b0010) == 0b0010) {
 						// Black's short castle
 						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
-							steps = (RIGHT << 4) | RIGHT;
-							if (debugPossibleMoves) {
-								std::cout << "Black's short castle accepted.\n";
+							move.steps = RIGHT;
+							if (kingInCheckAfter(move)) {
+								move.steps = 0;
+							}
+							else {
+								move.steps = (RIGHT << 4) | RIGHT;
+								if (!kingInCheckAfter(move)) {
+									possibleMoves.push_back(move);
+									if (debugPossibleMoves) {
+										std::cout << "Black's short castle accepted.\n";
+									}
+								}
 							}
 						}
 					}
 					if ((castleRights & 0b0001) == 0b0001) {
 						// Black's long castle
 						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
-							int steps = (LEFT << 4) | LEFT;
-							if (debugPossibleMoves) {
-								std::cout << "Black's long castle accepted.\n";
+							move.steps = LEFT;
+							if (kingInCheckAfter(move)) {
+								move.steps = 0;
+							}
+							else {
+								move.steps = (LEFT << 4) | LEFT;
+								if (!kingInCheckAfter(move)) {
+									possibleMoves.push_back(move);
+									if (debugPossibleMoves) {
+										std::cout << "Black's long castle accepted.\n";
+									}
+								}
 							}
 						}
 					}
-				}
-
-				if (steps != 0) {
-					Move move(Piece::KING | currentPlayer, Piece::NONE, i, j, steps);
-					possibleMoves.push_back(move);
 				}
 			}
 		}
@@ -509,18 +559,33 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	target[1] = y + dir[1];
 
 	// If move goes out of bounds, discard
-	if (target[0] > 7 || target[0] < 0 || target[1] > 7 || target[1] < 0)
+	if (target[0] > 7 || target[0] < 0 || target[1] > 7 || target[1] < 0) {
+		if (!returnTarget) {
+			delete[] target;
+		}
 		return false;
+	}
+		
 	// If move would capture friendly piece, discard
-	if (Piece::getColor(getPiece(target[0], target[1])) == currentPlayer)
+	if (Piece::getColor(getPiece(target[0], target[1])) == currentPlayer) {
+		if (!returnTarget) {
+			delete[] target;
+		}
 		return false;
+	}
+		
 
 	// Get target piece
 	short capture = getPiece(target[0], target[1]);
 
 	// If move would capture, but it's not allowed (pawn forward), discard
-	if (!canCapture && Piece::getType(capture) != Piece::NONE)
+	if (!canCapture && Piece::getType(capture) != Piece::NONE) {
+		if (!returnTarget) {
+			delete[] target;
+		}
 		return false;
+	}
+
 
 	// Check if promotion is possible
 	bool promote = false;
@@ -530,24 +595,33 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 
 	// Move accepted
 	Move move(getPiece(x, y), capture, x, y, steps);
-	if (!promote) {
-		possibleMoves.push_back(move);
+	if (!kingInCheckAfter(move)) {
+
+		// Move accepted
+		if (!promote) {
+			possibleMoves.push_back(move);
+		}
+		else {
+			// If it's a promotion, add one move for each type of promotion
+			move.flags = Move::Promotion::ToBishop;
+			possibleMoves.push_back(move);
+			move.flags = Move::Promotion::ToKnight;
+			possibleMoves.push_back(move);
+			move.flags = Move::Promotion::ToQueen;
+			possibleMoves.push_back(move);
+			move.flags = Move::Promotion::ToRook;
+			possibleMoves.push_back(move);
+		}
+
+		if (debugPossibleMoves) {
+			std::cout << "Move " << Move::toString(move) << " accepted.\n";
+		}
 	}
 	else {
-		// If it's a promotion, add one move for each type of promotion
-		move.flags = Move::Promotion::ToBishop;
-		possibleMoves.push_back(move);
-		move.flags = Move::Promotion::ToKnight;
-		possibleMoves.push_back(move);
-		move.flags = Move::Promotion::ToQueen;
-		possibleMoves.push_back(move);
-		move.flags = Move::Promotion::ToRook;
-		possibleMoves.push_back(move);
-	}
-	
-
-	if (debugPossibleMoves) {
-		std::cout << "Move " << Move::toString(move) << " accepted.\n";
+		if (!returnTarget) {
+			delete[] target;
+		}
+		return false;
 	}
 
 	if (!returnTarget) {
@@ -555,6 +629,116 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	}
 
 	return true;
+}
+
+// Refactor to "getCheckingLineSteps" or something ??
+bool Board::kingIsInCheck(const short color)
+{
+	short* kingPos = (color == Piece::WHITE) ? whiteKingPos : blackKingPos;
+	short* directions = Move::bishopDirections;
+
+	for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
+		// Go into one of the directions as long as possible and look for enemy pieces
+		short dir[2];
+		stepsToDirection(directions[dirIndex], dir);
+		
+		for (int i = 1; i < 8; i++) {
+			short pieceOnTargetSquare = getPiece(kingPos[0] + i * dir[0], kingPos[1] + i * dir[1]);
+
+			short pieceType = Piece::getType(pieceOnTargetSquare);
+
+			if (pieceType == Piece::NONE) continue;
+			if (Piece::getColor(pieceOnTargetSquare) == color) break;
+
+			if (directions == Move::bishopDirections) {
+				// Pawn checks
+				if (i == 1 && pieceType == Piece::PAWN) {
+					// White king get's checked by pawns above him
+					if (color == Piece::WHITE && dirIndex < 2) {
+						return true;
+					}
+					// Black king get's checked by pawns below him
+					else if (color == Piece::BLACK && dirIndex >= 2) {
+						return true;
+					}
+				}
+				// Bishop checks
+				if (pieceType == Piece::BISHOP)
+					return true;
+			}
+			// Rook checks
+			else {
+				if (pieceType == Piece::ROOK)
+					return true;
+			}
+			// Queen checks
+			if (pieceType == Piece::QUEEN)
+				return true;
+		}
+
+		// Do bishop moves and then rook moves
+		if (dirIndex == 3 && directions == Move::bishopDirections) {
+			dirIndex = -1;
+			directions = Move::rookDirections;
+		}
+	}
+
+	//---------- KNIGHT CHECKS -----------------
+	directions = Move::knightMoves;
+	for (int i = 0; i < 8; i++) {
+		short dir[2];
+		stepsToDirection(directions[i], dir);
+		short pieceOnTargetSquare = getPiece(kingPos[0] + dir[0], kingPos[1] + dir[1]);
+		// Check if there is an enemy knight on one of the squares where it's targeting the king
+		if (pieceOnTargetSquare == (Piece::KNIGHT | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE))) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Board::kingInCheckAfter(const Move move)
+{
+	std::cout << "Is king in check after " << Move::toString(move) << "? ";
+	// Fake making the move (ignores en passant ! -> Problem, ignores rook move from castle, ...)
+	short dir[2];
+	stepsToDirection(move.steps, dir);
+
+	short target[2] = { move.startSquare[0] + dir[0], move.startSquare[1] + dir[1] };
+	short capture = getPiece(target[0], target[1]);
+	setPiece(target[0], target[1], move.piece);
+	removePiece(move.startSquare[0], move.startSquare[1]);
+	if (Piece::getType(move.piece) == Piece::KING) {
+		if (currentPlayer == Piece::WHITE) {
+			whiteKingPos[0] = target[0];
+			whiteKingPos[1] = target[1];
+		}
+		else {
+			blackKingPos[0] = target[0];
+			blackKingPos[1] = target[1];
+		}
+	}
+
+	// Is king in check now?
+	bool check = kingIsInCheck(currentPlayer);
+	
+	// Undo move
+	setPiece(move.startSquare[0], move.startSquare[1], move.piece);
+	setPiece(target[0], target[1], capture);
+	if (Piece::getType(move.piece) == Piece::KING) {
+		if (currentPlayer == Piece::WHITE) {
+			whiteKingPos[0] = move.startSquare[0];
+			whiteKingPos[1] = move.startSquare[1];
+		}
+		else {
+			blackKingPos[0] = move.startSquare[0];
+			blackKingPos[1] = move.startSquare[1];
+		}
+	}
+
+	std::cout << (check ? "Yes." : "No.") << "\n";
+	return check;
 }
 
 // Converts an integer (step) to a short[2] x and y direction

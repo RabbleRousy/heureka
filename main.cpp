@@ -122,7 +122,7 @@ int main() {
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
 				short p = board.getPiece(i, j);
-				if (p != Piece().NONE) {
+				if (p != Piece::NONE) {
 					bool dragging = false;
 					if (pieceSelected) {
 						if (selectedSquare[0] == i && selectedSquare[1] == j) {

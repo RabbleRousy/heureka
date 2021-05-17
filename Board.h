@@ -15,6 +15,8 @@ class Board
 {
 private:
 	short squares[8][8];
+	short whiteKingPos[2];
+	short blackKingPos[2];
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
 	short castleRights = 0b1111;
 public:
@@ -34,6 +36,8 @@ public:
 	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2], short promotionChoice = 0);
 	void generateMoves();
 	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL);
+	bool kingIsInCheck(const short color);
+	bool kingInCheckAfter(const Move move);
 	static void stepsToDirection(int steps, short dir[2]);
 	void swapCurrentPlayer();
 	static std::string squareName(unsigned short column, unsigned short row);

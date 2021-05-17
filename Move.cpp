@@ -35,7 +35,7 @@ bool Move::isPromotion()
 	return (flags & 0b111) != 0;
 }
 
-const int Move::knightMoves[8] = {
+short Move::knightMoves[8] = {
 		(UP << 4) | UP | RIGHT ,
 		(UP << 4) | UP | LEFT,
 		(RIGHT << 4) | UP | RIGHT,
