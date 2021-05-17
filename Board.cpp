@@ -651,29 +651,37 @@ bool Board::kingIsInCheck(const short color)
 			if (Piece::getColor(pieceOnTargetSquare) == color) break;
 
 			if (directions == Move::bishopDirections) {
-				// Pawn checks
-				if (i == 1 && pieceType == Piece::PAWN) {
-					// White king get's checked by pawns above him
-					if (color == Piece::WHITE && dirIndex < 2) {
-						return true;
+				// "Short range" checks
+				if (i == 1) {
+					// Pawn checks
+					if (pieceType == Piece::PAWN) {
+						// White king get's checked by pawns above him
+						if (color == Piece::WHITE && dirIndex < 2) {
+							return true;
+						}
+						// Black king get's checked by pawns below him
+						else if (color == Piece::BLACK && dirIndex >= 2) {
+							return true;
+						}
 					}
-					// Black king get's checked by pawns below him
-					else if (color == Piece::BLACK && dirIndex >= 2) {
+					// Diagonal King checks
+					else if (pieceType == Piece::KING){
 						return true;
 					}
 				}
-				// Bishop checks
-				if (pieceType == Piece::BISHOP)
+				// Diagonal checks
+				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN)
 					return true;
+				else
+					break;
 			}
-			// Rook checks
+			// Horizontal/vertical checks
 			else {
-				if (pieceType == Piece::ROOK)
+				if (pieceType == Piece::ROOK || pieceType == Piece::QUEEN || (pieceType == Piece::KING && i == 1))
 					return true;
+				else
+					break;
 			}
-			// Queen checks
-			if (pieceType == Piece::QUEEN)
-				return true;
 		}
 
 		// Do bishop moves and then rook moves
