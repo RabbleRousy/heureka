@@ -373,7 +373,7 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant * 8);
 						if (!kingInCheckAfter(move)) {
 							possibleMoves.push_back(move);
 							if (debugPossibleMoves) {
@@ -408,7 +408,7 @@ void Board::generateMoves()
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant * 8);
 						if (!kingInCheckAfter(move)) {
 							possibleMoves.push_back(move);
 							if (debugPossibleMoves) {
