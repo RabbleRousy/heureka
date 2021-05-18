@@ -430,6 +430,7 @@ void Board::generateMoves()
 				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::KING) {
 					directions = Move::bishopDirections;
 				}
+				bool* check = new bool{};
 
 				for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
 					// Go into one of the directions as long as possible and save possible moves along the way
@@ -439,10 +440,11 @@ void Board::generateMoves()
 						// Go one step into the direction
 						steps |= directions[dirIndex];
 						short target[2];
-						if (tryAddMove(i, j, steps, true, target))
+						if (tryAddMove(i, j, steps, true, target, check) || *check) 
 						{
 							stepCounter++;
 							steps <<= 4;
+
 							// If capturing piece, still stop after accepting
 							if (Piece::getType(getPiece(target[0], target[1])) != Piece::NONE)
 								break;
@@ -462,6 +464,7 @@ void Board::generateMoves()
 						directions = Move::rookDirections;
 					}
 				}
+				delete check;
 			}
 			//----------- CASTLING MOVES -----------------------
 			if (pieceType == Piece::KING) {
@@ -548,7 +551,7 @@ void Board::generateMoves()
 	}
 }
 
-bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, short target[2])
+bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, short target[2], bool* illegalBecauseCheck)
 {
 	short dir[2];
 	stepsToDirection(steps, dir);
@@ -622,6 +625,9 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		}
 	}
 	else {
+		if (illegalBecauseCheck != NULL) {
+			*illegalBecauseCheck = true;
+		}
 		if (!returnTarget) {
 			delete[] target;
 		}

@@ -35,7 +35,7 @@ public:
 	void removePiece(unsigned short column, unsigned short row);
 	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2], short promotionChoice = 0);
 	void generateMoves();
-	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL);
+	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL, bool* illegalBecauseCheck = NULL);
 	bool kingIsInCheck(const short color);
 	bool kingInCheckAfter(const Move move);
 	static void stepsToDirection(int steps, short dir[2]);
