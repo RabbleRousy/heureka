@@ -25,12 +25,12 @@ std::string Move::toString(Move m)
 	return name;
 }
 
-bool Move::isEnPassant()
+bool Move::isEnPassant() const
 {
 	return (flags & 0b1000) == 0b1000;
 }
 
-bool Move::isPromotion()
+bool Move::isPromotion() const
 {
 	return (flags & 0b111) != 0;
 }

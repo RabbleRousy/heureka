@@ -372,8 +372,10 @@ void Board::generateMoves()
 					}
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
+						if (enPassant)
+							targetPiece = Piece::PAWN | Piece::getOppositeColor(currentPlayer);
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant * 8);
+						Move move(Piece::PAWN | currentPlayer, targetPiece, i, j, step, enPassant * 8);
 						if (!kingInCheckAfter(move)) {
 							possibleMoves.push_back(move);
 							if (debugPossibleMoves) {
@@ -407,8 +409,10 @@ void Board::generateMoves()
 					}
 					// Target square has to be occupied by enemy piece
 					if (regularCapture || enPassant) {
+						if (enPassant)
+							targetPiece = Piece::PAWN | Piece::getOppositeColor(currentPlayer);
 						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE), i, j, step, enPassant * 8);
+						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | Piece::getOppositeColor(currentPlayer), i, j, step, enPassant * 8);
 						if (!kingInCheckAfter(move)) {
 							possibleMoves.push_back(move);
 							if (debugPossibleMoves) {
@@ -698,7 +702,7 @@ bool Board::kingIsInCheck(const short color)
 		stepsToDirection(directions[i], dir);
 		short pieceOnTargetSquare = getPiece(kingPos[0] + dir[0], kingPos[1] + dir[1]);
 		// Check if there is an enemy knight on one of the squares where it's targeting the king
-		if (pieceOnTargetSquare == (Piece::KNIGHT | ((currentPlayer == Piece::WHITE) ? Piece::BLACK : Piece::WHITE))) {
+		if (pieceOnTargetSquare == (Piece::KNIGHT | Piece::getOppositeColor(currentPlayer))) {
 			return true;
 		}
 	}
@@ -714,9 +718,15 @@ bool Board::kingInCheckAfter(const Move move)
 	stepsToDirection(move.steps, dir);
 
 	short target[2] = { move.startSquare[0] + dir[0], move.startSquare[1] + dir[1] };
-	short capture = getPiece(target[0], target[1]);
+	//short capture = getPiece(target[0], target[1]);
 	setPiece(target[0], target[1], move.piece);
 	removePiece(move.startSquare[0], move.startSquare[1]);
+	// Fake EP capture
+	if (move.isEnPassant()) {
+		removePiece(move.startSquare[0] + dir[0], move.startSquare[1]);
+	}
+	
+	// Update king pos
 	if (Piece::getType(move.piece) == Piece::KING) {
 		if (currentPlayer == Piece::WHITE) {
 			whiteKingPos[0] = target[0];
@@ -733,7 +743,15 @@ bool Board::kingInCheckAfter(const Move move)
 	
 	// Undo move
 	setPiece(move.startSquare[0], move.startSquare[1], move.piece);
-	setPiece(target[0], target[1], capture);
+	if (!move.isEnPassant()) {
+		setPiece(target[0], target[1], move.capturedPiece);
+	}
+	// Place the EP captured pawn again
+	else {
+		setPiece(move.startSquare[0] + dir[0], move.startSquare[1], move.capturedPiece);
+		removePiece(target[0], target[1]);
+	}
+	// Reset king pos
 	if (Piece::getType(move.piece) == Piece::KING) {
 		if (currentPlayer == Piece::WHITE) {
 			whiteKingPos[0] = move.startSquare[0];

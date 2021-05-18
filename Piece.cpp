@@ -10,6 +10,11 @@ short Piece::getColor(short piece)
 	return (piece & colorMask);
 }
 
+short Piece::getOppositeColor(short color)
+{
+	return color == WHITE ? BLACK : WHITE;
+}
+
 std::string Piece::name(short piece) {
 	std::string color = (getColor(piece) == WHITE) ? "White" : "Black";
 	std::string type;

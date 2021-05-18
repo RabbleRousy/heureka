@@ -20,6 +20,7 @@ public:
 
 	static short getType(short piece);
 	static short getColor(short piece);
+	static short getOppositeColor(short color);
 	static std::string name(short piece);
 };
 

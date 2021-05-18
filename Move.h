@@ -45,9 +45,9 @@ struct Move {
 	static std::string toString(Move m);
 
 	// Returns wether the en passant flag is set
-	bool isEnPassant();
+	bool isEnPassant() const;
 	
 	// Returns wether one of the promotion flags is set
-	bool isPromotion();
+	bool isPromotion() const;
 };
 
