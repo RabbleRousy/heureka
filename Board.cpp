@@ -355,34 +355,7 @@ void Board::generateMoves()
 				if (i != 0) {
 					step |= LEFT;
 					stepsToDirection(step, dir);
-					targetPiece = getPiece(i + dir[0], j + dir[1]);
-					bool regularCapture = Piece::getType(targetPiece) != Piece::NONE && Piece::getColor(targetPiece) != currentPlayer;
-					bool enPassant = false;
-					if (!regularCapture) {
-						// Check for en passant
-						// White on 5th rank or black on 4th rank
-						if ((pieceColor == Piece::WHITE && j == 4) || (pieceColor == Piece::BLACK && j == 3)) {
-							// Check if enemy pawn is to your left
-							short pieceOnEnpassantSquare = getPiece(i - 1, j);
-							if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(targetPiece) != currentPlayer) {
-								// Check wether it moved 2 steps last turn
-								enPassant = (moveHistory.top().startSquare[0] == i - 1) && (moveHistory.top().startSquare[1] == j + 2 * dir[1]);
-							}
-						}
-					}
-					// Target square has to be occupied by enemy piece
-					if (regularCapture || enPassant) {
-						if (enPassant)
-							targetPiece = Piece::PAWN | Piece::getOppositeColor(currentPlayer);
-						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, targetPiece, i, j, step, enPassant * 8);
-						if (!kingInCheckAfter(move)) {
-							possibleMoves.push_back(move);
-							if (debugPossibleMoves) {
-								std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
-							}
-						}
-					}
+					tryAddMove(i, j, step, true);
 				}
 				
 				//--------- CAPTURE RIGHT ---------------------
@@ -391,35 +364,7 @@ void Board::generateMoves()
 					step &= 0b11110000;
 					step |= RIGHT;
 					stepsToDirection(step, dir);
-					targetPiece = getPiece(i + dir[0], j + dir[1]);
-					bool regularCapture = Piece::getType(targetPiece) != Piece::NONE && Piece::getColor(targetPiece) != currentPlayer;
-					bool enPassant = false;
-					if (!regularCapture) {
-						// Check for en passant
-						// White on 5th rank or black on 4th rank
-						if ((pieceColor == Piece::WHITE && j == 4) || (pieceColor == Piece::BLACK && j == 3)) {
-							// Check if enemy pawn is to your right
-							// TODO: check that he moved last turn
-							short pieceOnEnpassantSquare = getPiece(i + 1, j);
-							if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(targetPiece) != currentPlayer) {
-								// Check wether it moved 2 steps last turn
-								enPassant = (moveHistory.top().startSquare[0] == i + 1) && (moveHistory.top().startSquare[1] == j + 2 * dir[1]);
-							}
-						}
-					}
-					// Target square has to be occupied by enemy piece
-					if (regularCapture || enPassant) {
-						if (enPassant)
-							targetPiece = Piece::PAWN | Piece::getOppositeColor(currentPlayer);
-						// Move accepted
-						Move move(Piece::PAWN | currentPlayer, Piece::PAWN | Piece::getOppositeColor(currentPlayer), i, j, step, enPassant * 8);
-						if (!kingInCheckAfter(move)) {
-							possibleMoves.push_back(move);
-							if (debugPossibleMoves) {
-								std::cout << "Possible move " << Move::toString(move) << " accepted.\n";
-							}
-						}
-					}
+					tryAddMove(i, j, step, true);
 				}
 				
 			}
@@ -555,6 +500,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 {
 	short dir[2];
 	stepsToDirection(steps, dir);
+	short moveColor = Piece::getColor(getPiece(x, y));
 
 	bool returnTarget = !(target == NULL);
 
@@ -594,14 +540,41 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	}
 
 
-	// Check if promotion is possible
+	// Handle pawn move (promotion check)
 	bool promote = false;
+	short flags = 0;
 	if (Piece::getType(getPiece(x, y)) == Piece::PAWN) {
 		promote = (target[1] == 7 && currentPlayer == Piece::WHITE) || (target[1] == 0 && currentPlayer == Piece::BLACK);
+		// Handle pawn captures (enpassant check)
+		if (canCapture) {
+			bool regularCapture = Piece::getType(capture) != Piece::NONE && Piece::getColor(capture) != currentPlayer;
+			bool enPassant = false;
+			if (!regularCapture) {
+				// Check for en passant
+				// White on 5th rank or black on 4th rank
+				if ((moveColor == Piece::WHITE && y == 4) || (moveColor == Piece::BLACK && y == 3)) {
+					// Check if enemy pawn is to your left
+					short pieceOnEnpassantSquare = getPiece(x - 1, y);
+					if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(capture) != currentPlayer) {
+						// Check wether it moved 2 steps last turn
+						enPassant = (moveHistory.top().startSquare[0] == x - 1) && (moveHistory.top().startSquare[1] == y + 2 * dir[1]);
+					}
+				}
+			}
+			if (!(regularCapture || enPassant))
+				return false;
+			// If ep flag is set
+			if (enPassant) {
+				// Update the captured piece
+				capture = Piece::PAWN | Piece::getOppositeColor(currentPlayer);
+				// Save flag
+				flags = enPassant * 8;
+			}
+		}
 	}
 
 	// Move accepted
-	Move move(getPiece(x, y), capture, x, y, steps);
+	Move move(getPiece(x, y), capture, x, y, steps, flags);
 	if (!kingInCheckAfter(move)) {
 
 		// Move accepted
@@ -609,14 +582,14 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 			possibleMoves.push_back(move);
 		}
 		else {
-			// If it's a promotion, add one move for each type of promotion
-			move.flags = Move::Promotion::ToBishop;
+			// If it's a promotion, add one move for each type of promotion and set corresponding flag
+			move.flags |= Move::Promotion::ToBishop;
 			possibleMoves.push_back(move);
-			move.flags = Move::Promotion::ToKnight;
+			move.flags |= Move::Promotion::ToKnight;
 			possibleMoves.push_back(move);
-			move.flags = Move::Promotion::ToQueen;
+			move.flags |= Move::Promotion::ToQueen;
 			possibleMoves.push_back(move);
-			move.flags = Move::Promotion::ToRook;
+			move.flags |= Move::Promotion::ToRook;
 			possibleMoves.push_back(move);
 		}
 
