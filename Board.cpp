@@ -149,7 +149,7 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 	if (from[0] == to[0] && from[1] == to[1])
 		return false;
 	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7) {
-		//std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
+		std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
 		return false;
 	}
 
@@ -506,11 +506,11 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 				// Check for en passant
 				// White on 5th rank or black on 4th rank
 				if ((moveColor == Piece::WHITE && y == 4) || (moveColor == Piece::BLACK && y == 3)) {
-					// Check if enemy pawn is to your left
-					short pieceOnEnpassantSquare = getPiece(x - 1, y);
+					// Check if enemy pawn is next to you
+					short pieceOnEnpassantSquare = getPiece(x + dir[0], y);
 					if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(capture) != currentPlayer) {
 						// Check wether it moved 2 steps last turn
-						enPassant = (moveHistory.top().startSquare[0] == x - 1) && (moveHistory.top().startSquare[1] == y + 2 * dir[1]);
+						enPassant = (moveHistory.top().startSquare[0] == x + dir[0]) && (moveHistory.top().startSquare[1] == y + 2 * dir[1]);
 					}
 				}
 			}
