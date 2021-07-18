@@ -22,16 +22,23 @@ void Board::clearBoard() {
 }
 
 bool Board::readPosFromFEN(std::string fen) {
+
+	const bool DEBUG = true;
+
 	std::cout << "Trying to parse FEN: " << fen << std::endl;
 	clearBoard();
 
 	// FEN starts at the top left corner of the board
-	int column = 0;
-	int row = 7;
-	for (unsigned int i = 0; i < fen.length(); i++) {
+	unsigned short column = 0;
+	unsigned short row = 7;
+	int i = 0;
+	char c = fen[0];
+	while (i < fen.size() && fen[i] != ' ') {
 		// Stop when at the end of the board
 		if (row == 0 && column == 8)
 			break;
+
+		if (DEBUG) std::cout << "Parsing " << fen[i] << " ... \n";
 
 		// Return false for invalid fens that reach out of bounds
 		if (row < 0 || (column > 7 && fen[i] != '/')) {
@@ -113,9 +120,136 @@ bool Board::readPosFromFEN(std::string fen) {
 		default:
 			break;
 		}
+		i++;
 	}
-	// Return true if FEN parsing reached end of board
-	return (row == 0 && column == 8);
+
+	// Return false if FEN parsing didn't reach end of board
+	if (!(row == 0 && column == 8))return false;
+	// No additional infos
+	if (i >= fen.size()-1) {
+		if (DEBUG) std::cout << "End of FEN reached.\n";
+		return true;
+	}
+
+	// Player to move
+	switch (fen[++i]) {
+	case 'b':
+		currentPlayer = Piece::BLACK;
+		break;
+	default:
+		currentPlayer = Piece::WHITE;
+		break;
+	}
+	if (DEBUG)
+		std::cout << "Current player read from FEN: " << fen[i] << '\n';
+
+	// Castling rights
+	castleRights = 0;
+	int j = i+2;
+	for (j; j < (i + 6); j++) {
+		std::cout << "j = " << j << ", i = " << i << '\n';
+		if (j == fen.size()) break;
+
+		switch (fen[j]) {
+			if (DEBUG) std::cout << "Parsing " << fen[j] << " ...\n";
+		case '-':
+			return true;
+		case 'K':
+			castleRights |= 0b1000;
+			break;
+		case 'Q':
+			castleRights |= 0b0100;
+			break;
+		case 'k':
+			castleRights |= 0b0010;
+			break;
+		case 'q':
+			castleRights |= 0b0001;
+			break;
+		default:
+			castleRights = 0b1111;
+			return true;
+		}
+		if (DEBUG) std::cout << "Castle right input: " << fen[j] << '\n';
+	}
+	// Something went wrong while parsing castlerights, set all as default
+	if (castleRights == 0)
+		castleRights = 0b1111;
+
+	std::cout << "j is at char: " << fen[j] << '\n';
+
+	// No ep capture left to read
+	if (!(j < fen.size() - 2)) {
+		std::cout << "Abort!" << std::endl;
+		return true;
+	}
+
+	column = 8;
+	row = 8;
+	for (i = (j + 1); i < (j + 3); i++) {
+		switch (fen[i]) {
+		case 'a':
+			column = 0;
+			break;
+		case 'b':
+			column = 1;
+			break;
+		case 'c':
+			column = 2;
+			break;
+		case 'd':
+			column = 3;
+			break;
+		case 'e':
+			column = 4;
+			break;
+		case 'f':
+			column = 5;
+			break;
+		case 'g':
+			column = 6;
+			break;
+		case 'h':
+			column = 7;
+			break;
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+			row = std::atoi(&fen[i]) - 1;
+			break;
+		default:
+			return true;
+		}
+		if (DEBUG) std::cout << "EP Capture input: " << fen[i] << '\n';
+	}
+
+	// Parsing failed
+	if (column == 8 || !(row == 2 || row == 5)) {
+		std::cout << "Parsing failed\n";
+		return true;
+	}
+
+	// Remove the pawn and make the move manually
+	swapCurrentPlayer();
+
+	unsigned short from[2] = { column, (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1) };
+	unsigned short to[2] = { column, (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1) };
+	
+	std::cout << "from: " << from[0] << "," << from[1] << " to: " << to[0] << "," << to[1] << '\n';
+
+	removePiece(to[0], to[1]);
+	setPiece(from[0], from[1], Piece::PAWN | currentPlayer);
+	generateMoves();
+	if (!tryMakeMove(from, to)) {
+		swapCurrentPlayer();
+	}
+
+	return true;
 }
 
 std::string Board::getFENfromPos() {

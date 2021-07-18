@@ -1,4 +1,8 @@
 Promotion:
-q3k2q/1PP2PP1/8/8/8/8/1pp4p/Q3K3
+q3k2q/1PP3P1/8/8/8/8/1pp4p/Q3K3 w - c7
+
 Castling:
-r3k2r/8/8/8/8/8/8/R3K2R
+r3k2r/8/8/8/8/8/8/R3K2R w KQkq -
+
+Instant ep capture:
+rnbqkbnr/pppppppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3
