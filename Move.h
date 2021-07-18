@@ -1,6 +1,11 @@
 #pragma once
 #include <string>
 
+#define UP 0b0001
+#define DOWN 0b0100
+#define RIGHT 0b0010
+#define LEFT 0b1000
+
 // Represents a move on the board
 struct Move {
 	// The piece that moved
