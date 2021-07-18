@@ -1,2 +1,4 @@
 Promotion:
 q3k2q/1PP2PP1/8/8/8/8/1pp4p/Q3K3
+Castling:
+r3k2r/8/8/8/8/8/8/R3K2R

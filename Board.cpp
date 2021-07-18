@@ -346,7 +346,6 @@ void Board::generateMoves()
 						tryAddMove(i, j, step, false);
 					}
 				}
-				short dir[2];
 				short targetPiece;
 				// Clear step from double step
 				step &= 0b00001111;
@@ -354,7 +353,6 @@ void Board::generateMoves()
 				//-------- CAPTURE LEFT ----------------------
 				if (i != 0) {
 					step |= LEFT;
-					stepsToDirection(step, dir);
 					tryAddMove(i, j, step, true);
 				}
 				
@@ -363,7 +361,6 @@ void Board::generateMoves()
 					// Clear step from capture left
 					step &= 0b11110000;
 					step |= RIGHT;
-					stepsToDirection(step, dir);
 					tryAddMove(i, j, step, true);
 				}
 				
@@ -413,43 +410,21 @@ void Board::generateMoves()
 			}
 			//----------- CASTLING MOVES -----------------------
 			if (pieceType == Piece::KING) {
-				Move move(Piece::KING | currentPlayer, Piece::NONE, i, j, 0);
+				short steps = 0;
 				if (currentPlayer == Piece::WHITE) {
 					if ((castleRights & 0b1000) == 0b1000) {
 						//std::cout << "White's short castle \n";
 						// White's short castle
 						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
-							move.steps = RIGHT;
-							if (kingInCheckAfter(move)) {
-								move.steps = 0;
-							}
-							else {
-								move.steps = (RIGHT << 4) | RIGHT;
-								if (!kingInCheckAfter(move)) {
-									possibleMoves.push_back(move);
-									if (debugPossibleMoves) {
-										std::cout << "White's short castle accepted.\n";
-									}
-								}
-							}
+							steps = RIGHT | (RIGHT << 4);
+							tryAddMove(i, j, steps, false);
 						}
 					}
 					if ((castleRights & 0b0100) == 0b0100) {
 						// White's long castle
 						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
-							move.steps = LEFT;
-							if (kingInCheckAfter(move)) {
-								move.steps = 0;
-							}
-							else {
-								move.steps = (LEFT << 4) | LEFT;
-								if (!kingInCheckAfter(move)) {
-									possibleMoves.push_back(move);
-									if (debugPossibleMoves) {
-										std::cout << "White's long castle accepted.\n";
-									}
-								}
-							}
+							steps = (LEFT << 4) | LEFT;
+							tryAddMove(i, j, steps, false);
 						}
 					}
 				}
@@ -457,37 +432,15 @@ void Board::generateMoves()
 					if ((castleRights & 0b0010) == 0b0010) {
 						// Black's short castle
 						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
-							move.steps = RIGHT;
-							if (kingInCheckAfter(move)) {
-								move.steps = 0;
-							}
-							else {
-								move.steps = (RIGHT << 4) | RIGHT;
-								if (!kingInCheckAfter(move)) {
-									possibleMoves.push_back(move);
-									if (debugPossibleMoves) {
-										std::cout << "Black's short castle accepted.\n";
-									}
-								}
-							}
+							steps = (RIGHT << 4) | RIGHT;
+							tryAddMove(i, j, steps, false);
 						}
 					}
 					if ((castleRights & 0b0001) == 0b0001) {
 						// Black's long castle
 						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
-							move.steps = LEFT;
-							if (kingInCheckAfter(move)) {
-								move.steps = 0;
-							}
-							else {
-								move.steps = (LEFT << 4) | LEFT;
-								if (!kingInCheckAfter(move)) {
-									possibleMoves.push_back(move);
-									if (debugPossibleMoves) {
-										std::cout << "Black's long castle accepted.\n";
-									}
-								}
-							}
+							steps = (LEFT << 4) | LEFT;
+							tryAddMove(i, j, steps, false);
 						}
 					}
 				}
@@ -573,8 +526,17 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		}
 	}
 
-	// Move accepted
 	Move move(getPiece(x, y), capture, x, y, steps, flags);
+
+	// If king tries to move more than one square, check for castling
+	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {
+		move.steps = steps & 0b1111;
+		if (kingInCheckAfter(move))
+			// Castling is interrupted on the first step
+			return false;
+		move.steps = steps;
+	}
+
 	if (!kingInCheckAfter(move)) {
 
 		// Move accepted
