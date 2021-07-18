@@ -87,3 +87,22 @@ void ChessGraphics::getSquareAt(float x, float y, unsigned short& column, unsign
 	column = (short)(x / (windowRes / 8.0f));
 	row = 7 - (short)(y / (windowRes / 8.0f));
 }
+
+RectangleShape ChessGraphics::getHighlightSquare(unsigned int column, unsigned int row)
+{
+	RectangleShape r = RectangleShape((Vector2f)board.getSize() / 8.0f);
+	r.setFillColor(Color(255, 204, 65, 100));
+	float scale = board.getSize().x / (float)windowRes;
+	float x = column * squareRes;
+	float y = (7 - row) * squareRes;
+	r.setPosition(x, y);
+	return r;
+}
+
+RectangleShape ChessGraphics::getBoardOverlay()
+{
+	RectangleShape r = RectangleShape((Vector2f)board.getSize());
+	r.setFillColor(Color(255, 255, 255, 100));
+	r.setPosition(0, 0);
+	return r;
+}

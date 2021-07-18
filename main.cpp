@@ -128,9 +128,7 @@ int main() {
 						if (selectedSquare[0] == i && selectedSquare[1] == j) {
 							float squareWidth = window.getSize().x / 8.0f;
 							// Highlight selected square
-							RectangleShape highlightSquare(Vector2f(squareWidth, squareWidth));
-							highlightSquare.setFillColor(Color(255, 204, 65, 100));
-							highlightSquare.setPosition(i * squareWidth, (7 - j) * squareWidth);
+							RectangleShape highlightSquare = graphics.getHighlightSquare(i, j);//(Vector2f(squareWidth, squareWidth));
 							window.draw(highlightSquare);
 
 							// Drag piece if mouse is held down
@@ -150,9 +148,8 @@ int main() {
 
 		if (board.wantsToPromote) {
 			// White transparency over board
-			RectangleShape highlightSquare(Vector2f(window.getSize().x, window.getSize().y));
-			highlightSquare.setFillColor(Color(255, 255, 255, 100));
-			highlightSquare.setPosition(0, 0);
+			RectangleShape highlightSquare = graphics.getBoardOverlay();
+			
 			window.draw(highlightSquare);
 
 			// Display ossible promotion peaces

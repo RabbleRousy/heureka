@@ -21,5 +21,7 @@ public:
 	void setPieceSquare(short piece, unsigned int column, unsigned int row);
 	void setPiecePosition(short piece, float x, float y);
 	void getSquareAt(float x, float y, unsigned short& column, unsigned short& row);
+	RectangleShape getHighlightSquare(unsigned int column, unsigned int row);
+	RectangleShape getBoardOverlay();
 };
 
