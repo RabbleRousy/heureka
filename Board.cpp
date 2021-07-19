@@ -4,7 +4,7 @@
 #include <string>
 
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), debugPossibleMoves(m), wantsToPromote(false)
+	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), debugLogs(m), wantsToPromote(false)
 {
 	if (!readPosFromFEN(fen)) {
 		std::cout << "Loading default position..." << std::endl;
@@ -289,7 +289,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		return false;
 	}
 	
-	if (debugPossibleMoves) std::cout << "Handling move input from " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << " ...\n";
+	if (debugLogs) std::cout << "Handling move input from " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << " ...\n";
 
 	if (wantsToPromote && promotionChoice != 0) {
 		// Promotion choice was made, we already stored the correct move in promoMoveBuffer
@@ -315,6 +315,10 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		}
 
 		doMove(promoMoveBuffer);
+
+		swapCurrentPlayer();
+		generateMoves();
+
 		/*short dir[2];
 		stepsToDirection(promoMoveBuffer.steps, dir);
 		setPiece(promoMoveBuffer.startSquare[0] + dir[0], promoMoveBuffer.startSquare[1] + dir[1], promotionChoice | currentPlayer);
@@ -323,7 +327,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		swapCurrentPlayer();
 		generateMoves();*/
 
-		if (debugPossibleMoves) std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
+		if (debugLogs) std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
 		return true;
 	}
 
@@ -347,25 +351,30 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		//--------- MOVE FOUND ----------------------
 
-		if (debugPossibleMoves) std::cout << "Move found in possibleMoves list. Checking if it's promotion ...";
+		if (debugLogs) std::cout << "Move found in possibleMoves list. Checking if it's promotion ...";
 
 		// Promotion
 		if (possibleMoves[i].isPromotion()) {
-			if (debugPossibleMoves) std::cout << " YES. Setting wantsToPromote flag.\n";
+			if (debugLogs) std::cout << " YES. Setting wantsToPromote flag.\n";
 			// Promotion needs to be completed by player
 			wantsToPromote = true;
 			promoMoveBuffer = possibleMoves[i];
 			// Correct promotion move will be added afterwards
 			return false;
 		}
-		if (debugPossibleMoves) std::cout << " NO. Doing move ...\n";
+		if (debugLogs) std::cout << " NO. Doing move ...\n";
 
-		return doMove(possibleMoves[i]);
+		doMove(possibleMoves[i]);
+
+		swapCurrentPlayer();
+		generateMoves();
+
+		return true;
 	}
 	return false;
 }
 
-bool Board::doMove(const Move move)
+void Board::doMove(const Move move)
 {
 	const unsigned short* from = move.startSquare;
 	unsigned short to[2];
@@ -378,7 +387,7 @@ bool Board::doMove(const Move move)
 	short pieceFrom = move.piece;
 	short pieceTo = move.capturedPiece;
 	short promoResult = move.getPromotionResult();
-	if (debugPossibleMoves) std::cout << "Flags = " << move.flags << "\nPiece = " << Piece::name(pieceFrom) << "\nPromotion Result = " << Piece::name(promoResult) << '\n';
+	if (debugLogs) std::cout << "Flags = " << move.flags << "\nPiece = " << Piece::name(pieceFrom) << "\nPromotion Result = " << Piece::name(promoResult) << '\n';
 	setPiece(to[0], to[1], promoResult);
 	removePiece(from[0], from[1]);
 
@@ -473,9 +482,6 @@ bool Board::doMove(const Move move)
 	}
 
 	moveHistory.push(move);
-	swapCurrentPlayer();
-	generateMoves();
-	return true;
 }
 
 void Board::generateMoves()
@@ -720,7 +726,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 			possibleMoves.push_back(move);
 		}
 
-		if (debugPossibleMoves) {
+		if (debugLogs) {
 			std::cout << "Move " << Move::toString(move) << " accepted.\n";
 		}
 	}

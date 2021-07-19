@@ -30,7 +30,11 @@ public:
 	void removePiece(unsigned short column, unsigned short row);
 
 
-	bool doMove(const Move move);
+	/// <summary>
+	/// Performs a move on the board, adds it to the moveHistory.
+	/// </summary>
+	/// <param name="move"> to be made.</param>
+	void doMove(const Move move);
 
 	/// <summary>
 	/// Tries to make a move and update the board if it is found in the possibleMoves vector.
