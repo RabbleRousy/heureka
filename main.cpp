@@ -82,7 +82,7 @@ int main() {
 				if (e.type == Event::MouseButtonPressed && !board.wantsToPromote) {
 					//std::cout << "Mouse down at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If a piece is currently selected, try move and unselect
-					if (pieceSelected && board.tryMakeMove(selectedSquare, clickedSquare)) {
+					if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
 					}
 					// Try to select a hovered piece
@@ -98,21 +98,21 @@ int main() {
 					// Promotion selection
 					if (board.wantsToPromote) {
 						if (clickedSquare[0] == 3 && clickedSquare[1] == 4) {
-							board.tryMakeMove(selectedSquare, clickedSquare, Piece::QUEEN);
+							board.handleMoveInput(selectedSquare, clickedSquare, Piece::QUEEN);
 						} else if (clickedSquare[0] == 4 && clickedSquare[1] == 4) {
-							board.tryMakeMove(selectedSquare, clickedSquare, Piece::ROOK);
+							board.handleMoveInput(selectedSquare, clickedSquare, Piece::ROOK);
 						}
 						else if (clickedSquare[0] == 3 && clickedSquare[1] == 3) {
-							board.tryMakeMove(selectedSquare, clickedSquare, Piece::BISHOP);
+							board.handleMoveInput(selectedSquare, clickedSquare, Piece::BISHOP);
 						}
 						else if (clickedSquare[0] == 4 && clickedSquare[1] == 3) {
-							board.tryMakeMove(selectedSquare, clickedSquare, Piece::KNIGHT);
+							board.handleMoveInput(selectedSquare, clickedSquare, Piece::KNIGHT);
 						}
 					}
 					//std::cout << "Mouse released at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If there was a selected piece, try to place it
 					else if (pieceSelected) {
-						if (board.tryMakeMove(selectedSquare, clickedSquare)) {
+						if (board.handleMoveInput(selectedSquare, clickedSquare)) {
 							pieceSelected = false;
 						}
 					}

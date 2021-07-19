@@ -245,7 +245,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	removePiece(to[0], to[1]);
 	setPiece(from[0], from[1], Piece::PAWN | currentPlayer);
 	generateMoves();
-	if (!tryMakeMove(from, to)) {
+	if (!handleMoveInput(from, to)) {
 		swapCurrentPlayer();
 	}
 
@@ -256,40 +256,45 @@ std::string Board::getFENfromPos() {
 	return "";
 }
 
-// Returns the piece at the desired position (can be NONE)
-// Row = bottom to top
-// Column = left to right
 short Board::getPiece(unsigned short column, unsigned short row)
 {
-	if (row > 7 || column > 7) return 0;
+	if (row > 7 || column > 7) {
+		return 0;
+	}
 	return squares[column][row];
 }
 
-// Sets the piece at the desired position
-// Row = bottom to top
-// Column = left to right
 void Board::setPiece(unsigned short column, unsigned short row, short p)
 {
-	if (row > 7 || column > 7) return;
+	if (row > 7 || column > 7) {
+		std::cerr << "ERROR: setPiece out of bounds at [" << column << "][" << row << "]\n";
+		return;
+	}
 	squares[column][row] = p;
 }
 
 void Board::removePiece(unsigned short column, unsigned short row) {
-	if (row > 7 || column > 7) return;
+	if (row > 7 || column > 7) {
+		std::cerr << "ERROR: removePiece out of bounds at [" << column << "][" << row << "]\n";
+		return;
+	}
 	squares[column][row] = Piece::NONE;
 }
 
-bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2], short promotionChoice) {
+bool Board::handleMoveInput(const unsigned short from[2], const unsigned short to[2], short promotionChoice) {
 	if (from[0] == to[0] && from[1] == to[1])
 		return false;
 	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7) {
 		std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
 		return false;
 	}
+	
+	if (debugPossibleMoves) std::cout << "Handling move input from " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << " ...\n";
 
 	if (wantsToPromote && promotionChoice != 0) {
-		// If promotion was already demanded, next call will have promotionChoice set
+		// Promotion choice was made, we already stored the correct move in promoMoveBuffer
 		wantsToPromote = false;
+		// Clear promoflags and set the correct one
 		promoMoveBuffer.flags &= 0b1000;
 		switch (promotionChoice)
 		{
@@ -309,13 +314,16 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 			break;
 		}
 
-		short dir[2];
+		doMove(promoMoveBuffer);
+		/*short dir[2];
 		stepsToDirection(promoMoveBuffer.steps, dir);
 		setPiece(promoMoveBuffer.startSquare[0] + dir[0], promoMoveBuffer.startSquare[1] + dir[1], promotionChoice | currentPlayer);
 
 		moveHistory.push(promoMoveBuffer);
 		swapCurrentPlayer();
-		generateMoves();
+		generateMoves();*/
+
+		if (debugPossibleMoves) std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
 		return true;
 	}
 
@@ -328,6 +336,7 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 	{
 		if (possibleMoves[i].startSquare[0] != from[0] || possibleMoves[i].startSquare[1] != from[1])
 			continue;
+
 		short dir[2];
 		stepsToDirection(possibleMoves[i].steps, dir);
 		unsigned short result[2];
@@ -338,113 +347,135 @@ bool Board::tryMakeMove(const unsigned short from[2], const unsigned short to[2]
 
 		//--------- MOVE FOUND ----------------------
 
-		setPiece(to[0], to[1], pieceFrom);
-		removePiece(from[0], from[1]);
-
-		// En passant 
-		if (possibleMoves[i].isEnPassant()) {
-			removePiece(from[0] + dir[0], from[1]);
-		}
+		if (debugPossibleMoves) std::cout << "Move found in possibleMoves list. Checking if it's promotion ...";
 
 		// Promotion
 		if (possibleMoves[i].isPromotion()) {
+			if (debugPossibleMoves) std::cout << " YES. Setting wantsToPromote flag.\n";
 			// Promotion needs to be completed by player
 			wantsToPromote = true;
 			promoMoveBuffer = possibleMoves[i];
 			// Correct promotion move will be added afterwards
 			return false;
 		}
+		if (debugPossibleMoves) std::cout << " NO. Doing move ...\n";
 
-		if (Piece::getType(pieceFrom) == Piece::KING && (dir[0] == 2 || dir[0] == -2) ) {
-			// Castle detected, Rook has to be moved
-			switch (dir[0])
-			{
-			case 2: 
-				removePiece(7, from[1]);
-				setPiece(5, from[1], Piece::ROOK | currentPlayer);
-				break;
-			case -2:
-				removePiece(0, from[1]);
-				setPiece(3, from[1], Piece::ROOK | currentPlayer);
-				break;
-			default:
-				break;
-			}
-		}
-
-		std::cout << ((currentPlayer == Piece::WHITE) ? "\nWhite" : "\nBlack") << " played " << Move::toString(possibleMoves[i]) << "\n\n";
-
-		//----------- UPDATE CASTLE RIGHTS ---------------------
-		if (castleRights != 0) {
-			// If king moved, delete that player's castle rights
-			if (Piece::getType(pieceFrom) == Piece::KING) {
-				castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
-			}
-			// If rook moved
-			else if (Piece::getType(pieceFrom) == Piece::ROOK) {
-				if (currentPlayer == Piece::WHITE && from[1] == 0) {
-					if (from[0] == 0) {
-						// Remove right for white's long castle
-						castleRights &= 0b1011;
-					} else if (from[0] == 7) {
-						// Remove right for white's short castle
-						castleRights &= 0b0111;
-					}
-				}
-				else if (currentPlayer == Piece::BLACK && from[1] == 7) {
-					if (from[0] == 0) {
-						// Remove right for black's long castle
-						castleRights &= 0b1110;
-					}
-					else if (from[0] == 7) {
-						// Remove right for black's short castle
-						castleRights &= 0b1101;
-					}
-				}
-			}
-			// If rook got captured
-			else if (Piece::getType(pieceTo) == Piece::ROOK) {
-				if (currentPlayer == Piece::BLACK && to[1] == 0) {
-					if (to[0] == 0) {
-						// Remove right for white's long castle
-						castleRights &= 0b1011;
-					}
-					else if (to[0] == 7) {
-						// Remove right for white's short castle
-						castleRights &= 0b0111;
-					}
-				}
-				else if (currentPlayer == Piece::WHITE && to[1] == 7) {
-					if (to[0] == 0) {
-						// Remove right for black's long castle
-						castleRights &= 0b1110;
-					}
-					else if (to[0] == 7) {
-						// Remove right for black's short castle
-						castleRights &= 0b1101;
-					}
-				}
-			}
-		}
-		
-		//----------- UPDATE KING POS --------------------------
-		if (Piece::getType(pieceFrom) == Piece::KING) {
-			if (currentPlayer == Piece::WHITE) {
-				whiteKingPos[0] = to[0];
-				whiteKingPos[1] = to[1];
-			}
-			else {
-				blackKingPos[0] = to[0];
-				blackKingPos[1] = to[1];
-			}
-		}
-
-		moveHistory.push(possibleMoves[i]);
-		swapCurrentPlayer();
-		generateMoves();
-		return true;
+		return doMove(possibleMoves[i]);
 	}
 	return false;
+}
+
+bool Board::doMove(const Move move)
+{
+	const unsigned short* from = move.startSquare;
+	unsigned short to[2];
+	short dir[2];
+	stepsToDirection(move.steps, dir);
+	unsigned short result[2];
+	to[0] = from[0] + dir[0];
+	to[1] = from[1] + dir[1];
+
+	short pieceFrom = move.piece;
+	short pieceTo = move.capturedPiece;
+	short promoResult = move.getPromotionResult();
+	if (debugPossibleMoves) std::cout << "Flags = " << move.flags << "\nPiece = " << Piece::name(pieceFrom) << "\nPromotion Result = " << Piece::name(promoResult) << '\n';
+	setPiece(to[0], to[1], promoResult);
+	removePiece(from[0], from[1]);
+
+	// En passant 
+	if (move.isEnPassant()) {
+		removePiece(from[0] + dir[0], from[1]);
+	}
+
+	if (Piece::getType(pieceFrom) == Piece::KING && (dir[0] == 2 || dir[0] == -2)) {
+		// Castle detected, Rook has to be moved
+		switch (dir[0])
+		{
+		case 2:
+			removePiece(7, from[1]);
+			setPiece(5, from[1], Piece::ROOK | currentPlayer);
+			break;
+		case -2:
+			removePiece(0, from[1]);
+			setPiece(3, from[1], Piece::ROOK | currentPlayer);
+			break;
+		default:
+			break;
+		}
+	}
+
+	std::cout << ((currentPlayer == Piece::WHITE) ? "\nWhite" : "\nBlack") << " played " << Move::toString(move) << "\n\n";
+
+	//----------- UPDATE CASTLE RIGHTS ---------------------
+	if (castleRights != 0) {
+		// If king moved, delete that player's castle rights
+		if (Piece::getType(pieceFrom) == Piece::KING) {
+			castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
+		}
+		// If rook moved
+		else if (Piece::getType(pieceFrom) == Piece::ROOK) {
+			if (currentPlayer == Piece::WHITE && from[1] == 0) {
+				if (from[0] == 0) {
+					// Remove right for white's long castle
+					castleRights &= 0b1011;
+				}
+				else if (from[0] == 7) {
+					// Remove right for white's short castle
+					castleRights &= 0b0111;
+				}
+			}
+			else if (currentPlayer == Piece::BLACK && from[1] == 7) {
+				if (from[0] == 0) {
+					// Remove right for black's long castle
+					castleRights &= 0b1110;
+				}
+				else if (from[0] == 7) {
+					// Remove right for black's short castle
+					castleRights &= 0b1101;
+				}
+			}
+		}
+		// If rook got captured
+		else if (Piece::getType(pieceTo) == Piece::ROOK) {
+			if (currentPlayer == Piece::BLACK && to[1] == 0) {
+				if (to[0] == 0) {
+					// Remove right for white's long castle
+					castleRights &= 0b1011;
+				}
+				else if (to[0] == 7) {
+					// Remove right for white's short castle
+					castleRights &= 0b0111;
+				}
+			}
+			else if (currentPlayer == Piece::WHITE && to[1] == 7) {
+				if (to[0] == 0) {
+					// Remove right for black's long castle
+					castleRights &= 0b1110;
+				}
+				else if (to[0] == 7) {
+					// Remove right for black's short castle
+					castleRights &= 0b1101;
+				}
+			}
+		}
+	}
+
+	//----------- UPDATE KING POS --------------------------
+	if (Piece::getType(pieceFrom) == Piece::KING) {
+		if (currentPlayer == Piece::WHITE) {
+			whiteKingPos[0] = to[0];
+			whiteKingPos[1] = to[1];
+		}
+		else {
+			blackKingPos[0] = to[0];
+			blackKingPos[1] = to[1];
+		}
+	}
+
+	moveHistory.push(move);
+	swapCurrentPlayer();
+	generateMoves();
+	return true;
 }
 
 void Board::generateMoves()
@@ -710,7 +741,6 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	return true;
 }
 
-// Refactor to "getCheckingLineSteps" or something ??
 bool Board::kingIsInCheck(const short color)
 {
 	short* kingPos = (color == Piece::WHITE) ? whiteKingPos : blackKingPos;
@@ -788,7 +818,7 @@ bool Board::kingIsInCheck(const short color)
 bool Board::kingInCheckAfter(const Move move)
 {
 	std::cout << "Is king in check after " << Move::toString(move) << "? ";
-	// Fake making the move (ignores en passant ! -> Problem, ignores rook move from castle, ...)
+	// Fake making the move (ignores rook move from castle, ...)
 	short dir[2];
 	stepsToDirection(move.steps, dir);
 

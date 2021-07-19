@@ -35,6 +35,23 @@ bool Move::isPromotion() const
 	return (flags & 0b111) != 0;
 }
 
+short Move::getPromotionResult() const
+{
+	short color = Piece::getColor(piece);
+	switch (flags & 0b0111) {
+	case Promotion::ToBishop:
+		return Piece::BISHOP | color;
+	case Promotion::ToKnight:
+		return Piece::KNIGHT | color;
+	case Promotion::ToQueen:
+		return Piece::QUEEN | color;
+	case Promotion::ToRook:
+		return Piece::ROOK | color;
+	default:
+		return piece;
+	}
+}
+
 short Move::knightMoves[8] = {
 		(UP << 4) | UP | RIGHT ,
 		(UP << 4) | UP | LEFT,

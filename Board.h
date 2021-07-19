@@ -28,7 +28,19 @@ public:
 	short getPiece(unsigned short column, unsigned short row);
 	void setPiece(unsigned short column, unsigned short row, short piece);
 	void removePiece(unsigned short column, unsigned short row);
-	bool tryMakeMove(const unsigned short from[2], const unsigned short to[2], short promotionChoice = 0);
+
+
+	bool doMove(const Move move);
+
+	/// <summary>
+	/// Tries to make a move and update the board if it is found in the possibleMoves vector.
+	/// If successfull, move is added to moveHistory, current player is swapped and possibleMoves are generated again.
+	/// </summary>
+	/// <param name="from">stores the position where the move starts.</param>
+	/// <param name="to">stores the position where the move ends.</param>
+	/// <param name="promotionChoice">is only used when not 0 and wantsToPromote is true.</param>
+	/// <returns>wether the move was contained in the possibleMoves vector and could be made. If true, the game is now updated and ready for the next move.</returns>
+	bool handleMoveInput(const unsigned short from[2], const unsigned short to[2], short promotionChoice = 0);
 	void generateMoves();
 	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL, bool* illegalBecauseCheck = NULL);
 	bool kingIsInCheck(const short color);
