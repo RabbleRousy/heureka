@@ -6,7 +6,12 @@
 #define RIGHT 0b0010
 #define LEFT 0b1000
 
+
 // Represents a move on the board
+
+/// <summary>
+/// Struct to handle moves on the board
+/// </summary>
 struct Move {
 	// The piece that moved
 	short piece;
@@ -54,5 +59,8 @@ struct Move {
 	
 	// Returns wether one of the promotion flags is set
 	bool isPromotion() const;
+
+	/// <returns>the piece that this move promotes to. If move is not a promotion, returns this->piece.</returns>
+	short getPromotionResult() const;
 };
 

@@ -156,7 +156,7 @@ int main() {
 			
 			window.draw(highlightSquare);
 
-			// Display ossible promotion peaces
+			// Display possible promotion pieces
 			graphics.setPieceSquare(Piece::QUEEN | board.currentPlayer, 3, 4);
 			window.draw(graphics.getPieceSprite(Piece::QUEEN | board.currentPlayer));
 

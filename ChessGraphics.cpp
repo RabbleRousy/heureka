@@ -1,8 +1,6 @@
 #include "ChessGraphics.h"
 #include <iostream>
 
-// Constructor loads the textures from Sprites directory
-// and initiates the sprites
 ChessGraphics::ChessGraphics(unsigned int res)
 {
 	windowRes = res;
@@ -37,42 +35,40 @@ Sprite& ChessGraphics::getPieceSprite(short p)
 {
 
 	// White sprites first
-	short color = (PIECE.getColor(p) == PIECE.WHITE) ? 0 : 1;
+	short color = (Piece::getColor(p) == Piece::WHITE) ? 0 : 1;
 	short type = 0;
 
-	if (PIECE.getType(p) == PIECE.KING) {
+	if (Piece::getType(p) == Piece::KING) {
 		type = 0;
 	}
-	else if (PIECE.getType(p) == PIECE.QUEEN) {
+	else if (Piece::getType(p) == Piece::QUEEN) {
 		type = 1;
 	}
-	else if (PIECE.getType(p) == PIECE.BISHOP) {
+	else if (Piece::getType(p) == Piece::BISHOP) {
 		type = 2;
 	}
-	else if (PIECE.getType(p) == PIECE.KNIGHT) {
+	else if (Piece::getType(p) == Piece::KNIGHT) {
 		type = 3;
 	}
-	else if (PIECE.getType(p) == PIECE.ROOK) {
+	else if (Piece::getType(p) == Piece::ROOK) {
 		type = 4;
 	}
-	else if (PIECE.getType(p) == PIECE.PAWN) {
+	else if (Piece::getType(p) == Piece::PAWN) {
 		type = 5;
 	}
 	//std::cout << "Color = " << color << ", Type = " << type << std::endl;
 	return pieceSprites[color * 6 + type];
 }
 
-// For setting piece position on a specific square
 void ChessGraphics::setPieceSquare(short piece, unsigned int column, unsigned int row)
 {
 	if (column > 7 || row > 7) return;
 	float x = column * squareRes;
 	float y = (7 - row) * squareRes;
 	getPieceSprite(piece).setPosition(x, y);
-	//std::cout << "Setting " << PIECE.name(piece) << " on square [" << column << "][" << row << "], position: " << x << ", " << y << std::endl;
+	//std::cout << "Setting " << Piece::name(piece) << " on square [" << column << "][" << row << "], position: " << x << ", " << y << std::endl;
 }
 
-// For setting piece's screen position directly, e.g. to mouse
 void ChessGraphics::setPiecePosition(short piece, float x, float y)
 {
 	float scale = board.getSize().x / (float)windowRes;

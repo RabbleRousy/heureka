@@ -1,5 +1,5 @@
 Promotion:
-q3k2q/1PP3P1/8/8/8/8/1pp4p/Q3K3 w - c7
+q3k2q/1PP3P1/8/8/8/8/1pp4p/Q3K3 w - -
 
 Castling:
 r3k2r/8/8/8/8/8/8/R3K2R w KQkq -
