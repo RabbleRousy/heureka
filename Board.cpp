@@ -253,7 +253,66 @@ bool Board::readPosFromFEN(std::string fen) {
 }
 
 std::string Board::getFENfromPos() {
-	return "";
+	std::string fen = "";
+	// Parse over the board from a8 to h1
+	for (int i = 7; i >= 0; i--) {
+		int gap = 0;
+		for (int j = 0; j < 8; j++) {
+			short p = getPiece(j, i);
+			// if there is no piece at the current position, count gaps
+			if (Piece::getType(p) == Piece::NONE) {
+				gap++;
+			}
+			else {
+				// if there was a gap, add it before adding the next piece and reset counter
+				if (gap != 0) {
+					fen += std::to_string(gap);
+					gap = 0;
+				}
+				// add the piece to the fen
+				fen += Piece::toChar(p);
+			}
+		}
+		// end of row, check for remaining gap counter and add linebreak
+		if (gap != 0) {
+			fen += std::to_string(gap);
+		}
+		if (i != 0) {
+			fen += '/';
+		}
+	}
+
+	// who's turn to move
+	fen += (currentPlayer == Piece::WHITE) ? " w" : " b";
+
+	// Castling rights
+	if (castleRights == 0) {
+		fen += " -";
+	}
+	else {
+		fen += ' ';
+		if ((castleRights & 0b1000) != 0) fen += 'K';
+		if ((castleRights & 0b0100) != 0) fen += 'Q';
+		if ((castleRights & 0b0010) != 0) fen += 'k';
+		if ((castleRights & 0b0001) != 0) fen += 'q';
+	}
+	
+	// En passant captures
+	Move lastMove = moveHistory.top();
+	if (Piece::getType(lastMove.piece) != Piece::PAWN)
+		return fen;
+
+	std::cout << "Last move steps = " << lastMove.steps << std::endl;
+	// If pawn did more than one step
+	if (lastMove.steps > 0b1111) {
+		std::cout << "Pawn made 2 steps!!\n";
+		fen += ' ';
+		short dir[2];
+		stepsToDirection(lastMove.steps, dir);
+		fen += squareName(lastMove.startSquare[0], lastMove.startSquare[1] + dir[1] / 2);
+	}
+
+	return fen;
 }
 
 short Board::getPiece(unsigned short column, unsigned short row)
@@ -368,6 +427,8 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		swapCurrentPlayer();
 		generateMoves();
+
+		if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
 
 		return true;
 	}

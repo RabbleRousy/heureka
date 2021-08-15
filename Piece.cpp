@@ -37,3 +37,23 @@ std::string Piece::name(short piece) {
 	}
 	return color + " " + type;
 }
+
+char Piece::toChar(short piece) {
+	bool white = getColor(piece) == WHITE;
+	switch (getType(piece)) {
+	case KING: return (white ? 'K' : 'k');
+		break;
+	case PAWN: return (white ? 'P' : 'p');
+		break;
+	case KNIGHT: return (white ? 'N' : 'n');
+		break;
+	case BISHOP: return (white ? 'B' : 'b');
+		break;
+	case ROOK: return (white ? 'R' : 'r');
+		break;
+	case QUEEN: return (white ? 'Q' : 'q');
+		break;
+	default:
+		return '0';
+	}
+}

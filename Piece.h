@@ -22,5 +22,6 @@ public:
 	static short getColor(short piece);
 	static short getOppositeColor(short color);
 	static std::string name(short piece);
+	static char toChar(short piece);
 };
 
