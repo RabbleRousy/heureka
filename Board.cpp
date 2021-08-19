@@ -4,7 +4,7 @@
 #include <string>
 
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), debugLogs(m), wantsToPromote(false)
+	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
 {
 	if (!readPosFromFEN(fen)) {
 		std::cout << "Loading default position..." << std::endl;
@@ -23,9 +23,9 @@ void Board::clearBoard() {
 
 bool Board::readPosFromFEN(std::string fen) {
 
-	const bool DEBUG = true;
+	const bool DEBUG = debugLogs;
 
-	std::cout << "Trying to parse FEN: " << fen << std::endl;
+	if (DEBUG) std::cout << "Trying to parse FEN: " << fen << std::endl;
 	clearBoard();
 
 	// FEN starts at the top left corner of the board
@@ -42,7 +42,7 @@ bool Board::readPosFromFEN(std::string fen) {
 
 		// Return false for invalid fens that reach out of bounds
 		if (row < 0 || (column > 7 && fen[i] != '/')) {
-			std::cout << "FEN parsing failed." << std::endl;
+			std::cerr << "FEN parsing failed." << std::endl;
 			return false;
 		}
 
@@ -147,7 +147,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	castleRights = 0;
 	int j = i+2;
 	for (j; j < (i + 6); j++) {
-		std::cout << "j = " << j << ", i = " << i << '\n';
+		if (DEBUG) std::cout << "j = " << j << ", i = " << i << '\n';
 		if (j == fen.size()) break;
 
 		switch (fen[j]) {
@@ -176,11 +176,8 @@ bool Board::readPosFromFEN(std::string fen) {
 	if (castleRights == 0)
 		castleRights = 0b1111;
 
-	std::cout << "j is at char: " << fen[j] << '\n';
-
 	// No ep capture left to read
 	if (!(j < fen.size() - 2)) {
-		std::cout << "Abort!" << std::endl;
 		return true;
 	}
 
@@ -230,7 +227,7 @@ bool Board::readPosFromFEN(std::string fen) {
 
 	// Parsing failed
 	if (column == 8 || !(row == 2 || row == 5)) {
-		std::cout << "Parsing failed\n";
+		std::cerr << "EP capture parsing failed\n";
 		return true;
 	}
 
@@ -239,15 +236,14 @@ bool Board::readPosFromFEN(std::string fen) {
 
 	unsigned short from[2] = { column, (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1) };
 	unsigned short to[2] = { column, (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1) };
-	
-	std::cout << "from: " << from[0] << "," << from[1] << " to: " << to[0] << "," << to[1] << '\n';
 
+	// Undo the move
 	removePiece(to[0], to[1]);
 	setPiece(from[0], from[1], Piece::PAWN | currentPlayer);
-	generateMoves();
-	if (!handleMoveInput(from, to)) {
-		swapCurrentPlayer();
-	}
+
+	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], (currentPlayer == Piece::WHITE) ? ((UP << 4) | UP) : ((DOWN << 4) | DOWN));
+	
+	doMove(epMove);
 
 	return true;
 }
@@ -298,14 +294,14 @@ std::string Board::getFENfromPos() {
 	}
 	
 	// En passant captures
+	if (moveHistory.empty())
+		return fen;
 	Move lastMove = moveHistory.top();
 	if (Piece::getType(lastMove.piece) != Piece::PAWN)
 		return fen;
 
-	std::cout << "Last move steps = " << lastMove.steps << std::endl;
 	// If pawn did more than one step
 	if (lastMove.steps > 0b1111) {
-		std::cout << "Pawn made 2 steps!!\n";
 		fen += ' ';
 		short dir[2];
 		stepsToDirection(lastMove.steps, dir);
@@ -375,16 +371,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		doMove(promoMoveBuffer);
 
-		swapCurrentPlayer();
-		generateMoves();
-
-		/*short dir[2];
-		stepsToDirection(promoMoveBuffer.steps, dir);
-		setPiece(promoMoveBuffer.startSquare[0] + dir[0], promoMoveBuffer.startSquare[1] + dir[1], promotionChoice | currentPlayer);
-
-		moveHistory.push(promoMoveBuffer);
-		swapCurrentPlayer();
-		generateMoves();*/
+		futureMovesBuffer = std::stack<Move>();
 
 		if (debugLogs) std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
 		return true;
@@ -425,10 +412,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		doMove(possibleMoves[i]);
 
-		swapCurrentPlayer();
-		generateMoves();
-
-		if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
+		futureMovesBuffer = std::stack<Move>();
 
 		return true;
 	}
@@ -474,7 +458,7 @@ void Board::doMove(const Move move)
 		}
 	}
 
-	std::cout << ((currentPlayer == Piece::WHITE) ? "\nWhite" : "\nBlack") << " played " << Move::toString(move) << "\n\n";
+	if (debugLogs) std::cout << ((currentPlayer == Piece::WHITE) ? "\nWhite" : "\nBlack") << " played " << Move::toString(move) << "\n\n";
 
 	//----------- UPDATE CASTLE RIGHTS ---------------------
 	if (castleRights != 0) {
@@ -543,6 +527,69 @@ void Board::doMove(const Move move)
 	}
 
 	moveHistory.push(move);
+
+	swapCurrentPlayer();
+	generateMoves();
+
+	if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
+}
+
+void Board::undoLastMove()
+{
+	if (moveHistory.empty()) return;
+
+	Move lastMove = moveHistory.top();
+	moveHistory.pop();
+	futureMovesBuffer.push(lastMove);
+
+	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(lastMove) << "<<\n";
+
+	short target[2];
+	short dir[2];
+	stepsToDirection(lastMove.steps, dir);
+	target[0] = lastMove.startSquare[0] + dir[0];
+	target[1] = lastMove.startSquare[1] + dir[1];
+
+	// Place captured piece / clear target square
+	if (lastMove.isEnPassant()) {
+		removePiece(target[0], target[1]);
+		setPiece(lastMove.startSquare[0] + dir[0], lastMove.startSquare[1], lastMove.capturedPiece);
+	}
+	else {
+		setPiece(target[0], target[1], lastMove.capturedPiece);
+	}
+
+	// Place piece back at startsquare
+	setPiece(lastMove.startSquare[0], lastMove.startSquare[1], lastMove.piece);
+
+	// Check if it was castling move
+	if (Piece::getType(lastMove.piece) == Piece::KING && (dir[0] == 2 || dir[0] == -2)) {
+		// Castle detected, Rook has to be moved
+		switch (dir[0])
+		{
+		case 2:
+			setPiece(7, lastMove.startSquare[1], Piece::ROOK |  Piece::getOppositeColor(currentPlayer));
+			removePiece(5, lastMove.startSquare[1]);
+			break;
+		case -2:
+			setPiece(0, lastMove.startSquare[1], Piece::ROOK | Piece::getOppositeColor(currentPlayer));
+			removePiece(3, lastMove.startSquare[1]);
+			break;
+		default:
+			break;
+		}
+	}
+
+	swapCurrentPlayer();
+	generateMoves();
+
+	if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
+}
+
+void Board::redoLastMove() {
+	if (futureMovesBuffer.empty()) return;
+	doMove(futureMovesBuffer.top());
+	futureMovesBuffer.pop();
 }
 
 void Board::generateMoves()
@@ -884,7 +931,7 @@ bool Board::kingIsInCheck(const short color)
 
 bool Board::kingInCheckAfter(const Move move)
 {
-	std::cout << "Is king in check after " << Move::toString(move) << "? ";
+	if (debugLogs) std::cout << "Is king in check after " << Move::toString(move) << "? ";
 	// Fake making the move (ignores rook move from castle, ...)
 	short dir[2];
 	stepsToDirection(move.steps, dir);
@@ -935,7 +982,7 @@ bool Board::kingInCheckAfter(const Move move)
 		}
 	}
 
-	std::cout << (check ? "Yes." : "No.") << "\n";
+	if (debugLogs) std::cout << (check ? "Yes." : "No.") << "\n";
 	return check;
 }
 
@@ -1058,4 +1105,18 @@ std::string Board::squareName(unsigned short column, unsigned short row) {
 		return "";
 	}
 	return name;
+}
+
+int Board::testMoveGeneration(unsigned int depth)
+{
+	if (depth == 1) return possibleMoves.size();
+	int positionCount = 0;
+
+	for (int i = 0; i < possibleMoves.size(); i++) {
+		doMove(possibleMoves[i]);
+		positionCount += testMoveGeneration(depth - 1);
+		undoLastMove();
+	}
+	futureMovesBuffer = std::stack<Move>();
+	return positionCount;
 }

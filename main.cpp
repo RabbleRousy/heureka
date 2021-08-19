@@ -118,6 +118,18 @@ int main() {
 					}
 				}
 			}
+			else if (Keyboard::isKeyPressed(Keyboard::Key::Left)){
+				board.undoLastMove();
+			}
+			else if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+				board.redoLastMove();
+			}
+			else if (Keyboard::isKeyPressed(Keyboard::Key::T)) {
+				std::cout << "Enter move generation test depth: ";
+				int depth;
+				std::cin >> depth;
+				std::cout << "After " << depth << " moves there are " << board.testMoveGeneration(depth) << " positions.\n";
+			}
 		}
 
 		window.clear();

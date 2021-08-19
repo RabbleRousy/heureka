@@ -38,6 +38,8 @@ public:
 
 	std::stack<Move> moveHistory;
 
+	std::stack<Move> futureMovesBuffer;
+
 	// Stores the pawn move while waiting for input on the promotion choice
 	Move promoMoveBuffer;
 
@@ -79,13 +81,24 @@ public:
 
 	/// <summary>
 	/// Performs a move on the board, adds it to the moveHistory.
+	/// Then swaps current player and regenerates the possible Moves.
 	/// </summary>
 	/// <param name="move"> to be made.</param>
 	void doMove(const Move move);
 
 	/// <summary>
-	/// Tries to make a move with the given input and update the board if a corresponding move is found in the possibleMoves vector.
-	/// If successfull, current player is swapped and possibleMoves are generated again.
+	/// Undos the move at the top of moveHistory and moves it to the futureMovesBuffer.
+	/// Swaps player and regenerates moves afterwards.
+	/// </summary>
+	void undoLastMove();
+
+	/// <summary>
+	/// Redos the move at the top of the futureMovesBuffer by calling doMove().
+	/// </summary>
+	void redoLastMove();
+
+	/// <summary>
+	/// Tries to call doMove() with the given input and update the board if a corresponding move is found in the possibleMoves vector.
 	/// </summary>
 	/// <param name="from">stores the position where the move starts.</param>
 	/// <param name="to">stores the position where the move ends.</param>
@@ -144,5 +157,7 @@ public:
 	/// <returns>a string containing the name of the square, e.g. "d4".
 	/// empty string if parameters were invalid.</returns>
 	static std::string squareName(unsigned short column, unsigned short row);
+
+	int testMoveGeneration(unsigned int depth);
 };
 
