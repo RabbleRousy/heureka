@@ -579,11 +579,6 @@ void Board::undoLastMove()
 			break;
 		}
 	}
-
-	swapCurrentPlayer();
-	generateMoves();
-
-	if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
 }
 
 void Board::redoLastMove() {
@@ -1111,11 +1106,14 @@ int Board::testMoveGeneration(unsigned int depth)
 {
 	if (depth == 1) return possibleMoves.size();
 	int positionCount = 0;
+	std::vector<Move> moves = possibleMoves;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		doMove(possibleMoves[i]);
 		positionCount += testMoveGeneration(depth - 1);
 		undoLastMove();
+		swapCurrentPlayer();
+		possibleMoves = moves;
 	}
 	futureMovesBuffer = std::stack<Move>();
 	return positionCount;

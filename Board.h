@@ -88,7 +88,7 @@ public:
 
 	/// <summary>
 	/// Undos the move at the top of moveHistory and moves it to the futureMovesBuffer.
-	/// Swaps player and regenerates moves afterwards.
+	/// Does NOT swap player and regenerate moves!
 	/// </summary>
 	void undoLastMove();
 
