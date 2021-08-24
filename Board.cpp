@@ -175,6 +175,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	// Something went wrong while parsing castlerights, set all as default
 	if (castleRights == 0)
 		castleRights = 0b1111;
+	if (DEBUG) std::cout << "Castle rights set to: " << std::to_string(castleRights) << '\n';
 
 	// No ep capture left to read
 	if (!(j < fen.size() - 2)) {
@@ -241,7 +242,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	removePiece(to[0], to[1]);
 	setPiece(from[0], from[1], Piece::PAWN | currentPlayer);
 
-	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], (currentPlayer == Piece::WHITE) ? ((UP << 4) | UP) : ((DOWN << 4) | DOWN));
+	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], (currentPlayer == Piece::WHITE) ? ((UP << 4) | UP) : ((DOWN << 4) | DOWN), castleRights);
 	
 	doMove(epMove);
 
@@ -537,9 +538,9 @@ void Board::doMove(const Move move)
 	moveHistory.push(move);
 }
 
-void Board::undoLastMove()
+bool Board::undoLastMove()
 {
-	if (moveHistory.empty()) return;
+	if (moveHistory.empty()) return false;
 
 	Move lastMove = moveHistory.top();
 	moveHistory.pop();
@@ -593,12 +594,16 @@ void Board::undoLastMove()
 			}
 		}
 	}
+	// Restore the castlerights from before that move
+	castleRights = lastMove.previousCastlerights;
+	return true;
 }
 
-void Board::redoLastMove() {
-	if (futureMovesBuffer.empty()) return;
+bool Board::redoLastMove() {
+	if (futureMovesBuffer.empty()) return false;
 	doMove(futureMovesBuffer.top());
 	futureMovesBuffer.pop();
+	return true;
 }
 
 void Board::generateMoves()
@@ -815,7 +820,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		}
 	}
 
-	Move move(getPiece(x, y), capture, x, y, steps, flags);
+	Move move(getPiece(x, y), capture, x, y, steps, castleRights, flags);
 
 	// If king tries to move more than one square, check for castling
 	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {
@@ -950,6 +955,8 @@ bool Board::kingInCheckAfter(const Move move)
 	
 	// Undo move
 	undoLastMove();
+	// Don't store undone move
+	futureMovesBuffer.pop();
 
 	if (debugLogs) std::cout << (check ? "Yes." : "No.") << "\n";
 	return check;

@@ -8,8 +8,8 @@ Move::Move() : piece(0), capturedPiece(0), steps(0), flags(0)
 	startSquare[1] = 0;
 }
 
-Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, short f)
-	: piece(p), capturedPiece(capture), steps(s), flags(f)
+Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, short castle, short f)
+	: piece(p), capturedPiece(capture), steps(s), flags(f), previousCastlerights(castle)
 {
 	startSquare[0] = startX;
 	startSquare[1] = startY;

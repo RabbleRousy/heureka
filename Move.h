@@ -33,11 +33,13 @@ struct Move {
 	// Last 3 bits: Promotion type, 4th bit: en passant flag
 	short flags;
 
+	short previousCastlerights;
+
 	// Default constructor, creates Move with all values 0
 	Move();
 
 	// Standard constructor
-	Move(short piece, short capture, unsigned short startX, unsigned short startY, int steps, short flags = 0);
+	Move(short piece, short capture, unsigned short startX, unsigned short startY, int steps, short previousCastlerights, short flags = 0);
 
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps
@@ -57,7 +59,7 @@ struct Move {
 	// Returns wether the en passant flag is set
 	bool isEnPassant() const;
 	
-	// Returns wether one of the promotion flags is set
+	/// <returns>wether one of the promotion flags is set.</returns>
 	bool isPromotion() const;
 
 	/// <returns>the piece that this move promotes to. If move is not a promotion, returns this->piece.</returns>

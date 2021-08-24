@@ -139,15 +139,17 @@ int main() {
 					}
 				}
 			}
-			else if (Keyboard::isKeyPressed(Keyboard::Key::Left)){
-				board.undoLastMove();
-				board.swapCurrentPlayer();
-				board.generateMoves();
+			else if (Keyboard::isKeyPressed(Keyboard::Key::Left)) {
+				if (board.undoLastMove()) {
+					board.swapCurrentPlayer();
+					board.generateMoves();
+				}
 			}
 			else if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
-				board.redoLastMove();
-				board.swapCurrentPlayer();
-				board.generateMoves();
+				if (board.redoLastMove()) {
+					board.swapCurrentPlayer();
+					board.generateMoves();
+				}
 			}
 			else if (Keyboard::isKeyPressed(Keyboard::Key::T)) {
 				std::cout << "Enter move generation test depth: ";

@@ -90,12 +90,14 @@ public:
 	/// Undos the move at the top of moveHistory and moves it to the futureMovesBuffer.
 	/// Does NOT swap player and regenerate moves!
 	/// </summary>
-	void undoLastMove();
+	/// <returns>wether there was a move to be undone.</returns>
+	bool undoLastMove();
 
 	/// <summary>
 	/// Redos the move at the top of the futureMovesBuffer by calling doMove().
 	/// </summary>
-	void redoLastMove();
+	/// <returns>wether there was a move to be redone.</returns>
+	bool redoLastMove();
 
 	/// <summary>
 	/// Tries to call doMove() with the given input and update the board if a corresponding move is found in the possibleMoves vector.
