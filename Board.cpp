@@ -998,37 +998,6 @@ void Board::stepsToDirection(int steps, short dir[2]) {
 		}
 		steps >>= 1;
 		i++;
-		/*switch (steps & 0b0101) {
-		case 0:
-		case 0b0101:
-			dir[0] += 0;
-			break;
-		case 0b0100:
-			dir[0] += -1;
-			break;
-		case 0b0001:
-			dir[0] += 1;
-			break;
-		default:
-			break;
-		}
-		switch (steps & 0b1010) {
-		case 0:
-		case 0b1010:
-			dir[1] += 0;
-			break;
-		case 0b1000:
-			dir[1] += -1;
-			break;
-		case 0b0010:
-			dir[1] += 1;
-			break;
-		default:
-			break;
-		}
-
-		steps = steps >> 4;
-		//std::cout << "Shifted. Steps is now " << steps << ".\n";*/
 	}
 	//std::cout << "[" << dir[0] << "][" << dir[1] << "]\n";
 }
@@ -1102,7 +1071,7 @@ std::string Board::squareName(unsigned short column, unsigned short row) {
 	return name;
 }
 
-int Board::testMoveGeneration(unsigned int depth)
+int Board::testMoveGeneration(unsigned int depth, bool divide)
 {
 	if (depth == 1) return possibleMoves.size();
 	int positionCount = 0;
@@ -1110,10 +1079,14 @@ int Board::testMoveGeneration(unsigned int depth)
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		doMove(possibleMoves[i]);
-		positionCount += testMoveGeneration(depth - 1);
+		int positionsAfterMove = testMoveGeneration(depth - 1, false);
+		positionCount += positionsAfterMove;
 		undoLastMove();
 		swapCurrentPlayer();
 		possibleMoves = moves;
+		if (divide) {
+			std::cout << Move::toString(possibleMoves[i]) << ": " << std::to_string(positionsAfterMove) << '\n';
+		}
 	}
 	futureMovesBuffer = std::stack<Move>();
 	return positionCount;

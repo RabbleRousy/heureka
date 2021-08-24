@@ -158,6 +158,5 @@ public:
 	/// empty string if parameters were invalid.</returns>
 	static std::string squareName(unsigned short column, unsigned short row);
 
-	int testMoveGeneration(unsigned int depth);
+	int testMoveGeneration(unsigned int depth, bool divide);
 };
-
