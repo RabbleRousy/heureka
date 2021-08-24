@@ -703,7 +703,7 @@ void Board::generateMoves()
 				delete check;
 			}
 			//----------- CASTLING MOVES -----------------------
-			if (pieceType == Piece::KING) {
+			if (pieceType == Piece::KING && !kingIsInCheck(currentPlayer)) {
 				short steps = 0;
 				if (currentPlayer == Piece::WHITE) {
 					if ((castleRights & 0b1000) == 0b1000) {
