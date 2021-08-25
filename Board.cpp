@@ -66,55 +66,55 @@ bool Board::readPosFromFEN(std::string fen) {
 			column += std::atoi(&fen[i]);
 			break;
 		case 'K':
-			squares[column][row] = Piece::KING | Piece::WHITE;
+			setPiece(column, row, Piece::KING | Piece::WHITE);
 			whiteKingPos[0] = column;
 			whiteKingPos[1] = row;
 			column++;
 			break;
 		case 'Q':
-			squares[column][row] = Piece::QUEEN | Piece::WHITE;
+			setPiece(column, row, Piece::QUEEN | Piece::WHITE);
 			column++;
 			break;
 		case 'R':
-			squares[column][row] = Piece::ROOK | Piece::WHITE;
+			setPiece(column, row, Piece::ROOK | Piece::WHITE);
 			column++;
 			break;
 		case 'N':
-			squares[column][row] = Piece::KNIGHT | Piece::WHITE;
+			setPiece(column, row, Piece::KNIGHT | Piece::WHITE);
 			column++;
 			break;
 		case 'B':
-			squares[column][row] = Piece::BISHOP | Piece::WHITE;
+			setPiece(column, row, Piece::BISHOP | Piece::WHITE);
 			column++;
 			break;
 		case 'P':
-			squares[column][row] = Piece::PAWN | Piece::WHITE;
+			setPiece(column, row, Piece::PAWN | Piece::WHITE);
 			column++;
 			break;
 		case 'k':
-			squares[column][row] = Piece::KING | Piece::BLACK;
+			setPiece(column, row, Piece::KING | Piece::BLACK);
 			blackKingPos[0] = column;
 			blackKingPos[1] = row;
 			column++;
 			break;
 		case 'q':
-			squares[column][row] = Piece::QUEEN | Piece::BLACK;
+			setPiece(column, row, Piece::QUEEN | Piece::BLACK);
 			column++;
 			break;
 		case 'r':
-			squares[column][row] = Piece::ROOK | Piece::BLACK;
+			setPiece(column, row, Piece::ROOK | Piece::BLACK);
 			column++;
 			break;
 		case 'n':
-			squares[column][row] = Piece::KNIGHT | Piece::BLACK;
+			setPiece(column, row, Piece::KNIGHT | Piece::BLACK);
 			column++;
 			break;
 		case 'b':
-			squares[column][row] = Piece::BISHOP | Piece::BLACK;
+			setPiece(column, row, Piece::BISHOP | Piece::BLACK);
 			column++;
 			break;
 		case 'p':
-			squares[column][row] = Piece::PAWN | Piece::BLACK;
+			setPiece(column, row, Piece::PAWN | Piece::BLACK);
 			column++;
 			break;
 		default:
@@ -317,6 +317,7 @@ std::string Board::getFENfromPos() {
 short Board::getPiece(unsigned short column, unsigned short row)
 {
 	if (row > 7 || column > 7) {
+		//std::cerr << "ERROR: getPiece out of bounds at [" << column << "][" << row << "]\n";
 		return 0;
 	}
 	return squares[column][row];
@@ -328,6 +329,8 @@ void Board::setPiece(unsigned short column, unsigned short row, short p)
 		std::cerr << "ERROR: setPiece out of bounds at [" << column << "][" << row << "]\n";
 		return;
 	}
+	if (squares[column][row] != Piece::NONE) BITBOARD.removePiece(squares[column][row], column, row);
+	BITBOARD.setPiece(p, column, row);
 	squares[column][row] = p;
 }
 
@@ -336,6 +339,7 @@ void Board::removePiece(unsigned short column, unsigned short row) {
 		std::cerr << "ERROR: removePiece out of bounds at [" << column << "][" << row << "]\n";
 		return;
 	}
+	BITBOARD.removePiece(squares[column][row], column, row);
 	squares[column][row] = Piece::NONE;
 }
 
@@ -379,8 +383,11 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		futureMovesBuffer = std::stack<Move>();
 
-		if (debugLogs) std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
-		if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
+		if (debugLogs) {
+			std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
+			std::cout << "New FEN: " << getFENfromPos() << '\n';
+			std::cout << "Occupied Bitboard: " << BITBOARD.toString(BITBOARD.getOccupied());
+		}
 
 		return true;
 	}
@@ -422,7 +429,10 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		swapCurrentPlayer();
 		generateMoves();
 
-		if (debugLogs) std::cout << "New FEN: " << getFENfromPos() << '\n';
+		if (debugLogs) {
+			std::cout << "New FEN: " << getFENfromPos() << '\n';
+			std::cout << "Occupied Bitboard:\n" << BITBOARD.toString(BITBOARD.getOccupied());
+		}
 
 		futureMovesBuffer = std::stack<Move>();
 
@@ -675,7 +685,7 @@ void Board::generateMoves()
 					while (stepCounter < 7) {
 						// Go one step into the direction
 						steps |= directions[dirIndex];
-						short target[2];
+						unsigned short target[2];
 						if (tryAddMove(i, j, steps, true, target, check) || *check) 
 						{
 							stepCounter++;
@@ -743,7 +753,7 @@ void Board::generateMoves()
 	}
 }
 
-bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, short target[2], bool* illegalBecauseCheck)
+bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, unsigned short target[2], bool* illegalBecauseCheck)
 {
 	short dir[2];
 	stepsToDirection(steps, dir);
@@ -752,7 +762,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	bool returnTarget = !(target == NULL);
 
 	if (!returnTarget) {
-		target = new short[2];
+		target = new unsigned short[2];
 	}
 
 	target[0] = x + dir[0];
@@ -968,7 +978,7 @@ void Board::stepsToDirection(int steps, short dir[2]) {
 	dir[0] = 0;
 	dir[1] = 0;
 	int i = 0;
-	while (steps != 0) {
+	while (steps) {
 		if (i % 2 == 0) {
 			// y direction
 			dir[1] += ((i % 4 == 0) ? 1 : -1) * (steps & 1);

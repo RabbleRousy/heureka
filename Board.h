@@ -1,6 +1,7 @@
 #pragma once
 #include "Piece.h"
 #include "Move.h"
+#include "Bitboard.h"
 #include <vector>
 #include <stack>
 
@@ -10,6 +11,7 @@
 class Board
 {
 private:
+	Bitboard BITBOARD;
 	short squares[8][8];
 	short whiteKingPos[2];
 	short blackKingPos[2];
@@ -126,7 +128,7 @@ public:
 	/// <param name="target">is used to store and optionally return the target coordinates. Can be NULL.</param>
 	/// <param name="illegalBecauseCheck">is a pointer to a flag that gets set if the candidate move got rejected because it would put own king in check.</param>
 	/// <returns>wether the move could be constructed and added to the list.</returns>
-	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, short target[2] = NULL, bool* illegalBecauseCheck = NULL);
+	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, unsigned short target[2] = NULL, bool* illegalBecauseCheck = NULL);
 
 	/// <summary>
 	/// Scans in all possible directions from the king to detect attackers that give check.
