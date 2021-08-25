@@ -18,6 +18,7 @@ private:
 	short castleRights = 0b1111;
 
 public:
+	float accumulatedGenerationTime;
 	/// <summary>
 	/// Constructor for the Board.
 	/// </summary>

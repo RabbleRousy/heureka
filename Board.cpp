@@ -2,6 +2,7 @@
 #include "Piece.h"
 #include <iostream>
 #include <string>
+#include "Timer.h"
 
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
@@ -1061,7 +1062,12 @@ int Board::testMoveGeneration(unsigned int depth, bool divide)
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		doMove(possibleMoves[i]);
 		swapCurrentPlayer();
-		generateMoves();
+		//float time;
+		{
+			//Timer timer("Board::generateMoves()", &time);
+			generateMoves();
+		}
+		//accumulatedGenerationTime += time;
 		int positionsAfterMove = testMoveGeneration(depth - 1, false);
 		positionCount += positionsAfterMove;
 		undoLastMove();

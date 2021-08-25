@@ -1,30 +1,10 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
-#include <chrono>
 #include "ChessGraphics.h"
 #include "Board.h"
+#include "Timer.h"
 
 using namespace sf;
-
-
-
-// Timer class, credit to The Cherno on YT
-struct Timer {
-	std::chrono::time_point<std::chrono::steady_clock> start, end;
-	std::chrono::duration<float> duration;
-	std::string name;
-
-	Timer(std::string s) : name(s) {
-		start = std::chrono::high_resolution_clock::now();
-	}
-	~Timer() {
-		end = std::chrono::high_resolution_clock::now();
-		duration = end - start;
-
-		float ms = duration.count() * 1000.0f;
-		std::cout << '[' << name << "]: " << ms << " ms\n";
-	}
-};
 
 // Called when resize event fired
 void keepAspectRatio(Window& window) {
@@ -155,9 +135,11 @@ int main() {
 				std::cout << "Enter move generation test depth: ";
 				int depth;
 				std::cin >> depth;
-				Timer timer("Board::testMoveGeneration(" + std::to_string(depth) + ')');
+				board.accumulatedGenerationTime = 0.0f;
+				Timer timer("Board::testMoveGeneration(" + std::to_string(depth) + ')', NULL);
 				int positions = board.testMoveGeneration(depth, true);
-				std::cout << "After " << depth << " moves there are " << positions << " positions.\n";
+				std::cout << "After " << depth << " moves there are " << positions << " positions.\nAccumulated move generation time: " 
+					<< board.accumulatedGenerationTime << '\n';
 			}
 		}
 
