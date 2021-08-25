@@ -85,7 +85,7 @@ public:
 	/// Then swaps current player and regenerates the possible Moves.
 	/// </summary>
 	/// <param name="move"> to be made.</param>
-	void doMove(const Move move);
+	void doMove(const Move* move);
 
 	/// <summary>
 	/// Undos the move at the top of moveHistory and moves it to the futureMovesBuffer.
@@ -141,7 +141,7 @@ public:
 	/// </summary>
 	/// <param name="move">to be made before the check test.</param>
 	/// <returns>wether the currentPlayer's king was checked after the move, making it an illegal move.</returns>
-	bool kingInCheckAfter(const Move move);
+	bool kingInCheckAfter(const Move* move);
 
 	/// <summary>
 	/// Converts a step to a x and y direction by bitshifting.
