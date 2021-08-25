@@ -243,7 +243,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	removePiece(to[0], to[1]);
 	setPiece(from[0], from[1], Piece::PAWN | currentPlayer);
 
-	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], (currentPlayer == Piece::WHITE) ? ((UP << 4) | UP) : ((DOWN << 4) | DOWN), castleRights);
+	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], from[0], (currentPlayer == Piece::WHITE) ? from[1] + 2 : from[1] - 2, castleRights);
 	
 	doMove(&epMove);
 
@@ -304,12 +304,10 @@ std::string Board::getFENfromPos() {
 	if (Piece::getType(lastMove.piece) != Piece::PAWN)
 		return fen;
 
-	// If pawn did more than one step
-	if (lastMove.steps > 0b1111) {
+	// If pawn did two steps
+	if (abs(lastMove.targetSquare[1] - lastMove.startSquare[1]) == 2) {
 		fen += ' ';
-		short dir[2];
-		stepsToDirection(lastMove.steps, dir);
-		fen += squareName(lastMove.startSquare[0], lastMove.startSquare[1] + dir[1] / 2);
+		fen += squareName(lastMove.startSquare[0], lastMove.targetSquare[1] / 2);
 	}
 
 	return fen;
@@ -403,11 +401,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		if (possibleMoves[i].startSquare[0] != from[0] || possibleMoves[i].startSquare[1] != from[1])
 			continue;
 
-		short dir[2];
-		stepsToDirection(possibleMoves[i].steps, dir);
-		unsigned short result[2];
-		result[0] = from[0] + dir[0];
-		result[1] = from[1] + dir[1];
+		unsigned short* result = possibleMoves[i].targetSquare;
 		if (result[0] != to[0] || result[1] != to[1])
 			continue;
 
@@ -445,12 +439,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 void Board::doMove(const Move* move)
 {
 	const unsigned short* from = move->startSquare;
-	unsigned short to[2];
-	short dir[2];
-	stepsToDirection(move->steps, dir);
-	unsigned short result[2];
-	to[0] = from[0] + dir[0];
-	to[1] = from[1] + dir[1];
+	const unsigned short* to = move->targetSquare;
 
 	short pieceFrom = move->piece;
 	short pieceTo = move->capturedPiece;
@@ -460,12 +449,12 @@ void Board::doMove(const Move* move)
 
 	// En passant 
 	if (move->isEnPassant()) {
-		removePiece(from[0] + dir[0], from[1]);
+		removePiece(to[0], from[1]);
 	}
 
-	if (Piece::getType(pieceFrom) == Piece::KING && (dir[0] == 2 || dir[0] == -2)) {
+	if (Piece::getType(pieceFrom) == Piece::KING && (abs(to[0]-from[0]) == 2)) {
 		// Castle detected, Rook has to be moved
-		switch (dir[0])
+		switch (to[0]-from[0])
 		{
 		case 2:
 			removePiece(7, from[1]);
@@ -559,16 +548,12 @@ bool Board::undoLastMove()
 
 	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*lastMove) << "<<\n";
 
-	short target[2];
-	short dir[2];
-	stepsToDirection(lastMove->steps, dir);
-	target[0] = lastMove->startSquare[0] + dir[0];
-	target[1] = lastMove->startSquare[1] + dir[1];
+	unsigned short* target = lastMove->targetSquare;
 
 	// Place captured piece / clear target square
 	if (lastMove->isEnPassant()) {
 		removePiece(target[0], target[1]);
-		setPiece(lastMove->startSquare[0] + dir[0], lastMove->startSquare[1], lastMove->capturedPiece);
+		setPiece(target[0], lastMove->startSquare[1], lastMove->capturedPiece);
 	}
 	else {
 		setPiece(target[0], target[1], lastMove->capturedPiece);
@@ -588,9 +573,9 @@ bool Board::undoLastMove()
 			blackKingPos[1] = lastMove->startSquare[1];
 		}
 		// If king castled
-		if (dir[0] == 2 || dir[0] == -2) {
+		if (abs(lastMove->startSquare[0] - target[0]) == 2) {
 			//Rook has to be moved
-			switch (dir[0])
+			switch (lastMove->startSquare[0] - target[0])
 			{
 			case 2:
 				setPiece(7, lastMove->startSquare[1], Piece::ROOK | Piece::getColor(lastMove->piece));
@@ -630,10 +615,7 @@ void Board::generateMoves()
 			//std::cout << "Computing moves for " << Piece::name(squares[i][j]) << " on " << squareName(i, j) << " ...\n";
 			//-------------- KNIGHT MOVES -----------------------
 			if (pieceType == Piece::KNIGHT) {
-				for (int moveIndex = 0; moveIndex < 8; moveIndex++) {
-					int steps = Move::knightMoves[moveIndex];
-					tryAddMove(i, j, steps, true);
-				}
+				generateKnightMoves(i, j);
 			}
 			//-------------- PAWN MOVES -------------------------
 			else if (pieceType == Piece::PAWN) {
@@ -754,6 +736,29 @@ void Board::generateMoves()
 	}
 }
 
+void Board::generateKnightMoves(short column, short row) {
+	bitboard knightMoves = BITBOARD.getKnightAttacks(column, row);
+	// Possible Knight moves either go to an empty square or capture an opponent's piece
+	knightMoves &= (BITBOARD.getEmpty() | BITBOARD.getBitboard(Piece::getOppositeColor(currentPlayer)));
+	short index = 0;
+	while (knightMoves) {
+		if ((knightMoves & 1) == 0) {
+			knightMoves >>= 1;
+			index++;
+			continue;
+		}
+		
+		unsigned short targetX = index % 8;
+		unsigned short targetY = (short) (index / 8);
+
+		Move move(Piece::KNIGHT | currentPlayer, getPiece(targetX, targetY), column, row, targetX, targetY, castleRights);
+		possibleMoves.push_back(move);
+
+		knightMoves >>= 1;
+		index++;
+	}
+}
+
 bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, unsigned short target[2], bool* illegalBecauseCheck)
 {
 	short dir[2];
@@ -831,15 +836,15 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		}
 	}
 
-	Move move(getPiece(x, y), capture, x, y, steps, castleRights, flags);
+	Move move(getPiece(x, y), capture, x, y, target[0], target[1], castleRights, flags);
 
 	// If king tries to move more than one square, check for castling
 	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {
-		move.steps = steps & 0b1111;
+		move.targetSquare[0] += int(dir[0] / 2);
 		if (kingInCheckAfter(&move))
 			// Castling is interrupted on the first step
 			return false;
-		move.steps = steps;
+		move.targetSquare[0] = target[0];
 	}
 
 	if (!kingInCheckAfter(&move)) {

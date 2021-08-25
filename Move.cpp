@@ -2,25 +2,27 @@
 #include "Piece.h"
 #include "Board.h"
 
-Move::Move() : piece(0), capturedPiece(0), steps(0), flags(0)
+Move::Move() : piece(0), capturedPiece(0), flags(0)
 {
 	startSquare[0] = 0;
 	startSquare[1] = 0;
+	targetSquare[0] = 0;
+	targetSquare[1] = 0;
 }
 
-Move::Move(short p, short capture, unsigned short startX, unsigned short startY, int s, short castle, short f)
-	: piece(p), capturedPiece(capture), steps(s), flags(f), previousCastlerights(castle)
+Move::Move(short p, short capture, unsigned short startX, unsigned short startY, unsigned short targetX, unsigned short targetY, short castle, short f)
+	: piece(p), capturedPiece(capture), flags(f), previousCastlerights(castle)
 {
 	startSquare[0] = startX;
 	startSquare[1] = startY;
+	targetSquare[0] = targetX;
+	targetSquare[1] = targetY;
 }
 
 std::string Move::toString(Move m)
 {
 	std::string name = Board::squareName(m.startSquare[0], m.startSquare[1]);
-	short dir[2];
-	Board::stepsToDirection(m.steps, dir);
-	name += Board::squareName(m.startSquare[0] + dir[0], m.startSquare[1] + dir[1]);
+	name += Board::squareName(m.targetSquare[0], m.targetSquare[1]);
 
 	return name;
 }

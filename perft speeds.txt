@@ -1,0 +1,6 @@
+KNIGHT MOVES
+old:
+58026 after 747 ms
+
+new:
+58026 after 105 ms

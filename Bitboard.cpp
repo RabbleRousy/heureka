@@ -1,5 +1,38 @@
 #include "Bitboard.h"
 
+Bitboard::Bitboard() : knightAttacks()
+{
+    initKnightAttacks();
+}
+
+void Bitboard::initKnightAttacks()
+{
+    for (short i = 0; i < 64; i++) {
+        // Bitboard representation of one of the 64 positions
+        bitboard pos = (bitboard)1 << i;
+
+        bitboard* currentAttacks = knightAttacks + i;
+        // NorthNorthEast
+        *currentAttacks |= (pos << 17) & notAfile;
+        // NorthEastEast
+        *currentAttacks |= (pos << 10) & notAfile & notBfile;
+        // SouthEastEast
+        *currentAttacks |= (pos >> 6) & notAfile & notBfile;
+        // SouthSouthEast
+        *currentAttacks |= (pos >> 15) & notAfile;
+        // NorthNorthWest
+        *currentAttacks |= (pos << 15) & notHfile;
+        // NorthWestWest
+        *currentAttacks |= (pos << 6) & notHfile & notGfile;
+        // SouthWestWest
+        *currentAttacks |= (pos >> 10) & notHfile & notGfile;
+        // SouthSouthWest
+        *currentAttacks |= (pos >> 17) & notHfile;
+
+        std::cout << '\n' << toString(*currentAttacks);
+    }
+}
+
 bitboard Bitboard::getBitboard(short p)
 {
     return allPieces[p];
@@ -27,6 +60,11 @@ bitboard Bitboard::getOccupied()
 bitboard Bitboard::getEmpty()
 {
     return ~(allPieces[Piece::WHITE] | allPieces[Piece::BLACK]);
+}
+
+bitboard Bitboard::getKnightAttacks(short column, short row)
+{
+    return knightAttacks[row * 8 + column];
 }
 
 std::string Bitboard::toString(bitboard b)
