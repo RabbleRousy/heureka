@@ -2,6 +2,7 @@
 #include "Piece.h"
 #include <iostream>
 #include <string>
+#include "Timer.h"
 
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
@@ -244,7 +245,7 @@ bool Board::readPosFromFEN(std::string fen) {
 
 	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], (currentPlayer == Piece::WHITE) ? ((UP << 4) | UP) : ((DOWN << 4) | DOWN), castleRights);
 	
-	doMove(epMove);
+	doMove(&epMove);
 
 	swapCurrentPlayer();
 
@@ -376,7 +377,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 			break;
 		}
 
-		doMove(promoMoveBuffer);
+		doMove(&promoMoveBuffer);
 
 		swapCurrentPlayer();
 		generateMoves();
@@ -425,7 +426,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		}
 		if (debugLogs) std::cout << " NO. Doing move: " << Move::toString(possibleMoves[i]) << '\n';
 
-		doMove(possibleMoves[i]);
+		doMove(&possibleMoves[i]);
 		swapCurrentPlayer();
 		generateMoves();
 
@@ -441,24 +442,24 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 	return false;
 }
 
-void Board::doMove(const Move move)
+void Board::doMove(const Move* move)
 {
-	const unsigned short* from = move.startSquare;
+	const unsigned short* from = move->startSquare;
 	unsigned short to[2];
 	short dir[2];
-	stepsToDirection(move.steps, dir);
+	stepsToDirection(move->steps, dir);
 	unsigned short result[2];
 	to[0] = from[0] + dir[0];
 	to[1] = from[1] + dir[1];
 
-	short pieceFrom = move.piece;
-	short pieceTo = move.capturedPiece;
-	short promoResult = move.getPromotionResult();
+	short pieceFrom = move->piece;
+	short pieceTo = move->capturedPiece;
+	short promoResult = move->getPromotionResult();
 	setPiece(to[0], to[1], promoResult);
 	removePiece(from[0], from[1]);
 
 	// En passant 
-	if (move.isEnPassant()) {
+	if (move->isEnPassant()) {
 		removePiece(from[0] + dir[0], from[1]);
 	}
 
@@ -545,46 +546,46 @@ void Board::doMove(const Move move)
 		}
 	}
 
-	moveHistory.push(move);
+	moveHistory.push(*move);
 }
 
 bool Board::undoLastMove()
 {
 	if (moveHistory.empty()) return false;
 
-	Move lastMove = moveHistory.top();
+	Move* lastMove = &moveHistory.top();
 	moveHistory.pop();
-	futureMovesBuffer.push(lastMove);
+	futureMovesBuffer.push(*lastMove);
 
-	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(lastMove) << "<<\n";
+	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*lastMove) << "<<\n";
 
 	short target[2];
 	short dir[2];
-	stepsToDirection(lastMove.steps, dir);
-	target[0] = lastMove.startSquare[0] + dir[0];
-	target[1] = lastMove.startSquare[1] + dir[1];
+	stepsToDirection(lastMove->steps, dir);
+	target[0] = lastMove->startSquare[0] + dir[0];
+	target[1] = lastMove->startSquare[1] + dir[1];
 
 	// Place captured piece / clear target square
-	if (lastMove.isEnPassant()) {
+	if (lastMove->isEnPassant()) {
 		removePiece(target[0], target[1]);
-		setPiece(lastMove.startSquare[0] + dir[0], lastMove.startSquare[1], lastMove.capturedPiece);
+		setPiece(lastMove->startSquare[0] + dir[0], lastMove->startSquare[1], lastMove->capturedPiece);
 	}
 	else {
-		setPiece(target[0], target[1], lastMove.capturedPiece);
+		setPiece(target[0], target[1], lastMove->capturedPiece);
 	}
 
 	// Place piece back at startsquare
-	setPiece(lastMove.startSquare[0], lastMove.startSquare[1], lastMove.piece);
+	setPiece(lastMove->startSquare[0], lastMove->startSquare[1], lastMove->piece);
 
 	// Check if the king moved
-	if (Piece::getType(lastMove.piece) == Piece::KING) {
-		if (Piece::getColor(lastMove.piece) == Piece::WHITE) {
-			whiteKingPos[0] = lastMove.startSquare[0];
-			whiteKingPos[1] = lastMove.startSquare[1];
+	if (Piece::getType(lastMove->piece) == Piece::KING) {
+		if (Piece::getColor(lastMove->piece) == Piece::WHITE) {
+			whiteKingPos[0] = lastMove->startSquare[0];
+			whiteKingPos[1] = lastMove->startSquare[1];
 		}
 		else {
-			blackKingPos[0] = lastMove.startSquare[0];
-			blackKingPos[1] = lastMove.startSquare[1];
+			blackKingPos[0] = lastMove->startSquare[0];
+			blackKingPos[1] = lastMove->startSquare[1];
 		}
 		// If king castled
 		if (dir[0] == 2 || dir[0] == -2) {
@@ -592,12 +593,12 @@ bool Board::undoLastMove()
 			switch (dir[0])
 			{
 			case 2:
-				setPiece(7, lastMove.startSquare[1], Piece::ROOK | Piece::getColor(lastMove.piece));
-				removePiece(5, lastMove.startSquare[1]);
+				setPiece(7, lastMove->startSquare[1], Piece::ROOK | Piece::getColor(lastMove->piece));
+				removePiece(5, lastMove->startSquare[1]);
 				break;
 			case -2:
-				setPiece(0, lastMove.startSquare[1], Piece::ROOK | Piece::getColor(lastMove.piece));
-				removePiece(3, lastMove.startSquare[1]);
+				setPiece(0, lastMove->startSquare[1], Piece::ROOK | Piece::getColor(lastMove->piece));
+				removePiece(3, lastMove->startSquare[1]);
 				break;
 			default:
 				break;
@@ -605,13 +606,13 @@ bool Board::undoLastMove()
 		}
 	}
 	// Restore the castlerights from before that move
-	castleRights = lastMove.previousCastlerights;
+	castleRights = lastMove->previousCastlerights;
 	return true;
 }
 
 bool Board::redoLastMove() {
 	if (futureMovesBuffer.empty()) return false;
-	doMove(futureMovesBuffer.top());
+	doMove(&futureMovesBuffer.top());
 	futureMovesBuffer.pop();
 	return true;
 }
@@ -835,13 +836,13 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 	// If king tries to move more than one square, check for castling
 	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {
 		move.steps = steps & 0b1111;
-		if (kingInCheckAfter(move))
+		if (kingInCheckAfter(&move))
 			// Castling is interrupted on the first step
 			return false;
 		move.steps = steps;
 	}
 
-	if (!kingInCheckAfter(move)) {
+	if (!kingInCheckAfter(&move)) {
 
 		// Move accepted
 		if (!promote) {
@@ -954,9 +955,9 @@ bool Board::kingIsInCheck(const short color)
 	return false;
 }
 
-bool Board::kingInCheckAfter(const Move move)
+bool Board::kingInCheckAfter(const Move* move)
 {
-	if (debugLogs) std::cout << "Is king in check after " << Move::toString(move) << "? ";
+	if (debugLogs) std::cout << "Is king in check after " << Move::toString(*move) << "? ";
 	// Do the move
 	doMove(move);
 
@@ -1069,9 +1070,14 @@ int Board::testMoveGeneration(unsigned int depth, bool divide)
 	std::vector<Move> moves = possibleMoves;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
-		doMove(possibleMoves[i]);
+		doMove(&possibleMoves[i]);
 		swapCurrentPlayer();
-		generateMoves();
+		//float time;
+		{
+			//Timer timer("Board::generateMoves()", &time);
+			generateMoves();
+		}
+		//accumulatedGenerationTime += time;
 		int positionsAfterMove = testMoveGeneration(depth - 1, false);
 		positionCount += positionsAfterMove;
 		undoLastMove();
