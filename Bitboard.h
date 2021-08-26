@@ -10,6 +10,7 @@ class Bitboard
 private:
 	bitboard allPieces[23];
 	void initKnightAttacks();
+	void initKingAttacks();
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
@@ -19,6 +20,7 @@ public:
 	const bitboard notEightRank = ~(0xFF00000000000000);
 	
 	bitboard knightAttacks[64];
+	bitboard kingAttacks[64];
 
 	Bitboard();
 	bitboard getBitboard(short p);
@@ -27,6 +29,7 @@ public:
 	bitboard getOccupied();
 	bitboard getEmpty();
 	bitboard getKnightAttacks(short column, short row);
+	bitboard getKingAttacks(short column, short row);
 	std::string toString(bitboard b);
 };
 

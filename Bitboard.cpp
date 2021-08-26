@@ -1,8 +1,9 @@
 #include "Bitboard.h"
 
-Bitboard::Bitboard() : knightAttacks()
+Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
     initKnightAttacks();
+    initKingAttacks();
 }
 
 void Bitboard::initKnightAttacks()
@@ -28,8 +29,33 @@ void Bitboard::initKnightAttacks()
         *currentAttacks |= (pos >> 10) & notHfile & notGfile;
         // SouthSouthWest
         *currentAttacks |= (pos >> 17) & notHfile;
+    }
+}
 
-        std::cout << '\n' << toString(*currentAttacks);
+void Bitboard::initKingAttacks() {
+    for (short i = 0; i < 64; i++) {
+        // Bitboard representation of one of the 64 positions
+        bitboard pos = (bitboard)1 << i;
+
+        bitboard* currentAttacks = kingAttacks + i;
+        // North
+        *currentAttacks |= (pos << 8) & notFirstRank;
+        // NorthEast
+        *currentAttacks |= (pos << 9) & notFirstRank & notAfile;
+        // East
+        *currentAttacks |= (pos << 1) & notAfile;
+        // SouthEast
+        *currentAttacks |= (pos >> 7) & notAfile & notEightRank;
+        // South
+        *currentAttacks |= (pos >> 8) & notEightRank;
+        // SouthWest
+        *currentAttacks |= (pos >> 9) & notEightRank & notHfile;
+        // West
+        *currentAttacks |= (pos >> 1) & notHfile;
+        // NorthWest
+        *currentAttacks |= (pos << 7) & notFirstRank & notHfile;
+
+        //std::cout << '\n' << toString(*currentAttacks);
     }
 }
 
@@ -67,17 +93,22 @@ bitboard Bitboard::getKnightAttacks(short column, short row)
     return knightAttacks[row * 8 + column];
 }
 
+bitboard Bitboard::getKingAttacks(short column, short row)
+{
+    return kingAttacks[row * 8 + column];
+}
+
 std::string Bitboard::toString(bitboard b)
 {
     std::string s;
     int count = 0;
 
-    for (int i = 0; i < 64; i++) {
-        s += std::to_string(b & 1) + ' ';
-        b >>= 1;
-        if ((i+1) % 8 == 0) {
-            s += '\n';
+    for (int i = 7; i >= 0 ; i--) {
+        for (int j = 0; j < 8; j++) {
+            int index = i * 8 + j;
+            s += std::to_string((b >> index) & 1) + ' ';
         }
+        s += '\n';
     }
     return s;
 }
