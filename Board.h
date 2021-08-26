@@ -104,16 +104,18 @@ public:
 
 	/// <summary>
 	/// Performs a move on the board, adds it to the moveHistory.
-	/// Then swaps current player and regenerates the possible Moves.
+	/// Does NOT swap player and regenerate moves!
 	/// </summary>
 	/// <param name="move"> to be made.</param>
 	void doMove(const Move* move);
 
 	/// <summary>
-	/// Undos the move at the top of moveHistory and moves it to the futureMovesBuffer.
+	/// Undos the move given move and moves it to the futureMovesBuffer.
 	/// Does NOT swap player and regenerate moves!
 	/// </summary>
-	/// <returns>wether there was a move to be undone.</returns>
+	/// <param name="move">to be undone.</param>
+	void undoMove(const Move* move);
+
 	bool undoLastMove();
 
 	/// <summary>

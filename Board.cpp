@@ -409,6 +409,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		}
 
 		doMove(&promoMoveBuffer);
+		moveHistory.push(promoMoveBuffer);
 
 		swapCurrentPlayer();
 		generateMoves();
@@ -454,6 +455,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		if (debugLogs) std::cout << " NO. Doing move: " << Move::toString(possibleMoves[i]) << '\n';
 
 		doMove(&possibleMoves[i]);
+		moveHistory.push(possibleMoves[i]);
 		swapCurrentPlayer();
 		generateMoves();
 
@@ -560,8 +562,46 @@ void Board::doMove(const Move* move)
 			blackKingPos = to;
 		}
 	}
+}
 
-	moveHistory.push(*move);
+void Board::undoMove(const Move* move)
+{
+	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*move) << "<<\n";
+
+	unsigned short target = move->targetSquare;
+
+	// Place captured piece / clear target square
+	if (move->isEnPassant()) {
+		removePiece(target);
+		setPiece(Piece::getColor(move->piece) == Piece::WHITE ? target - 8 : target + 8, move->capturedPiece);
+	}
+	else {
+		setPiece(target, move->capturedPiece);
+	}
+
+	// Place piece back at startsquare
+	setPiece(move->startSquare, move->piece);
+
+	// Check if the king moved
+	if (Piece::getType(move->piece) == Piece::KING) {
+		if (Piece::getColor(move->piece) == Piece::WHITE) {
+			whiteKingPos = move->startSquare;
+		}
+		else {
+			blackKingPos = move->startSquare;
+		}
+		// If king castled
+		if (abs(move->startSquare - target) == 2) {
+			unsigned short from = move->startSquare + (target - move->startSquare) / 2;
+			unsigned short to = target + (target - move->startSquare) / ((target - move->startSquare == 2) ? 2 : 1);
+			// Castle detected, Rook has to be moved
+			setPiece(to, Piece::ROOK | Piece::getColor(move->piece));
+			removePiece(from);
+		}
+	}
+	// Restore the castlerights and epsquare from before that move
+	castleRights = move->previousCastlerights;
+	enPassantSquare = move->previousEPsquare;
 }
 
 bool Board::undoLastMove()
@@ -570,50 +610,14 @@ bool Board::undoLastMove()
 
 	Move* lastMove = &moveHistory.top();
 	moveHistory.pop();
+	undoMove(lastMove);
 	futureMovesBuffer.push(*lastMove);
-
-	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*lastMove) << "<<\n";
-
-	unsigned short target = lastMove->targetSquare;
-
-	// Place captured piece / clear target square
-	if (lastMove->isEnPassant()) {
-		removePiece(target);
-		setPiece(Piece::getColor(lastMove->piece) == Piece::WHITE ? target - 8 : target + 8, lastMove->capturedPiece);
-	}
-	else {
-		setPiece(target, lastMove->capturedPiece);
-	}
-
-	// Place piece back at startsquare
-	setPiece(lastMove->startSquare, lastMove->piece);
-
-	// Check if the king moved
-	if (Piece::getType(lastMove->piece) == Piece::KING) {
-		if (Piece::getColor(lastMove->piece) == Piece::WHITE) {
-			whiteKingPos = lastMove->startSquare;
-		}
-		else {
-			blackKingPos = lastMove->startSquare;
-		}
-		// If king castled
-		if (abs(lastMove->startSquare - target) == 2) {
-			unsigned short from = lastMove->startSquare + (target - lastMove->startSquare) / 2;
-			unsigned short to = target + (target - lastMove->startSquare) / ((target - lastMove->startSquare == 2) ? 2 : 1);
-			// Castle detected, Rook has to be moved
-			setPiece(to, Piece::ROOK | Piece::getColor(lastMove->piece));
-			removePiece(from);
-		}
-	}
-	// Restore the castlerights and epsquare from before that move
-	castleRights = lastMove->previousCastlerights;
-	enPassantSquare = lastMove->previousEPsquare;
-	return true;
 }
 
 bool Board::redoLastMove() {
 	if (futureMovesBuffer.empty()) return false;
 	doMove(&futureMovesBuffer.top());
+	moveHistory.push(futureMovesBuffer.top());
 	futureMovesBuffer.pop();
 	return true;
 }
@@ -994,9 +998,7 @@ bool Board::kingInCheckAfter(const Move* move)
 	bool check = kingIsInCheck(currentPlayer);
 	
 	// Undo move
-	undoLastMove();
-	// Don't store undone move
-	futureMovesBuffer.pop();
+	undoMove(move);
 
 	if (debugLogs) std::cout << (check ? "Yes." : "No.") << "\n";
 	return check;
@@ -1042,7 +1044,9 @@ int Board::testMoveGeneration(unsigned int depth, bool divide)
 	std::vector<Move> moves = possibleMoves;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
-		doMove(&possibleMoves[i]);
+		// COPY!!! IMPORTANT, because possibleMoves will change
+		Move move = possibleMoves[i];
+		doMove(&move);
 		swapCurrentPlayer();
 		//float time;
 		{
@@ -1052,7 +1056,7 @@ int Board::testMoveGeneration(unsigned int depth, bool divide)
 		//accumulatedGenerationTime += time;
 		int positionsAfterMove = testMoveGeneration(depth - 1, false);
 		positionCount += positionsAfterMove;
-		undoLastMove();
+		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 		if (divide) {
