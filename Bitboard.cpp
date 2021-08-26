@@ -88,9 +88,9 @@ bitboard Bitboard::getEmpty()
     return ~(allPieces[Piece::WHITE] | allPieces[Piece::BLACK]);
 }
 
-bitboard Bitboard::getKnightAttacks(short column, short row)
+bitboard Bitboard::getKnightAttacks(unsigned short pos)
 {
-    return knightAttacks[row * 8 + column];
+    return knightAttacks[pos];
 }
 
 bitboard Bitboard::getKingAttacks(short column, short row)

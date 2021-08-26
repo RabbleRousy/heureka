@@ -118,7 +118,9 @@ public:
 	/// </summary>
 	void generateMoves();
 
-	void generateKnightMoves(short column, short row);
+	void generateKingMoves();
+
+	void generateKnightMoves();
 
 	/// <summary>
 	/// Tries to create a Move struct and add it to the possibleMoves vector.

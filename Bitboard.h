@@ -28,7 +28,7 @@ public:
 	void removePiece(short p, short column, short row);
 	bitboard getOccupied();
 	bitboard getEmpty();
-	bitboard getKnightAttacks(short column, short row);
+	bitboard getKnightAttacks(unsigned short pos);
 	bitboard getKingAttacks(short column, short row);
 	std::string toString(bitboard b);
 };

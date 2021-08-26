@@ -605,18 +605,13 @@ bool Board::redoLastMove() {
 void Board::generateMoves()
 {
 	possibleMoves.clear();
+	generateKnightMoves();
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			short pieceType = Piece::getType(squares[i][j]);
 			short pieceColor = Piece::getColor(squares[i][j]);
-			if (pieceType == Piece::NONE || pieceColor != currentPlayer)
+			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT)
 				continue;
-
-			//std::cout << "Computing moves for " << Piece::name(squares[i][j]) << " on " << squareName(i, j) << " ...\n";
-			//-------------- KNIGHT MOVES -----------------------
-			if (pieceType == Piece::KNIGHT) {
-				generateKnightMoves(i, j);
-			}
 			//-------------- PAWN MOVES -------------------------
 			else if (pieceType == Piece::PAWN) {
 
@@ -736,31 +731,47 @@ void Board::generateMoves()
 	}
 }
 
-void Board::generateKnightMoves(short column, short row) {
-	bitboard knightMoves = BITBOARD.getKnightAttacks(column, row);
-	// Possible Knight moves either go to an empty square or capture an opponent's piece
-	knightMoves &= (BITBOARD.getEmpty() | BITBOARD.getBitboard(Piece::getOppositeColor(currentPlayer)));
+void Board::generateKingMoves() {
 
-	// Index of the current move
-	unsigned short index = 0;
-	while (knightMoves) {
-		// Scan till you find a 1
-		unsigned long i;
-		_BitScanForward64(&i, knightMoves);
-		// Increase index
-		index += i;
-		
-		// Create and add move
-		unsigned short targetX = index % 8;
-		unsigned short targetY = (short) (index / 8);
+}
 
-		Move move(Piece::KNIGHT | currentPlayer, getPiece(targetX, targetY), column, row, targetX, targetY, castleRights);
-		possibleMoves.push_back(move);
+void Board::generateKnightMoves() {
+	bitboard knights = BITBOARD.getBitboard(Piece::KNIGHT | currentPlayer);
+	unsigned short knightPos = 0;
+	while (knights) {
+		unsigned long scanResult;
+		_BitScanForward64(&scanResult, knights);
+		knightPos += scanResult;
 
-		// Skip current 1
-		index++;
-		// Shift over current 1
-		knightMoves >>= i + 1;
+		bitboard knightMoves = BITBOARD.getKnightAttacks(knightPos);
+		// Possible Knight moves either go to an empty square or capture an opponent's piece
+		knightMoves &= (BITBOARD.getEmpty() | BITBOARD.getBitboard(Piece::getOppositeColor(currentPlayer)));
+
+		// Index of the current move
+		unsigned short targetIndex = 0;
+		while (knightMoves) {
+			// Scan till you find a 1
+			unsigned long scanIndex;
+			_BitScanForward64(&scanIndex, knightMoves);
+			// Increase index
+			targetIndex += scanIndex;
+
+			// Create and add move
+			unsigned short startX = knightPos % 8;
+			unsigned short startY = short(knightPos / 8);
+			unsigned short targetX = targetIndex % 8;
+			unsigned short targetY = short(targetIndex / 8);
+
+			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetX, targetY), startX, startY, targetX, targetY, castleRights);
+			possibleMoves.push_back(move);
+
+			// Skip current 1
+			targetIndex++;
+			// Shift over current 1
+			knightMoves >>= scanIndex + 1;
+		}
+		knightPos++;
+		knights >>= scanResult + 1;
 	}
 }
 
