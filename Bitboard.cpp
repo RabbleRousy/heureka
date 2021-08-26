@@ -64,16 +64,16 @@ bitboard Bitboard::getBitboard(short p)
     return allPieces[p];
 }
 
-void Bitboard::setPiece(short p, short column, short row)
+void Bitboard::setPiece(short p, unsigned short index)
 {
-    bitboard mask = (bitboard)1 << (row * 8 + column);
+    bitboard mask = (bitboard)1 << (index);
     allPieces[p] |= mask;
     allPieces[Piece::getColor(p)] |= mask;
 }
 
-void Bitboard::removePiece(short p, short column, short row)
+void Bitboard::removePiece(short p, unsigned short index)
 {
-    bitboard mask = (bitboard)1 << (row * 8 + column);
+    bitboard mask = (bitboard)1 << (index);
     allPieces[p] &= ~mask;
     allPieces[Piece::getColor(p)] &= ~mask;
 }
@@ -93,9 +93,14 @@ bitboard Bitboard::getKnightAttacks(unsigned short pos)
     return knightAttacks[pos];
 }
 
-bitboard Bitboard::getKingAttacks(short column, short row)
+bitboard Bitboard::getKingAttacks(unsigned short pos)
 {
-    return kingAttacks[row * 8 + column];
+    return kingAttacks[pos];
+}
+
+bool Bitboard::containsSquare(bitboard b, unsigned short square)
+{
+    return (b >> square) & 1;
 }
 
 std::string Bitboard::toString(bitboard b)

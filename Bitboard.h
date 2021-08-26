@@ -24,12 +24,13 @@ public:
 
 	Bitboard();
 	bitboard getBitboard(short p);
-	void setPiece(short p, short column, short row);
-	void removePiece(short p, short column, short row);
+	void setPiece(short p, unsigned short index);
+	void removePiece(short p, unsigned short index);
 	bitboard getOccupied();
 	bitboard getEmpty();
 	bitboard getKnightAttacks(unsigned short pos);
-	bitboard getKingAttacks(short column, short row);
+	bitboard getKingAttacks(unsigned short pos);
+	bool containsSquare(bitboard b, unsigned short square);
 	std::string toString(bitboard b);
 };
 

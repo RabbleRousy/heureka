@@ -11,15 +11,18 @@
 class Board
 {
 private:
-	Bitboard BITBOARD;
-	short squares[8][8];
-	short whiteKingPos[2];
-	short blackKingPos[2];
+	static const std::string squareNames[64];
+
+	Bitboard bb;
+	short squares[64];
+	short whiteKingPos;
+	short blackKingPos;
 
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
 	short castleRights = 0b1111;
 
 public:
+
 	float accumulatedGenerationTime;
 	/// <summary>
 	/// Constructor for the Board.
@@ -66,6 +69,9 @@ public:
 	/// <param name="row">from 0 to 7 (1 to 8).</param>
 	/// <returns>the piece on the desired square, can be Piece::NONE if square was empty or invalid.</returns>
 	short getPiece(unsigned short column, unsigned short row);
+	/// <param name="index">from 0 to 63 (a1 to h8)</param>
+	/// <returns>the piece on the desired square, can be Piece::NONE if square was empty or invalid.</returns>
+	short getPiece(unsigned short index);
 
 	/// <summary>
 	/// Places a piece on the desired square.
@@ -74,6 +80,12 @@ public:
 	/// <param name="row">from 0 to 7 (1 to 8).</param>
 	/// <param name="piece"> to be placed, use Piece::PieceType | Piece::PieceColor</param>
 	void setPiece(unsigned short column, unsigned short row, short piece);
+	/// <summary>
+	/// Places a piece on the desired square.
+	/// </summary>
+	/// <param name="index">from 0 to 63 (a1 to h8)</param>
+	/// <param name="piece">to be placed, use Piece::PieceType | Piece::PieceColor</param>
+	void setPiece(unsigned short index, short piece);
 
 	/// <summary>
 	/// Removes the piece at the desired position and sets that square to Piece::NONE
@@ -81,6 +93,11 @@ public:
 	/// <param name="column">from 0 to 7 (a to h).</param>
 	/// <param name="row">from 0 to 7 (1 to 8).</param>
 	void removePiece(unsigned short column, unsigned short row);
+	/// <summary>
+	/// Removes the piece at the desired position and sets that square to Piece::NONE
+	/// </summary>
+	/// /// <param name="index">from 0 to 63 (a1 to h8)</param>
+	void removePiece(unsigned short index);
 
 	/// <summary>
 	/// Performs a move on the board, adds it to the moveHistory.
@@ -165,7 +182,7 @@ public:
 	/// <param name="row">from 0 to 7 (1 to 8).</param>
 	/// <returns>a string containing the name of the square, e.g. "d4".
 	/// empty string if parameters were invalid.</returns>
-	static std::string squareName(unsigned short column, unsigned short row);
+	static std::string getSquareName(unsigned short index);
 
 	int testMoveGeneration(unsigned int depth, bool divide);
 };

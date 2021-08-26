@@ -20,10 +20,10 @@ struct Move {
 	short capturedPiece;
 
 	// Square where the move starts from
-	unsigned short startSquare[2];
+	unsigned short startSquare;
 
 	// Square where the move ends
-	unsigned short targetSquare[2];
+	unsigned short targetSquare;
 
 	enum Promotion {
 		ToQueen = 0b001, ToRook = 0b010, ToBishop = 0b011, ToKnight = 0b100
@@ -38,7 +38,7 @@ struct Move {
 	Move();
 
 	// Standard constructor
-	Move(short piece, short capture, unsigned short startX, unsigned short startY, unsigned short targetX, unsigned short targetY, short previousCastlerights, short flags = 0);
+	Move(short piece, short capture, unsigned short start, unsigned short target, short previousCastlerights, short flags = 0);
 
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps

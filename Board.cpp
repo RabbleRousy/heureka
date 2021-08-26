@@ -4,6 +4,17 @@
 #include <string>
 #include "Timer.h"
 
+const std::string Board::squareNames[] = {
+		"a1","b1","c1","d1","e1","f1","g1","h1",
+		"a2","b2","c2","d2","e2","f2","g2","h2",
+		"a3","b3","c3","d3","e3","f3","g3","h3",
+		"a4","b4","c4","d4","e4","f4","g4","h4",
+		"a5","b5","c5","d5","e5","f5","g5","h5",
+		"a6","b6","c6","d6","e6","f6","g6","h6",
+		"a7","b7","c7","d7","e7","f7","g7","h7",
+		"a8","b8","c8","d8","e8","f8","g8","h8"
+};
+
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
 {
@@ -15,10 +26,8 @@ Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK
 }
 
 void Board::clearBoard() {
-	for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 8; j++) {
-			squares[i][j] = Piece::NONE;
-		}
+	for (int i = 0; i < 64; i++) {
+		squares[i] = Piece::NONE;
 	}
 }
 
@@ -68,8 +77,7 @@ bool Board::readPosFromFEN(std::string fen) {
 			break;
 		case 'K':
 			setPiece(column, row, Piece::KING | Piece::WHITE);
-			whiteKingPos[0] = column;
-			whiteKingPos[1] = row;
+			whiteKingPos = column + row * 8;
 			column++;
 			break;
 		case 'Q':
@@ -94,8 +102,7 @@ bool Board::readPosFromFEN(std::string fen) {
 			break;
 		case 'k':
 			setPiece(column, row, Piece::KING | Piece::BLACK);
-			blackKingPos[0] = column;
-			blackKingPos[1] = row;
+			blackKingPos = column + row * 8;
 			column++;
 			break;
 		case 'q':
@@ -236,14 +243,14 @@ bool Board::readPosFromFEN(std::string fen) {
 	// Remove the pawn and make the move manually
 	swapCurrentPlayer();
 
-	unsigned short from[2] = { column, (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1) };
-	unsigned short to[2] = { column, (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1) };
+	unsigned short from = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1);
+	unsigned short to = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1);
 
 	// Undo the move
-	removePiece(to[0], to[1]);
-	setPiece(from[0], from[1], Piece::PAWN | currentPlayer);
+	removePiece(to);
+	setPiece(from, Piece::PAWN | currentPlayer);
 
-	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from[0], from[1], from[0], (currentPlayer == Piece::WHITE) ? from[1] + 2 : from[1] - 2, castleRights);
+	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from, (currentPlayer == Piece::WHITE) ? from + 16 : from - 16, castleRights);
 	
 	doMove(&epMove);
 
@@ -300,14 +307,14 @@ std::string Board::getFENfromPos() {
 	// En passant captures
 	if (moveHistory.empty())
 		return fen;
-	Move lastMove = moveHistory.top();
-	if (Piece::getType(lastMove.piece) != Piece::PAWN)
+	Move* lastMove = &moveHistory.top();
+	if (Piece::getType(lastMove->piece) != Piece::PAWN)
 		return fen;
 
 	// If pawn did two steps
-	if (abs(lastMove.targetSquare[1] - lastMove.startSquare[1]) == 2) {
+	if (abs(lastMove->targetSquare - lastMove->startSquare) == 16) {
 		fen += ' ';
-		fen += squareName(lastMove.startSquare[0], lastMove.targetSquare[1] / 2);
+		fen += getSquareName(lastMove->startSquare + (lastMove->targetSquare - lastMove->startSquare) / 2);
 	}
 
 	return fen;
@@ -315,42 +322,65 @@ std::string Board::getFENfromPos() {
 
 short Board::getPiece(unsigned short column, unsigned short row)
 {
-	if (row > 7 || column > 7) {
+	if (column > 7 || row > 7) return 0;
+	return squares[row * 8 + column];
+}
+
+short Board::getPiece(unsigned short index)
+{
+	if (index > 63) {
 		//std::cerr << "ERROR: getPiece out of bounds at [" << column << "][" << row << "]\n";
 		return 0;
 	}
-	return squares[column][row];
+	return squares[index];
 }
 
 void Board::setPiece(unsigned short column, unsigned short row, short p)
 {
-	if (row > 7 || column > 7) {
-		std::cerr << "ERROR: setPiece out of bounds at [" << column << "][" << row << "]\n";
+
+	if (column > 7 || row > 7) return;
+	unsigned short index = row * 8 + column;
+	setPiece(index, p);
+}
+
+void Board::setPiece(unsigned short index, short piece)
+{
+	if (index > 63) {
+		std::cerr << "ERROR: setPiece out of bounds at [" << index << "]\n";
 		return;
 	}
-	if (squares[column][row] != Piece::NONE) BITBOARD.removePiece(squares[column][row], column, row);
-	BITBOARD.setPiece(p, column, row);
-	squares[column][row] = p;
+	if (squares[index] != Piece::NONE) bb.removePiece(squares[index], index);
+	bb.setPiece(piece, index);
+	squares[index] = piece;
 }
 
 void Board::removePiece(unsigned short column, unsigned short row) {
-	if (row > 7 || column > 7) {
-		std::cerr << "ERROR: removePiece out of bounds at [" << column << "][" << row << "]\n";
+	if (column > 7 || row > 7) return;
+	unsigned short index = row * 8 + column;
+	removePiece(index);
+}
+
+void Board::removePiece(unsigned short index)
+{
+	if (index > 63) {
+		std::cerr << "ERROR: removePiece out of bounds at [" << index << "]\n";
 		return;
 	}
-	BITBOARD.removePiece(squares[column][row], column, row);
-	squares[column][row] = Piece::NONE;
+	bb.removePiece(squares[index], index);
+	squares[index] = Piece::NONE;
 }
 
 bool Board::handleMoveInput(const unsigned short from[2], const unsigned short to[2], short promotionChoice) {
-	if (from[0] == to[0] && from[1] == to[1])
+	unsigned short start = from[1] * 8 + from[0];
+	unsigned short target = to[1] * 8 + to[0];
+	if (start == target)
 		return false;
-	if (from[0] > 7 || from[1] > 7 || to[0] > 7 || to[1] > 7) {
-		std::cerr << "Tried illegal move (" << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << ")\n";
+	if (start > 63 || target > 63) {
+		std::cerr << "Tried illegal move (" << getSquareName(start) << " to " << getSquareName(target) << ")\n";
 		return false;
 	}
 	
-	if (debugLogs) std::cout << "Handling move input from " << squareName(from[0], from[1]) << " to " << squareName(to[0], to[1]) << " ...\n";
+	if (debugLogs) std::cout << "Handling move input from " << getSquareName(start) << " to " << getSquareName(target) << " ...\n";
 
 	if (wantsToPromote && promotionChoice != 0) {
 		// Promotion choice was made, we already stored the correct move in promoMoveBuffer
@@ -385,7 +415,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		if (debugLogs) {
 			std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
 			std::cout << "New FEN: " << getFENfromPos() << '\n';
-			std::cout << "Occupied Bitboard: " << BITBOARD.toString(BITBOARD.getOccupied());
+			std::cout << "Occupied Bitboard: " << bb.toString(bb.getOccupied());
 		}
 
 		return true;
@@ -398,11 +428,11 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 	}
 	for (int i = 0; i < possibleMoves.size(); i++)
 	{
-		if (possibleMoves[i].startSquare[0] != from[0] || possibleMoves[i].startSquare[1] != from[1])
+		if (possibleMoves[i].startSquare != start)
 			continue;
 
-		unsigned short* result = possibleMoves[i].targetSquare;
-		if (result[0] != to[0] || result[1] != to[1])
+		unsigned short result = possibleMoves[i].targetSquare;
+		if (result != target)
 			continue;
 
 		//--------- MOVE FOUND ----------------------
@@ -426,7 +456,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		if (debugLogs) {
 			std::cout << "New FEN: " << getFENfromPos() << '\n';
-			std::cout << "Occupied Bitboard:\n" << BITBOARD.toString(BITBOARD.getOccupied());
+			std::cout << "Occupied Bitboard:\n" << bb.toString(bb.getOccupied());
 		}
 
 		futureMovesBuffer = std::stack<Move>();
@@ -438,35 +468,26 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 void Board::doMove(const Move* move)
 {
-	const unsigned short* from = move->startSquare;
-	const unsigned short* to = move->targetSquare;
+	const unsigned short from = move->startSquare;
+	const unsigned short to = move->targetSquare;
 
 	short pieceFrom = move->piece;
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
-	setPiece(to[0], to[1], promoResult);
-	removePiece(from[0], from[1]);
+	setPiece(to, promoResult);
+	removePiece(from);
 
 	// En passant 
 	if (move->isEnPassant()) {
-		removePiece(to[0], from[1]);
+		removePiece(currentPlayer == Piece::WHITE ? to - 8 : to + 8);
 	}
 
-	if (Piece::getType(pieceFrom) == Piece::KING && (abs(to[0]-from[0]) == 2)) {
+	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
+		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
+		unsigned short rookTo = from + (to - from) / 2;
 		// Castle detected, Rook has to be moved
-		switch (to[0]-from[0])
-		{
-		case 2:
-			removePiece(7, from[1]);
-			setPiece(5, from[1], Piece::ROOK | currentPlayer);
-			break;
-		case -2:
-			removePiece(0, from[1]);
-			setPiece(3, from[1], Piece::ROOK | currentPlayer);
-			break;
-		default:
-			break;
-		}
+		removePiece(rookFrom);
+		setPiece(rookTo, Piece::ROOK | currentPlayer);
 	}
 
 	//----------- UPDATE CASTLE RIGHTS ---------------------
@@ -477,22 +498,22 @@ void Board::doMove(const Move* move)
 		}
 		// If rook moved
 		else if (Piece::getType(pieceFrom) == Piece::ROOK) {
-			if (currentPlayer == Piece::WHITE && from[1] == 0) {
-				if (from[0] == 0) {
+			if (currentPlayer == Piece::WHITE && bb.containsSquare(~bb.notFirstRank, from)) {
+				if (from == 0) {
 					// Remove right for white's long castle
 					castleRights &= 0b1011;
 				}
-				else if (from[0] == 7) {
+				else if (from == 7) {
 					// Remove right for white's short castle
 					castleRights &= 0b0111;
 				}
 			}
-			else if (currentPlayer == Piece::BLACK && from[1] == 7) {
-				if (from[0] == 0) {
+			else if (currentPlayer == Piece::BLACK && bb.containsSquare(~bb.notEightRank, from)) {
+				if (from == 56) {
 					// Remove right for black's long castle
 					castleRights &= 0b1110;
 				}
-				else if (from[0] == 7) {
+				else if (from == 63) {
 					// Remove right for black's short castle
 					castleRights &= 0b1101;
 				}
@@ -500,22 +521,22 @@ void Board::doMove(const Move* move)
 		}
 		// If rook got captured
 		else if (Piece::getType(pieceTo) == Piece::ROOK) {
-			if (currentPlayer == Piece::BLACK && to[1] == 0) {
-				if (to[0] == 0) {
+			if (currentPlayer == Piece::BLACK && bb.containsSquare(~bb.notFirstRank, to)) {
+				if (to == 0) {
 					// Remove right for white's long castle
 					castleRights &= 0b1011;
 				}
-				else if (to[0] == 7) {
+				else if (to == 7) {
 					// Remove right for white's short castle
 					castleRights &= 0b0111;
 				}
 			}
-			else if (currentPlayer == Piece::WHITE && to[1] == 7) {
-				if (to[0] == 0) {
+			else if (currentPlayer == Piece::WHITE && bb.containsSquare(~bb.notEightRank, to)) {
+				if (to == 56) {
 					// Remove right for black's long castle
 					castleRights &= 0b1110;
 				}
-				else if (to[0] == 7) {
+				else if (to == 63) {
 					// Remove right for black's short castle
 					castleRights &= 0b1101;
 				}
@@ -526,12 +547,10 @@ void Board::doMove(const Move* move)
 	//----------- UPDATE KING POS --------------------------
 	if (Piece::getType(pieceFrom) == Piece::KING) {
 		if (currentPlayer == Piece::WHITE) {
-			whiteKingPos[0] = to[0];
-			whiteKingPos[1] = to[1];
+			whiteKingPos = to;
 		}
 		else {
-			blackKingPos[0] = to[0];
-			blackKingPos[1] = to[1];
+			blackKingPos = to;
 		}
 	}
 
@@ -548,46 +567,35 @@ bool Board::undoLastMove()
 
 	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*lastMove) << "<<\n";
 
-	unsigned short* target = lastMove->targetSquare;
+	unsigned short target = lastMove->targetSquare;
 
 	// Place captured piece / clear target square
 	if (lastMove->isEnPassant()) {
-		removePiece(target[0], target[1]);
-		setPiece(target[0], lastMove->startSquare[1], lastMove->capturedPiece);
+		removePiece(target);
+		setPiece(Piece::getColor(lastMove->piece) == Piece::WHITE ? target - 8 : target + 8, lastMove->capturedPiece);
 	}
 	else {
-		setPiece(target[0], target[1], lastMove->capturedPiece);
+		setPiece(target, lastMove->capturedPiece);
 	}
 
 	// Place piece back at startsquare
-	setPiece(lastMove->startSquare[0], lastMove->startSquare[1], lastMove->piece);
+	setPiece(lastMove->startSquare, lastMove->piece);
 
 	// Check if the king moved
 	if (Piece::getType(lastMove->piece) == Piece::KING) {
 		if (Piece::getColor(lastMove->piece) == Piece::WHITE) {
-			whiteKingPos[0] = lastMove->startSquare[0];
-			whiteKingPos[1] = lastMove->startSquare[1];
+			whiteKingPos = lastMove->startSquare;
 		}
 		else {
-			blackKingPos[0] = lastMove->startSquare[0];
-			blackKingPos[1] = lastMove->startSquare[1];
+			blackKingPos = lastMove->startSquare;
 		}
 		// If king castled
-		if (abs(lastMove->startSquare[0] - target[0]) == 2) {
-			//Rook has to be moved
-			switch (lastMove->startSquare[0] - target[0])
-			{
-			case 2:
-				setPiece(7, lastMove->startSquare[1], Piece::ROOK | Piece::getColor(lastMove->piece));
-				removePiece(5, lastMove->startSquare[1]);
-				break;
-			case -2:
-				setPiece(0, lastMove->startSquare[1], Piece::ROOK | Piece::getColor(lastMove->piece));
-				removePiece(3, lastMove->startSquare[1]);
-				break;
-			default:
-				break;
-			}
+		if (abs(lastMove->startSquare - target) == 2) {
+			unsigned short from = lastMove->startSquare + (target - lastMove->startSquare) / 2;
+			unsigned short to = target + (target - lastMove->startSquare) / ((target - lastMove->startSquare == 2) ? 2 : 1);
+			// Castle detected, Rook has to be moved
+			setPiece(to, Piece::ROOK | Piece::getColor(lastMove->piece));
+			removePiece(from);
 		}
 	}
 	// Restore the castlerights from before that move
@@ -608,8 +616,8 @@ void Board::generateMoves()
 	generateKnightMoves();
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
-			short pieceType = Piece::getType(squares[i][j]);
-			short pieceColor = Piece::getColor(squares[i][j]);
+			short pieceType = Piece::getType(squares[i + j*8]);
+			short pieceColor = Piece::getColor(squares[i + j*8]);
 			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT)
 				continue;
 			//-------------- PAWN MOVES -------------------------
@@ -736,16 +744,16 @@ void Board::generateKingMoves() {
 }
 
 void Board::generateKnightMoves() {
-	bitboard knights = BITBOARD.getBitboard(Piece::KNIGHT | currentPlayer);
+	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
 	unsigned short knightPos = 0;
 	while (knights) {
 		unsigned long scanResult;
 		_BitScanForward64(&scanResult, knights);
 		knightPos += scanResult;
 
-		bitboard knightMoves = BITBOARD.getKnightAttacks(knightPos);
+		bitboard knightMoves = bb.getKnightAttacks(knightPos);
 		// Possible Knight moves either go to an empty square or capture an opponent's piece
-		knightMoves &= (BITBOARD.getEmpty() | BITBOARD.getBitboard(Piece::getOppositeColor(currentPlayer)));
+		knightMoves &= (bb.getEmpty() | bb.getBitboard(Piece::getOppositeColor(currentPlayer)));
 
 		// Index of the current move
 		unsigned short targetIndex = 0;
@@ -756,13 +764,7 @@ void Board::generateKnightMoves() {
 			// Increase index
 			targetIndex += scanIndex;
 
-			// Create and add move
-			unsigned short startX = knightPos % 8;
-			unsigned short startY = short(knightPos / 8);
-			unsigned short targetX = targetIndex % 8;
-			unsigned short targetY = short(targetIndex / 8);
-
-			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetX, targetY), startX, startY, targetX, targetY, castleRights);
+			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex, castleRights);
 			possibleMoves.push_back(move);
 
 			// Skip current 1
@@ -836,7 +838,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 					short pieceOnEnpassantSquare = getPiece(x + dir[0], y);
 					if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(capture) != currentPlayer) {
 						// Check wether it moved 2 steps last turn
-						enPassant = (moveHistory.top().startSquare[0] == x + dir[0]) && (moveHistory.top().startSquare[1] == y + 2 * dir[1]);
+						enPassant = ((moveHistory.top().startSquare % 8) == x + dir[0]) && ((moveHistory.top().startSquare / 8) == y + 2 * dir[1]);
 					}
 				}
 			}
@@ -852,15 +854,15 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		}
 	}
 
-	Move move(getPiece(x, y), capture, x, y, target[0], target[1], castleRights, flags);
+	Move move(getPiece(x, y), capture, x + y * 8, target[0] + target[1] * 8, castleRights, flags);
 
 	// If king tries to move more than one square, check for castling
 	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {
-		move.targetSquare[0] += int(dir[0] / 2);
+		move.targetSquare = x + y * 8 + int(dir[0] / 2);
 		if (kingInCheckAfter(&move))
 			// Castling is interrupted on the first step
 			return false;
-		move.targetSquare[0] = target[0];
+		move.targetSquare = target[0] + target[1] * 8;
 	}
 
 	if (!kingInCheckAfter(&move)) {
@@ -904,7 +906,9 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 
 bool Board::kingIsInCheck(const short color)
 {
-	short* kingPos = (color == Piece::WHITE) ? whiteKingPos : blackKingPos;
+	short kingPos[2];
+	kingPos[0] = (color == Piece::WHITE) ? whiteKingPos % 8 : blackKingPos % 8;
+	kingPos[1] = (color == Piece::WHITE) ? whiteKingPos / 8 : blackKingPos / 8;
 	short* directions = Move::bishopDirections;
 
 	for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
@@ -1022,66 +1026,9 @@ void Board::swapCurrentPlayer() {
 		currentPlayer = Piece::WHITE;
 }
 
-std::string Board::squareName(unsigned short column, unsigned short row) {
-	if (row > 7 || column > 7) return "";
-	std::string name;
-	switch (column) {
-	case 0:
-		name = "a";
-		break;
-	case 1:
-		name = "b";
-		break;
-	case 2:
-		name = "c";
-		break;
-	case 3:
-		name = "d";
-		break;
-	case 4:
-		name = "e";
-		break;
-	case 5:
-		name = "f";
-		break;
-	case 6:
-		name = "g";
-		break;
-	case 7:
-		name = "h";
-		break;
-	default:
-		return "";
-	}
-	switch (row) {
-	case 0:
-		name += "1";
-		break;
-	case 1:
-		name += "2";
-		break;
-	case 2:
-		name += "3";
-		break;
-	case 3:
-		name += "4";
-		break;
-	case 4:
-		name += "5";
-		break;
-	case 5:
-		name += "6";
-		break;
-	case 6:
-		name += "7";
-		break;
-	case 7:
-		name += "8";
-		break;
-	default:
-		return "";
-	}
-	return name;
+std::string Board::getSquareName(unsigned short index) {
+	if (index > 63) return "";
+	return squareNames[index];
 }
 
 int Board::testMoveGeneration(unsigned int depth, bool divide)
