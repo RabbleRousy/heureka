@@ -33,12 +33,13 @@ struct Move {
 	short flags;
 
 	short previousCastlerights;
+	unsigned short previousEPsquare;
 
 	// Default constructor, creates Move with all values 0
 	Move();
 
 	// Standard constructor
-	Move(short piece, short capture, unsigned short start, unsigned short target, short previousCastlerights, short flags = 0);
+	Move(short piece, short capture, unsigned short start, unsigned short target, short flags = 0);
 
 	// All the directions a knight may go
 	// Each direction is a combination of 2 4bit steps

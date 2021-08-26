@@ -18,10 +18,13 @@ private:
 	short whiteKingPos;
 	short blackKingPos;
 
-	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
-	short castleRights = 0b1111;
 
 public:
+	
+	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
+	static short castleRights;
+
+	static unsigned short enPassantSquare;
 
 	float accumulatedGenerationTime;
 	/// <summary>

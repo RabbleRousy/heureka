@@ -15,6 +15,9 @@ const std::string Board::squareNames[] = {
 		"a8","b8","c8","d8","e8","f8","g8","h8"
 };
 
+short Board::castleRights = 0b1111;
+unsigned short Board::enPassantSquare = 64;
+
 Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
 {
@@ -250,7 +253,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	removePiece(to);
 	setPiece(from, Piece::PAWN | currentPlayer);
 
-	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from, (currentPlayer == Piece::WHITE) ? from + 16 : from - 16, castleRights);
+	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from, (currentPlayer == Piece::WHITE) ? from + 16 : from - 16);
 	
 	doMove(&epMove);
 
@@ -481,6 +484,10 @@ void Board::doMove(const Move* move)
 	if (move->isEnPassant()) {
 		removePiece(currentPlayer == Piece::WHITE ? to - 8 : to + 8);
 	}
+	else if (Piece::getType(pieceFrom) == Piece::PAWN && (abs(to - from) == 16)) {
+		// Double pawn step
+		enPassantSquare = from + ((to - from) / 2);
+	}
 
 	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
 		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
@@ -598,8 +605,9 @@ bool Board::undoLastMove()
 			removePiece(from);
 		}
 	}
-	// Restore the castlerights from before that move
+	// Restore the castlerights and epsquare from before that move
 	castleRights = lastMove->previousCastlerights;
+	enPassantSquare = lastMove->previousEPsquare;
 	return true;
 }
 
@@ -764,7 +772,7 @@ void Board::generateKnightMoves() {
 			// Increase index
 			targetIndex += scanIndex;
 
-			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex, castleRights);
+			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex);
 			possibleMoves.push_back(move);
 
 			// Skip current 1
@@ -835,11 +843,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 				// White on 5th rank or black on 4th rank
 				if ((moveColor == Piece::WHITE && y == 4) || (moveColor == Piece::BLACK && y == 3)) {
 					// Check if enemy pawn is next to you
-					short pieceOnEnpassantSquare = getPiece(x + dir[0], y);
-					if (Piece::getType(pieceOnEnpassantSquare) == Piece::PAWN && Piece::getColor(capture) != currentPlayer) {
-						// Check wether it moved 2 steps last turn
-						enPassant = ((moveHistory.top().startSquare % 8) == x + dir[0]) && ((moveHistory.top().startSquare / 8) == y + 2 * dir[1]);
-					}
+					enPassant = (enPassantSquare == target[0] + target[1] * 8);
 				}
 			}
 			if (!(regularCapture || enPassant))
@@ -854,7 +858,7 @@ bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps
 		}
 	}
 
-	Move move(getPiece(x, y), capture, x + y * 8, target[0] + target[1] * 8, castleRights, flags);
+	Move move(getPiece(x, y), capture, x + y * 8, target[0] + target[1] * 8, flags);
 
 	// If king tries to move more than one square, check for castling
 	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {

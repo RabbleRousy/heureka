@@ -2,12 +2,10 @@
 #include "Piece.h"
 #include "Board.h"
 
-Move::Move() : piece(0), capturedPiece(0), startSquare(0), targetSquare(0), flags(0), previousCastlerights(0) {};
+Move::Move() : piece(0), capturedPiece(0), startSquare(0), targetSquare(0), flags(0), previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare) {};
 
-Move::Move(short p, short capture, unsigned short start, unsigned short target, short castle, short f)
-	: piece(p), capturedPiece(capture), startSquare(start), targetSquare(target), flags(f), previousCastlerights(castle)
-{
-}
+Move::Move(short p, short capture, unsigned short start, unsigned short target, short f)
+	: piece(p), capturedPiece(capture), startSquare(start), targetSquare(target), flags(f), previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare) {}
 
 std::string Move::toString(Move m)
 {
