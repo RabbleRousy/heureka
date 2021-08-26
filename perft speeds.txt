@@ -1,6 +1,9 @@
 KNIGHT MOVES
+
+fen: nnnnknnn/nnnnnnnn/8/8/8/8/NNNNNNNN/NNNNKNNN
+
 old:
 58026 after 747 ms
 
-new:
+bitboards:
 58026 after 105 ms

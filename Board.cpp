@@ -740,22 +740,27 @@ void Board::generateKnightMoves(short column, short row) {
 	bitboard knightMoves = BITBOARD.getKnightAttacks(column, row);
 	// Possible Knight moves either go to an empty square or capture an opponent's piece
 	knightMoves &= (BITBOARD.getEmpty() | BITBOARD.getBitboard(Piece::getOppositeColor(currentPlayer)));
-	short index = 0;
+
+	// Index of the current move
+	unsigned short index = 0;
 	while (knightMoves) {
-		if ((knightMoves & 1) == 0) {
-			knightMoves >>= 1;
-			index++;
-			continue;
-		}
+		// Scan till you find a 1
+		unsigned long i;
+		_BitScanForward64(&i, knightMoves);
+		// Increase index
+		index += i;
 		
+		// Create and add move
 		unsigned short targetX = index % 8;
 		unsigned short targetY = (short) (index / 8);
 
 		Move move(Piece::KNIGHT | currentPlayer, getPiece(targetX, targetY), column, row, targetX, targetY, castleRights);
 		possibleMoves.push_back(move);
 
-		knightMoves >>= 1;
+		// Skip current 1
 		index++;
+		// Shift over current 1
+		knightMoves >>= i + 1;
 	}
 }
 
