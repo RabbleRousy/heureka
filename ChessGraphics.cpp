@@ -36,17 +36,20 @@ void ChessGraphics::initGraphics()
 	}
 
 	boardSprite = Sprite(boardTexture);
+
+	window.draw(boardSprite);
+	window.display();
 }
 
 void ChessGraphics::initGame()
 {
-	window.draw(boardSprite);
-	window.display();
 
 	std::string input;
 	std::cout << "Do you want to debug the move generation? Enter Y for yes.\n";
 	std::cin >> input;
 	debugPossibleMoves = (input == "Y" || input == "y");
+	board.debugLogs = debugPossibleMoves;
+
 	// Clear cin
 	std::getline(std::cin, input);
 
@@ -56,7 +59,10 @@ void ChessGraphics::initGame()
 
 	std::cout << fen << std::endl;
 
-	board = Board(debugPossibleMoves, fen);
+	if (!board.readPosFromFEN(fen)) {
+		board.readPosFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+	}
+	board.generateMoves();
 }
 
 void ChessGraphics::mainLoop() {

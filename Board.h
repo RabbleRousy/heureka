@@ -30,9 +30,6 @@ public:
 	/// <summary>
 	/// Constructor for the Board.
 	/// </summary>
-	/// <param name="m">indicates wether move generation should be debugged on the console.</param>
-	/// <param name="fen">is an optional string to construct the starting position from.</param>
-	Board(bool m, std::string fen);
 	Board();
 
 	// Whose turn it is, either Piece::WHITE or Piece::BLACK

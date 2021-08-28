@@ -2,7 +2,7 @@
 
 
 int main() {
-	// Main loop
-	ChessGraphics();
+	// Constructs the gui which enters the main loop
+	ChessGraphics gui;
 	return 0;
 }

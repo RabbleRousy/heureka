@@ -18,20 +18,9 @@ const std::string Board::squareNames[] = {
 short Board::castleRights = 0b1111;
 unsigned short Board::enPassantSquare = 64;
 
-Board::Board(bool d, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(d), wantsToPromote(false)
-{
-	if (!readPosFromFEN(fen)) {
-		std::cout << "Loading default position..." << std::endl;
-		readPosFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
-	}
-	generateMoves();
-}
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE)
+{ }
 
-Board::Board()
-{
-	Board(false);
-}
 
 void Board::clearBoard() {
 	for (int i = 0; i < 64; i++) {
@@ -134,7 +123,8 @@ bool Board::readPosFromFEN(std::string fen) {
 			column++;
 			break;
 		default:
-			break;
+			std::cout << "FEN parsing failed!\n";
+			return false;
 		}
 		i++;
 	}
