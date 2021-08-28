@@ -18,14 +18,19 @@ const std::string Board::squareNames[] = {
 short Board::castleRights = 0b1111;
 unsigned short Board::enPassantSquare = 64;
 
-Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
+Board::Board(bool d, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(d), wantsToPromote(false)
 {
 	if (!readPosFromFEN(fen)) {
 		std::cout << "Loading default position..." << std::endl;
 		readPosFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
 	}
 	generateMoves();
+}
+
+Board::Board()
+{
+	Board(false);
 }
 
 void Board::clearBoard() {
