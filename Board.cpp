@@ -4,15 +4,8 @@
 #include <string>
 #include "Timer.h"
 
-Board::Board(bool m, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-	: currentPlayer(Piece::WHITE), possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(m), wantsToPromote(false)
-{
-	if (!readPosFromFEN(fen)) {
-		std::cout << "Loading default position..." << std::endl;
-		readPosFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
-	}
-	generateMoves();
-}
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE)
+{ }
 
 void Board::clearBoard() {
 	for (int i = 0; i < 8; i++) {
@@ -119,7 +112,8 @@ bool Board::readPosFromFEN(std::string fen) {
 			column++;
 			break;
 		default:
-			break;
+			std::cout << "FEN parsing failed!\n";
+			return false;
 		}
 		i++;
 	}

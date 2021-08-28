@@ -2,27 +2,39 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include "Piece.h"
+#include "Board.h"
 using namespace sf;
 
 // This class manages the board- and piece-sprites, scales and repositions them.
 class ChessGraphics
 {
 private:
-	Texture board, pieces;
+	RenderWindow window;
+	Texture boardTexture, pieces;
 	unsigned int windowRes;
 	unsigned int pieceRes;
 	unsigned int squareRes;
+	Board board;
+	bool pieceSelected;
+	unsigned short selectedSquare[2];
+	Vector2i mousePos;
+	bool debugPossibleMoves;
+
 public:
 	Sprite boardSprite;
 	Sprite pieceSprites[12];
 
 	/// <summary>
 	/// Constructor loads the textures from Sprites directory and initiates the sprite objects.
+	/// Then enters the main loop.
 	/// </summary>
-	/// <param name="res">is the start resolution.</param>
-	ChessGraphics(unsigned int res);
+	ChessGraphics();
 
-	void setWindowRes(unsigned int res);
+	void initGraphics();
+
+	void initGame();
+
+	void mainLoop();
 
 	/// <param name="piece">indicates which sprite is needed.</param>
 	/// <returns>the sprite by reference so it may be drawn to the screen.</returns>
@@ -60,5 +72,7 @@ public:
 
 	/// <returns>a white rectangle overlay that is scaled to fit the whole board sprite.</returns>
 	RectangleShape getBoardOverlay();
+
+	void keepAspectRatio();
 };
 
