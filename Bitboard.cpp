@@ -88,6 +88,11 @@ bitboard Bitboard::getEmpty()
     return ~(allPieces[Piece::WHITE] | allPieces[Piece::BLACK]);
 }
 
+bitboard Bitboard::getAllAttacks(short color)
+{
+    return bitboard();
+}
+
 bitboard Bitboard::getKnightAttacks(unsigned short pos)
 {
     return knightAttacks[pos];

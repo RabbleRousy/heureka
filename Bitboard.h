@@ -28,6 +28,7 @@ public:
 	void removePiece(short p, unsigned short index);
 	bitboard getOccupied();
 	bitboard getEmpty();
+	bitboard getAllAttacks(short color);
 	bitboard getKnightAttacks(unsigned short pos);
 	bitboard getKingAttacks(unsigned short pos);
 	bool containsSquare(bitboard b, unsigned short square);

@@ -658,11 +658,12 @@ void Board::generateMoves()
 {
 	possibleMoves.clear();
 	generateKnightMoves();
+	generateKingMoves();
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			short pieceType = Piece::getType(squares[i + j*8]);
 			short pieceColor = Piece::getColor(squares[i + j*8]);
-			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT)
+			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT || pieceType == Piece::KING)
 				continue;
 			//-------------- PAWN MOVES -------------------------
 			else if (pieceType == Piece::PAWN) {
@@ -784,7 +785,28 @@ void Board::generateMoves()
 }
 
 void Board::generateKingMoves() {
+	unsigned short kingPos = (currentPlayer == Piece::WHITE) ? whiteKingPos : blackKingPos;
+	bitboard kingMoves = bb.getKingAttacks(kingPos);
+	// King can only move to squares that are not attacked by enemy pieces
+	kingMoves &= ~bb.getAllAttacks(Piece::getOppositeColor(currentPlayer));
 
+	// Index of the current move
+	unsigned short targetIndex = 0;
+	while (kingMoves) {
+		// Scan till you find a 1
+		unsigned long scanIndex;
+		_BitScanForward64(&scanIndex, kingMoves);
+		// Increase index
+		targetIndex += scanIndex;
+
+		Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
+		possibleMoves.push_back(move);
+
+		// Skip current 1
+		targetIndex++;
+		// Shift over current 1
+		kingMoves >>= scanIndex + 1;
+	}
 }
 
 void Board::generateKnightMoves() {
