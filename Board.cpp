@@ -658,12 +658,12 @@ void Board::generateMoves()
 {
 	possibleMoves.clear();
 	generateKnightMoves();
-	generateKingMoves();
+	//generateKingMoves();
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			short pieceType = Piece::getType(squares[i + j*8]);
 			short pieceColor = Piece::getColor(squares[i + j*8]);
-			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT || pieceType == Piece::KING)
+			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT)
 				continue;
 			//-------------- PAWN MOVES -------------------------
 			else if (pieceType == Piece::PAWN) {
@@ -793,19 +793,14 @@ void Board::generateKingMoves() {
 	// Index of the current move
 	unsigned short targetIndex = 0;
 	while (kingMoves) {
-		// Scan till you find a 1
-		unsigned long scanIndex;
-		_BitScanForward64(&scanIndex, kingMoves);
 		// Increase index
-		targetIndex += scanIndex;
+		targetIndex += bb.pop(&kingMoves);
 
 		Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
 		possibleMoves.push_back(move);
 
 		// Skip current 1
 		targetIndex++;
-		// Shift over current 1
-		kingMoves >>= scanIndex + 1;
 	}
 }
 
@@ -813,9 +808,8 @@ void Board::generateKnightMoves() {
 	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
 	unsigned short knightPos = 0;
 	while (knights) {
-		unsigned long scanResult;
-		_BitScanForward64(&scanResult, knights);
-		knightPos += scanResult;
+		// Get the index of next knight
+		knightPos += bb.pop(&knights);
 
 		bitboard knightMoves = bb.getKnightAttacks(knightPos);
 		// Possible Knight moves either go to an empty square or capture an opponent's piece
@@ -824,22 +818,16 @@ void Board::generateKnightMoves() {
 		// Index of the current move
 		unsigned short targetIndex = 0;
 		while (knightMoves) {
-			// Scan till you find a 1
-			unsigned long scanIndex;
-			_BitScanForward64(&scanIndex, knightMoves);
 			// Increase index
-			targetIndex += scanIndex;
+			targetIndex += bb.pop(&knightMoves);
 
 			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex);
 			possibleMoves.push_back(move);
 
 			// Skip current 1
 			targetIndex++;
-			// Shift over current 1
-			knightMoves >>= scanIndex + 1;
 		}
 		knightPos++;
-		knights >>= scanResult + 1;
 	}
 }
 

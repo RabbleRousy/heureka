@@ -12,6 +12,7 @@ private:
 	void initKnightAttacks();
 	void initKingAttacks();
 	void initBishopAttacks();
+	void initRookAttacks();
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
@@ -23,6 +24,7 @@ public:
 	bitboard knightAttacks[64];
 	bitboard kingAttacks[64];
 	bitboard bishopAttacks[64];
+	bitboard rookAttacks[64];
 
 	Bitboard();
 	bitboard getBitboard(short p);
@@ -34,6 +36,7 @@ public:
 	bitboard getKnightAttacks(unsigned short pos);
 	bitboard getKingAttacks(unsigned short pos);
 	bool containsSquare(bitboard b, unsigned short square);
+	unsigned short pop(bitboard* b);
 	std::string toString(bitboard b);
 };
 

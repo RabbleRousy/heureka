@@ -5,6 +5,7 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     initKnightAttacks();
     initKingAttacks();
     initBishopAttacks();
+    initRookAttacks();
 }
 
 void Bitboard::initKnightAttacks()
@@ -80,6 +81,30 @@ void Bitboard::initBishopAttacks() {
             *currentAttacks |= bitboard(1) << (row * 8 + column);
         }
 
+        //std::cout << '\n' << toString(*currentAttacks);
+    }
+}
+
+void Bitboard::initRookAttacks() {
+    for (short i = 0; i < 64; i++) {
+        bitboard* currentAttacks = rookAttacks + i;
+
+        int startColumn = i % 8;
+        int startRow = i / 8;
+
+        for (int column = startColumn + 1; column < 7; column++) {
+            *currentAttacks |= bitboard(1) << (startRow * 8 + column);
+        }
+        for (int column = startColumn - 1; column > 0; column--) {
+            *currentAttacks |= bitboard(1) << (startRow * 8 + column);
+        }
+        for (int row = startRow + 1; row < 7; row++) {
+            *currentAttacks |= bitboard(1) << (row * 8 + startColumn);
+        }
+        for (int row = startRow - 1; row > 0; row--) {
+            *currentAttacks |= bitboard(1) << (row * 8 + startColumn);
+        }
+
         std::cout << '\n' << toString(*currentAttacks);
     }
 }
@@ -131,6 +156,14 @@ bitboard Bitboard::getKingAttacks(unsigned short pos)
 bool Bitboard::containsSquare(bitboard b, unsigned short square)
 {
     return (b >> square) & 1;
+}
+
+unsigned short Bitboard::pop(bitboard* b)
+{
+    unsigned long scanIndex;
+    _BitScanForward64(&scanIndex, *b);
+    *b >>= scanIndex + 1;
+    return scanIndex;
 }
 
 std::string Bitboard::toString(bitboard b)
