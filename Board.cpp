@@ -34,6 +34,8 @@ bool Board::readPosFromFEN(std::string fen) {
 
 	if (DEBUG) std::cout << "Trying to parse FEN: " << fen << std::endl;
 	clearBoard();
+	currentPlayer = Piece::WHITE;
+	castleRights = 0b1111;
 
 	// FEN starts at the top left corner of the board
 	unsigned short column = 0;
@@ -557,6 +559,41 @@ void Board::doMove(const Move* move)
 			blackKingPos = to;
 		}
 	}
+}
+
+void Board::doMove(std::string move) {
+	unsigned short from, to;
+	for (int i = 0; i < 63; i++) {
+		if (move.substr(0, 2) == squareNames[i]) from = i;
+		if (move.substr(2, 2) == squareNames[i]) to = i;
+	}
+
+	Move::Promotion promo = Move::Promotion::None;
+
+	if (move.size() > 4) {
+		switch (move[4]) {
+		case 'q':
+			promo = Move::Promotion::ToQueen;
+			break;
+		case 'r':
+			promo = Move::Promotion::ToRook;
+			break;
+		case 'n':
+			promo = Move::Promotion::ToKnight;
+			break;
+		case 'b':
+			promo = Move::Promotion::ToBishop;
+			break;
+		}
+	}
+
+	short ep = 0;
+	if ((Piece::getType(getPiece(from) == Piece::PAWN)) && (abs(to - from) == 7 || abs(to - from) == 9)) {
+		ep = 0b1000;
+	}
+
+	Move m(getPiece(from), getPiece(to), from, to, promo | ep);
+	doMove(&m);
 }
 
 void Board::undoMove(const Move* move)

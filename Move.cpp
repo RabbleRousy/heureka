@@ -12,6 +12,23 @@ std::string Move::toString(Move m)
 	std::string name = Board::getSquareName(m.startSquare);
 	name += Board::getSquareName(m.targetSquare);
 
+	if (m.isPromotion()) {
+		switch (m.getPromotionResult()) {
+		case (Promotion::ToQueen):
+			name += 'q';
+			break;
+		case (Promotion::ToBishop):
+			name += 'b';
+			break;
+		case (Promotion::ToRook):
+			name += 'r';
+			break;
+		case (Promotion::ToKnight):
+			name += 'n';
+			break;
+		}
+	}
+
 	return name;
 }
 

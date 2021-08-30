@@ -58,7 +58,7 @@ public:
 	/// </summary>
 	/// <param name="fen"></param>
 	/// <returns></returns>
-	bool readPosFromFEN(std::string fen);
+	bool readPosFromFEN(std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
 
 	/// <summary>
 	/// Constructs a FEN string from the current game state.
@@ -106,6 +106,8 @@ public:
 	/// </summary>
 	/// <param name="move"> to be made.</param>
 	void doMove(const Move* move);
+
+	void doMove(std::string move);
 
 	/// <summary>
 	/// Undos the move given move and moves it to the futureMovesBuffer.

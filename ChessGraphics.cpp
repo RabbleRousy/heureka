@@ -60,7 +60,7 @@ void ChessGraphics::initGame()
 	std::cout << fen << std::endl;
 
 	if (!board.readPosFromFEN(fen)) {
-		board.readPosFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+		board.readPosFromFEN();
 	}
 	board.generateMoves();
 }

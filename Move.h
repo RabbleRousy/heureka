@@ -26,7 +26,7 @@ struct Move {
 	unsigned short targetSquare;
 
 	enum Promotion {
-		ToQueen = 0b001, ToRook = 0b010, ToBishop = 0b011, ToKnight = 0b100
+		None = 0, ToQueen = 0b001, ToRook = 0b010, ToBishop = 0b011, ToKnight = 0b100
 	};
 
 	// Last 3 bits: Promotion type, 4th bit: en passant flag

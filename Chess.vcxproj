@@ -159,6 +159,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Move.cpp" />
     <ClCompile Include="Piece.cpp" />
+    <ClCompile Include="uci.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitboard.h" />
@@ -169,6 +170,7 @@
     <ClInclude Include="Piece.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Timer.h" />
+    <ClInclude Include="uci.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
