@@ -4,13 +4,14 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
     initKnightAttacks();
     initKingAttacks();
+    initBishopAttacks();
 }
 
 void Bitboard::initKnightAttacks()
 {
     for (short i = 0; i < 64; i++) {
         // Bitboard representation of one of the 64 positions
-        bitboard pos = (bitboard)1 << i;
+        bitboard pos = bitboard(1) << i;
 
         bitboard* currentAttacks = knightAttacks + i;
         // NorthNorthEast
@@ -56,6 +57,30 @@ void Bitboard::initKingAttacks() {
         *currentAttacks |= (pos << 7) & notFirstRank & notHfile;
 
         //std::cout << '\n' << toString(*currentAttacks);
+    }
+}
+
+void Bitboard::initBishopAttacks() {
+    for (short i = 0; i < 64; i++) {
+        bitboard* currentAttacks = bishopAttacks + i;
+
+        int startColumn = i % 8;
+        int startRow = i / 8;
+
+        for (int column = startColumn + 1, row = startRow + 1; column < 7 && row < 7; column++, row++) {
+            *currentAttacks |= bitboard(1) << (row * 8 + column);
+        }
+        for (int column = startColumn + 1, row = startRow - 1; column < 7 && row > 0; column++, row--) {
+            *currentAttacks |= bitboard(1) << (row * 8 + column);
+        }
+        for (int column = startColumn - 1, row = startRow + 1; column > 0 && row < 7; column--, row++) {
+            *currentAttacks |= bitboard(1) << (row * 8 + column);
+        }
+        for (int column = startColumn - 1, row = startRow - 1; column > 0 && row > 0; column--, row--) {
+            *currentAttacks |= bitboard(1) << (row * 8 + column);
+        }
+
+        std::cout << '\n' << toString(*currentAttacks);
     }
 }
 

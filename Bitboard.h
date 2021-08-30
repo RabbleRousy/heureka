@@ -11,6 +11,7 @@ private:
 	bitboard allPieces[23];
 	void initKnightAttacks();
 	void initKingAttacks();
+	void initBishopAttacks();
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
@@ -21,6 +22,7 @@ public:
 	
 	bitboard knightAttacks[64];
 	bitboard kingAttacks[64];
+	bitboard bishopAttacks[64];
 
 	Bitboard();
 	bitboard getBitboard(short p);
