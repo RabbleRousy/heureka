@@ -14,23 +14,23 @@ void Bitboard::initKnightAttacks()
         // Bitboard representation of one of the 64 positions
         bitboard pos = bitboard(1) << i;
 
-        bitboard* currentAttacks = knightAttacks + i;
+        bitboard* currentMask = knightAttacks + i;
         // NorthNorthEast
-        *currentAttacks |= (pos << 17) & notAfile;
+        *currentMask |= (pos << 17) & notAfile;
         // NorthEastEast
-        *currentAttacks |= (pos << 10) & notAfile & notBfile;
+        *currentMask |= (pos << 10) & notAfile & notBfile;
         // SouthEastEast
-        *currentAttacks |= (pos >> 6) & notAfile & notBfile;
+        *currentMask |= (pos >> 6) & notAfile & notBfile;
         // SouthSouthEast
-        *currentAttacks |= (pos >> 15) & notAfile;
+        *currentMask |= (pos >> 15) & notAfile;
         // NorthNorthWest
-        *currentAttacks |= (pos << 15) & notHfile;
+        *currentMask |= (pos << 15) & notHfile;
         // NorthWestWest
-        *currentAttacks |= (pos << 6) & notHfile & notGfile;
+        *currentMask |= (pos << 6) & notHfile & notGfile;
         // SouthWestWest
-        *currentAttacks |= (pos >> 10) & notHfile & notGfile;
+        *currentMask |= (pos >> 10) & notHfile & notGfile;
         // SouthSouthWest
-        *currentAttacks |= (pos >> 17) & notHfile;
+        *currentMask |= (pos >> 17) & notHfile;
     }
 }
 
@@ -39,31 +39,31 @@ void Bitboard::initKingAttacks() {
         // Bitboard representation of one of the 64 positions
         bitboard pos = (bitboard)1 << i;
 
-        bitboard* currentAttacks = kingAttacks + i;
+        bitboard* currentMask = kingAttacks + i;
         // North
-        *currentAttacks |= (pos << 8) & notFirstRank;
+        *currentMask |= (pos << 8) & notFirstRank;
         // NorthEast
-        *currentAttacks |= (pos << 9) & notFirstRank & notAfile;
+        *currentMask |= (pos << 9) & notFirstRank & notAfile;
         // East
-        *currentAttacks |= (pos << 1) & notAfile;
+        *currentMask |= (pos << 1) & notAfile;
         // SouthEast
-        *currentAttacks |= (pos >> 7) & notAfile & notEightRank;
+        *currentMask |= (pos >> 7) & notAfile & notEightRank;
         // South
-        *currentAttacks |= (pos >> 8) & notEightRank;
+        *currentMask |= (pos >> 8) & notEightRank;
         // SouthWest
-        *currentAttacks |= (pos >> 9) & notEightRank & notHfile;
+        *currentMask |= (pos >> 9) & notEightRank & notHfile;
         // West
-        *currentAttacks |= (pos >> 1) & notHfile;
+        *currentMask |= (pos >> 1) & notHfile;
         // NorthWest
-        *currentAttacks |= (pos << 7) & notFirstRank & notHfile;
+        *currentMask |= (pos << 7) & notFirstRank & notHfile;
 
-        //std::cout << '\n' << toString(*currentAttacks);
+        //std::cout << '\n' << toString(*currentMask);
     }
 }
 
 void Bitboard::initBishopMasks() {
     for (short i = 0; i < 64; i++) {
-        bitboard* currentAttacks = bishopMasks + i;
+        bitboard* currentMask = bishopMasks + i;
 
         int startColumn = i % 8;
         int startRow = i / 8;
@@ -71,28 +71,28 @@ void Bitboard::initBishopMasks() {
 
         for (int column = startColumn + 1, row = startRow + 1; column < 7 && row < 7; column++, row++) {
             bit = (row * 8 + column);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
         for (int column = startColumn + 1, row = startRow - 1; column < 7 && row > 0; column++, row--) {
             bit = (row * 8 + column);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
         for (int column = startColumn - 1, row = startRow + 1; column > 0 && row < 7; column--, row++) {
             bit = (row * 8 + column);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
         for (int column = startColumn - 1, row = startRow - 1; column > 0 && row > 0; column--, row--) {
             bit = (row * 8 + column);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
 
-        //std::cout << '\n' << toString(*currentAttacks);
+        //std::cout << '\n' << toString(*currentMask);
     }
 }
 
 void Bitboard::initRookMasks() {
     for (short i = 0; i < 64; i++) {
-        bitboard* currentAttacks = rookMasks + i;
+        bitboard* currentMask = rookMasks + i;
 
         int startColumn = i % 8;
         int startRow = i / 8;
@@ -100,23 +100,42 @@ void Bitboard::initRookMasks() {
 
         for (int column = startColumn + 1; column < 7; column++) {
             bit = (startRow * 8 + column);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
         for (int column = startColumn - 1; column > 0; column--) {
             bit = (startRow * 8 + column);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
         for (int row = startRow + 1; row < 7; row++) {
             bit = (row * 8 + startColumn);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
         for (int row = startRow - 1; row > 0; row--) {
             bit = (row * 8 + startColumn);
-            set(currentAttacks, bit);
+            set(currentMask, bit);
         }
 
-        //std::cout << '\n' << toString(*currentAttacks);
+        //std::cout << '\n' << toString(*currentMask);
     }
+}
+
+bitboard Bitboard::getOccupancy(int index, bitboard blockerMask)
+{
+    bitboard occupany = bitboard(0);
+
+    int bitCount = count(blockerMask);
+    short square = -1;
+    
+    for (int i = 0; i < bitCount; i++) {
+        // Read the next least significant bit
+        square += pop(&blockerMask) + 1;
+        // Set the i'th bit if the i'th bit in the index is also set
+        // --> guarantees all possible occupancy variations with indexes from 0 - 2^bitCount
+        if (index & (1 << i)) {
+            set(&occupany, square);
+        }
+    }
+    return occupany;
 }
 
 bitboard Bitboard::getBitboard(short p)

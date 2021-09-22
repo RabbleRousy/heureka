@@ -22,6 +22,9 @@ private:
 	void initKingAttacks();
 	void initBishopMasks();
 	void initRookMasks();
+
+	bitboard getOccupancy(int index, bitboard blockerMask);
+
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
