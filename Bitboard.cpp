@@ -4,8 +4,8 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
     initKnightAttacks();
     initKingAttacks();
-    initBishopAttacks();
-    initRookAttacks();
+    initBishopMasks();
+    initRookMasks();
 }
 
 void Bitboard::initKnightAttacks()
@@ -61,9 +61,9 @@ void Bitboard::initKingAttacks() {
     }
 }
 
-void Bitboard::initBishopAttacks() {
+void Bitboard::initBishopMasks() {
     for (short i = 0; i < 64; i++) {
-        bitboard* currentAttacks = bishopAttacks + i;
+        bitboard* currentAttacks = bishopMasks + i;
 
         int startColumn = i % 8;
         int startRow = i / 8;
@@ -85,9 +85,9 @@ void Bitboard::initBishopAttacks() {
     }
 }
 
-void Bitboard::initRookAttacks() {
+void Bitboard::initRookMasks() {
     for (short i = 0; i < 64; i++) {
-        bitboard* currentAttacks = rookAttacks + i;
+        bitboard* currentAttacks = rookMasks + i;
 
         int startColumn = i % 8;
         int startRow = i / 8;
@@ -166,6 +166,16 @@ unsigned short Bitboard::pop(bitboard* b)
     return scanIndex;
 }
 
+unsigned short Bitboard::count(bitboard b)
+{
+    unsigned short count = 0;
+    while (b) {
+        pop(&b);
+        count++;
+    }
+    return count;
+}
+
 std::string Bitboard::toString(bitboard b)
 {
     std::string s;
@@ -174,7 +184,7 @@ std::string Bitboard::toString(bitboard b)
     for (int i = 7; i >= 0 ; i--) {
         for (int j = 0; j < 8; j++) {
             int index = i * 8 + j;
-            s += std::to_string((b >> index) & 1) + ' ';
+            s += ((b >> index) & 1) == 1 ? "1 " : ". ";
         }
         s += '\n';
     }

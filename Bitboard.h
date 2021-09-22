@@ -9,10 +9,19 @@ class Bitboard
 {
 private:
 	bitboard allPieces[23];
+
+	bitboard bishopMasks[64];
+	bitboard rookMasks[64];
+	//bitboard bishopAttacks[64][1024];
+	//bitboard rookAttacks[64][1024];
+
+	bitboard knightAttacks[64];
+	bitboard kingAttacks[64];
+
 	void initKnightAttacks();
 	void initKingAttacks();
-	void initBishopAttacks();
-	void initRookAttacks();
+	void initBishopMasks();
+	void initRookMasks();
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
@@ -20,11 +29,6 @@ public:
 	const bitboard notHfile = ~(0x8080808080808080);
 	const bitboard notFirstRank = ~(0x00000000000000FF);
 	const bitboard notEightRank = ~(0xFF00000000000000);
-	
-	bitboard knightAttacks[64];
-	bitboard kingAttacks[64];
-	bitboard bishopAttacks[64];
-	bitboard rookAttacks[64];
 
 	Bitboard();
 	bitboard getBitboard(short p);
@@ -37,6 +41,7 @@ public:
 	bitboard getKingAttacks(unsigned short pos);
 	bool containsSquare(bitboard b, unsigned short square);
 	unsigned short pop(bitboard* b);
+	unsigned short count(bitboard b);
 	std::string toString(bitboard b);
 };
 
