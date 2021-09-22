@@ -64,6 +64,7 @@ void Bitboard::initKingAttacks() {
 void Bitboard::initBishopMasks() {
     for (short i = 0; i < 64; i++) {
         bitboard* currentMask = bishopMasks + i;
+        unsigned short bitCount = 0;
 
         int startColumn = i % 8;
         int startRow = i / 8;
@@ -72,27 +73,33 @@ void Bitboard::initBishopMasks() {
         for (int column = startColumn + 1, row = startRow + 1; column < 7 && row < 7; column++, row++) {
             bit = (row * 8 + column);
             set(currentMask, bit);
+            bitCount++;
         }
         for (int column = startColumn + 1, row = startRow - 1; column < 7 && row > 0; column++, row--) {
             bit = (row * 8 + column);
             set(currentMask, bit);
+            bitCount++;
         }
         for (int column = startColumn - 1, row = startRow + 1; column > 0 && row < 7; column--, row++) {
             bit = (row * 8 + column);
             set(currentMask, bit);
+            bitCount++;
         }
         for (int column = startColumn - 1, row = startRow - 1; column > 0 && row > 0; column--, row--) {
             bit = (row * 8 + column);
             set(currentMask, bit);
+            bitCount++;
         }
 
-        //std::cout << '\n' << toString(*currentMask);
+        bitsInBishopMask[i] = bitCount;
+        //std::cout << '\n' << toString(*currentMask) << "Bits in mask: " << bitCount;
     }
 }
 
 void Bitboard::initRookMasks() {
     for (short i = 0; i < 64; i++) {
         bitboard* currentMask = rookMasks + i;
+        unsigned short bitCount = 0;
 
         int startColumn = i % 8;
         int startRow = i / 8;
@@ -101,21 +108,26 @@ void Bitboard::initRookMasks() {
         for (int column = startColumn + 1; column < 7; column++) {
             bit = (startRow * 8 + column);
             set(currentMask, bit);
+            bitCount++;
         }
         for (int column = startColumn - 1; column > 0; column--) {
             bit = (startRow * 8 + column);
             set(currentMask, bit);
+            bitCount++;
         }
         for (int row = startRow + 1; row < 7; row++) {
             bit = (row * 8 + startColumn);
             set(currentMask, bit);
+            bitCount++;
         }
         for (int row = startRow - 1; row > 0; row--) {
             bit = (row * 8 + startColumn);
             set(currentMask, bit);
+            bitCount++;
         }
 
-        //std::cout << '\n' << toString(*currentMask);
+        bitsInRookMask[i] = bitCount;
+        std::cout << '\n' << toString(*currentMask) << "\nBitcount: " << bitCount << '\n';
     }
 }
 

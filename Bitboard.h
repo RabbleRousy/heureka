@@ -12,6 +12,8 @@ private:
 
 	bitboard bishopMasks[64];
 	bitboard rookMasks[64];
+	unsigned short bitsInBishopMask[64];
+	unsigned short bitsInRookMask[64];
 	//bitboard bishopAttacks[64][1024];
 	//bitboard rookAttacks[64][1024];
 
