@@ -67,18 +67,23 @@ void Bitboard::initBishopMasks() {
 
         int startColumn = i % 8;
         int startRow = i / 8;
+        unsigned short bit;
 
         for (int column = startColumn + 1, row = startRow + 1; column < 7 && row < 7; column++, row++) {
-            *currentAttacks |= bitboard(1) << (row * 8 + column);
+            bit = (row * 8 + column);
+            set(currentAttacks, bit);
         }
         for (int column = startColumn + 1, row = startRow - 1; column < 7 && row > 0; column++, row--) {
-            *currentAttacks |= bitboard(1) << (row * 8 + column);
+            bit = (row * 8 + column);
+            set(currentAttacks, bit);
         }
         for (int column = startColumn - 1, row = startRow + 1; column > 0 && row < 7; column--, row++) {
-            *currentAttacks |= bitboard(1) << (row * 8 + column);
+            bit = (row * 8 + column);
+            set(currentAttacks, bit);
         }
         for (int column = startColumn - 1, row = startRow - 1; column > 0 && row > 0; column--, row--) {
-            *currentAttacks |= bitboard(1) << (row * 8 + column);
+            bit = (row * 8 + column);
+            set(currentAttacks, bit);
         }
 
         //std::cout << '\n' << toString(*currentAttacks);
@@ -91,21 +96,26 @@ void Bitboard::initRookMasks() {
 
         int startColumn = i % 8;
         int startRow = i / 8;
+        unsigned short bit;
 
         for (int column = startColumn + 1; column < 7; column++) {
-            *currentAttacks |= bitboard(1) << (startRow * 8 + column);
+            bit = (startRow * 8 + column);
+            set(currentAttacks, bit);
         }
         for (int column = startColumn - 1; column > 0; column--) {
-            *currentAttacks |= bitboard(1) << (startRow * 8 + column);
+            bit = (startRow * 8 + column);
+            set(currentAttacks, bit);
         }
         for (int row = startRow + 1; row < 7; row++) {
-            *currentAttacks |= bitboard(1) << (row * 8 + startColumn);
+            bit = (row * 8 + startColumn);
+            set(currentAttacks, bit);
         }
         for (int row = startRow - 1; row > 0; row--) {
-            *currentAttacks |= bitboard(1) << (row * 8 + startColumn);
+            bit = (row * 8 + startColumn);
+            set(currentAttacks, bit);
         }
 
-        std::cout << '\n' << toString(*currentAttacks);
+        //std::cout << '\n' << toString(*currentAttacks);
     }
 }
 
@@ -174,6 +184,10 @@ unsigned short Bitboard::count(bitboard b)
         count++;
     }
     return count;
+}
+
+void Bitboard::set(bitboard* b, unsigned short bit) {
+    *b |= bitboard(1) << bit;
 }
 
 std::string Bitboard::toString(bitboard b)

@@ -42,6 +42,7 @@ public:
 	bool containsSquare(bitboard b, unsigned short square);
 	unsigned short pop(bitboard* b);
 	unsigned short count(bitboard b);
+	void set(bitboard* b, unsigned short bit);
 	std::string toString(bitboard b);
 };
 
