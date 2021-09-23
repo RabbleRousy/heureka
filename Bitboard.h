@@ -22,6 +22,8 @@ private:
 
 	bitboard knightAttacks[64];
 	bitboard kingAttacks[64];
+	bitboard* bishopAttacks[64];
+	bitboard* rookAttacks[64];
 
 	void initKnightAttacks();
 	void initKingAttacks();
@@ -46,6 +48,7 @@ public:
 	const bitboard notEightRank = ~(0xFF00000000000000);
 
 	Bitboard();
+	~Bitboard();
 	bitboard getBitboard(short p);
 	void setPiece(short p, unsigned short index);
 	void removePiece(short p, unsigned short index);

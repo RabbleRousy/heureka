@@ -2,6 +2,11 @@
 
 Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
+    for (int i = 0; i < 64; i++) {
+        bishopAttacks[i] = new bitboard[512];
+        rookAttacks[i] = new bitboard[4096];
+    }
+
     initKnightAttacks();
     initKingAttacks();
     initBishopMasks();
@@ -12,6 +17,13 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     randomBitboardGenerator = std::mt19937_64(rd());
 
     initMagicNumbers();
+}
+
+Bitboard::~Bitboard() {
+    for (int i = 0; i < 64; i++) {
+        delete[] bishopAttacks[i];
+        delete[] rookAttacks[i];
+    }
 }
 
 void Bitboard::initKnightAttacks()
@@ -224,27 +236,25 @@ unsigned long long Bitboard::findMagicNumber(unsigned short pos, bool forRook) {
 
     // Relevant Blockermask for this position and piece
     bitboard blockerMask = forRook ? rookMasks[pos] : bishopMasks[pos];
+    bitboard* attackTableToFill = forRook ? rookAttacks[pos] : bishopAttacks[pos];
     // Calculate relevant bits in the blockerMask of this position and the resulting table size needed
     unsigned short relevantBits = forRook ? bitsInRookMask[pos] : bitsInBishopMask[pos];
     int tableSize = 1 << relevantBits; // 2^relevantBits
 
     // Init all possible occupancy combinations and the resulting scanlines
-    bitboard occupancyCombinations[4096];
-    bitboard scanLines[4096];
+    bitboard* occupancyCombinations = new bitboard[tableSize];
+    bitboard* scanLines = new bitboard[tableSize];
     for (int i = 0; i < tableSize; i++) {
         occupancyCombinations[i] = getOccupancy(i, forRook ? rookMasks[pos] : bishopMasks[pos]);
         scanLines[i] = forRook ? scanRookDirections(pos, occupancyCombinations[i]) : scanBishopDirections(pos, occupancyCombinations[i]);
     }
-
-    // Store scanline hits for the magic number candidates
-    bitboard foundScanLines[4096];
 
     for (int i = 0; i < 100000000; i++) {
         unsigned long long magicCandidate = getMagicNumberCandidate();
         // Magic candidate doesn't have enough 1s
         if (count((blockerMask * magicCandidate) & 0xFF00000000000000) < 6) continue;
         // Reset Memory
-        memset(foundScanLines, 0ULL, sizeof(foundScanLines));
+        memset(attackTableToFill, 0ULL, sizeof(bitboard) * (forRook ? 4096 : 512));
 
         int index;
         bool collision;
@@ -252,11 +262,11 @@ unsigned long long Bitboard::findMagicNumber(unsigned short pos, bool forRook) {
         for (index = 0, collision = false; (index < tableSize) && !collision; index++) {
             int magicIndex = shittyHash(occupancyCombinations[index], magicCandidate, relevantBits);
             // No collision
-            if (foundScanLines[magicIndex] == 0ULL) {
+            if (attackTableToFill[magicIndex] == 0ULL) {
                 // Magic index maps to the scanLine of this occupancy
-                foundScanLines[magicIndex] = scanLines[index];
+                attackTableToFill[magicIndex] = scanLines[index];
             }
-            else if (foundScanLines[magicIndex] != scanLines[index]) {
+            else if (attackTableToFill[magicIndex] != scanLines[index]) {
                 // COLLISION!
                 collision = true;
             }
@@ -266,18 +276,16 @@ unsigned long long Bitboard::findMagicNumber(unsigned short pos, bool forRook) {
             // If there was no collision for all the indeces, magic number works!
 
             // Free memory
-            //delete[] scanLines;
-            //delete[] foundScanLines;
-            //delete[] occupancyCombinations;
+            delete[] scanLines;
+            delete[] occupancyCombinations;
 
             return magicCandidate;
         }
     }
 
     // Free memory
-    //delete[] scanLines;
-    //delete[] foundScanLines;
-    //delete[] occupancyCombinations;
+    delete[] scanLines;
+    delete[] occupancyCombinations;
 
     std::cerr << "No magic number found for " << (forRook ? "Rook" : "Bishop") << " on " << pos << '\n';
     return 0;
