@@ -6,6 +6,10 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     initKingAttacks();
     initBishopMasks();
     initRookMasks();
+
+    // Initialize random ULL generator
+    std::random_device rd;
+    randomBitboardGenerator = std::mt19937_64(rd());
 }
 
 void Bitboard::initKnightAttacks()
@@ -127,7 +131,7 @@ void Bitboard::initRookMasks() {
         }
 
         bitsInRookMask[i] = bitCount;
-        std::cout << '\n' << toString(*currentMask) << "\nBitcount: " << bitCount << '\n';
+        //std::cout << '\n' << toString(*currentMask) << "\nBitcount: " << bitCount << '\n';
     }
 }
 

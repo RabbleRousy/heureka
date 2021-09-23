@@ -1,6 +1,7 @@
 #pragma once
 #include "Piece.h"
 #include <iostream>
+#include <random>
 
 typedef unsigned __int64 bitboard;
 #define C64(constantU64) constantU64##ULL
@@ -8,6 +9,8 @@ typedef unsigned __int64 bitboard;
 class Bitboard
 {
 private:
+	std::mt19937_64 randomBitboardGenerator;
+
 	bitboard allPieces[23];
 
 	bitboard bishopMasks[64];
