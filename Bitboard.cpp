@@ -260,11 +260,13 @@ unsigned long long Bitboard::findMagicNumber(unsigned short pos, bool forRook) {
         bool collision;
         // Check this magic number candidate for all indeces
         for (index = 0, collision = false; (index < tableSize) && !collision; index++) {
+            //std::cout << "\nOccupancy #" << index << ":\n" << toString(occupancyCombinations[index]);
             int magicIndex = shittyHash(occupancyCombinations[index], magicCandidate, relevantBits);
             // No collision
             if (attackTableToFill[magicIndex] == 0ULL) {
                 // Magic index maps to the scanLine of this occupancy
                 attackTableToFill[magicIndex] = scanLines[index];
+                //std::cout << "\nAttack table filled with:\n" << toString(attackTableToFill[magicIndex]);
             }
             else if (attackTableToFill[magicIndex] != scanLines[index]) {
                 // COLLISION!
@@ -295,8 +297,6 @@ void Bitboard::initMagicNumbers() {
     for (int pos = 0; pos < 64; pos++) {
         rookMagics[pos] = findMagicNumber(pos, true);
         bishopMagics[pos] = findMagicNumber(pos, false);
-        std::cout << "Rook Magic Number #" << pos << ": " << rookMagics[pos] <<
-            "\nBishop Magic Number #" << pos << ": " << bishopMagics[pos] << "\n\n";
     }
 }
 
@@ -346,6 +346,12 @@ bitboard Bitboard::getKnightAttacks(unsigned short pos)
 bitboard Bitboard::getKingAttacks(unsigned short pos)
 {
     return kingAttacks[pos];
+}
+
+bitboard Bitboard::getRookAttacks(unsigned short pos)
+{
+    int magicIndex = shittyHash(getOccupied() & rookMasks[pos], rookMagics[pos], bitsInRookMask[pos]);
+    return rookAttacks[pos][magicIndex];
 }
 
 bool Bitboard::containsSquare(bitboard b, unsigned short square)
