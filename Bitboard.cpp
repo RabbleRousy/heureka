@@ -154,6 +154,64 @@ bitboard Bitboard::getOccupancy(int index, bitboard blockerMask)
     return occupany;
 }
 
+bitboard Bitboard::scanRookDirections(unsigned short pos, bitboard blockers) {
+    bitboard result(0);
+    int startColumn = pos % 8;
+    int startRow = pos / 8;
+    unsigned short bit;
+
+    for (int column = startColumn + 1; column < 8; column++) {
+        bit = (startRow * 8 + column);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    for (int column = startColumn - 1; column >= 0; column--) {
+        bit = (startRow * 8 + column);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    for (int row = startRow + 1; row < 8; row++) {
+        bit = (row * 8 + startColumn);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    for (int row = startRow - 1; row >= 0; row--) {
+        bit = (row * 8 + startColumn);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    return result;
+}
+
+bitboard Bitboard::scanBishopDirections(unsigned short pos, bitboard blockers) {
+    bitboard result(0);
+    int startColumn = pos % 8;
+    int startRow = pos / 8;
+    unsigned short bit;
+
+    for (int column = startColumn + 1, row = startRow + 1; column < 8 && row < 8; column++, row++) {
+        bit = (row * 8 + column);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    for (int column = startColumn + 1, row = startRow - 1; column < 8 && row >= 0; column++, row--) {
+        bit = (row * 8 + column);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    for (int column = startColumn - 1, row = startRow + 1; column >= 0 && row < 8; column--, row++) {
+        bit = (row * 8 + column);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    for (int column = startColumn - 1, row = startRow - 1; column >= 0 && row >= 0; column--, row--) {
+        bit = (row * 8 + column);
+        set(&result, bit);
+        if ((bitboard(1) << bit) & blockers) break;
+    }
+    return result;
+}
+
 bitboard Bitboard::getBitboard(short p)
 {
     return allPieces[p];

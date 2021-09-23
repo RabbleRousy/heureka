@@ -29,6 +29,8 @@ private:
 	void initRookMasks();
 
 	bitboard getOccupancy(int index, bitboard blockerMask);
+	bitboard scanRookDirections(unsigned short pos, bitboard blockers);
+	bitboard scanBishopDirections(unsigned short pos, bitboard blockers);
 
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
