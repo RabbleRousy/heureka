@@ -17,8 +17,8 @@ private:
 	bitboard rookMasks[64];
 	unsigned short bitsInBishopMask[64];
 	unsigned short bitsInRookMask[64];
-	//bitboard bishopAttacks[64][1024];
-	//bitboard rookAttacks[64][1024];
+	unsigned long long rookMagics[64];
+	unsigned long long bishopMagics[64];
 
 	bitboard knightAttacks[64];
 	bitboard kingAttacks[64];
@@ -31,6 +31,11 @@ private:
 	bitboard getOccupancy(int index, bitboard blockerMask);
 	bitboard scanRookDirections(unsigned short pos, bitboard blockers);
 	bitboard scanBishopDirections(unsigned short pos, bitboard blockers);
+	unsigned long long getMagicNumberCandidate();
+	unsigned long long findMagicNumber(unsigned short pos, bool forRook);
+	void initMagicNumbers();
+
+	int shittyHash(bitboard occupancy, unsigned long long magicNumber, unsigned short bitCount);
 
 public:
 	const bitboard notAfile = ~(0x0101010101010101);

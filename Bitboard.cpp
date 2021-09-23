@@ -10,6 +10,8 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     // Initialize random ULL generator
     std::random_device rd;
     randomBitboardGenerator = std::mt19937_64(rd());
+
+    initMagicNumbers();
 }
 
 void Bitboard::initKnightAttacks()
@@ -212,6 +214,88 @@ bitboard Bitboard::scanBishopDirections(unsigned short pos, bitboard blockers) {
     return result;
 }
 
+unsigned long long Bitboard::getMagicNumberCandidate()
+{
+    return randomBitboardGenerator() & randomBitboardGenerator() & randomBitboardGenerator();
+}
+
+unsigned long long Bitboard::findMagicNumber(unsigned short pos, bool forRook) {
+    std::cout << "Looking for magic number #" << pos << " for " << (forRook ? "Rook" : "Bishop") << "...\n";
+
+    // Relevant Blockermask for this position and piece
+    bitboard blockerMask = forRook ? rookMasks[pos] : bishopMasks[pos];
+    // Calculate relevant bits in the blockerMask of this position and the resulting table size needed
+    unsigned short relevantBits = forRook ? bitsInRookMask[pos] : bitsInBishopMask[pos];
+    int tableSize = 1 << relevantBits; // 2^relevantBits
+
+    // Init all possible occupancy combinations and the resulting scanlines
+    bitboard occupancyCombinations[4096];
+    bitboard scanLines[4096];
+    for (int i = 0; i < tableSize; i++) {
+        occupancyCombinations[i] = getOccupancy(i, forRook ? rookMasks[pos] : bishopMasks[pos]);
+        scanLines[i] = forRook ? scanRookDirections(pos, occupancyCombinations[i]) : scanBishopDirections(pos, occupancyCombinations[i]);
+    }
+
+    // Store scanline hits for the magic number candidates
+    bitboard foundScanLines[4096];
+
+    for (int i = 0; i < 100000000; i++) {
+        unsigned long long magicCandidate = getMagicNumberCandidate();
+        // Magic candidate doesn't have enough 1s
+        if (count((blockerMask * magicCandidate) & 0xFF00000000000000) < 6) continue;
+        // Reset Memory
+        memset(foundScanLines, 0ULL, sizeof(foundScanLines));
+
+        int index;
+        bool collision;
+        // Check this magic number candidate for all indeces
+        for (index = 0, collision = false; (index < tableSize) && !collision; index++) {
+            int magicIndex = shittyHash(occupancyCombinations[index], magicCandidate, relevantBits);
+            // No collision
+            if (foundScanLines[magicIndex] == 0ULL) {
+                // Magic index maps to the scanLine of this occupancy
+                foundScanLines[magicIndex] = scanLines[index];
+            }
+            else if (foundScanLines[magicIndex] != scanLines[index]) {
+                // COLLISION!
+                collision = true;
+            }
+        }
+
+        if (!collision) {
+            // If there was no collision for all the indeces, magic number works!
+
+            // Free memory
+            //delete[] scanLines;
+            //delete[] foundScanLines;
+            //delete[] occupancyCombinations;
+
+            return magicCandidate;
+        }
+    }
+
+    // Free memory
+    //delete[] scanLines;
+    //delete[] foundScanLines;
+    //delete[] occupancyCombinations;
+
+    std::cerr << "No magic number found for " << (forRook ? "Rook" : "Bishop") << " on " << pos << '\n';
+    return 0;
+}
+
+void Bitboard::initMagicNumbers() {
+    for (int pos = 0; pos < 64; pos++) {
+        rookMagics[pos] = findMagicNumber(pos, true);
+        bishopMagics[pos] = findMagicNumber(pos, false);
+        std::cout << "Rook Magic Number #" << pos << ": " << rookMagics[pos] <<
+            "\nBishop Magic Number #" << pos << ": " << bishopMagics[pos] << "\n\n";
+    }
+}
+
+int Bitboard::shittyHash(bitboard occupancy, unsigned long long magicNumber, unsigned short bitCount) {
+    return int((occupancy * magicNumber) >> (64 - bitCount));
+}
+
 bitboard Bitboard::getBitboard(short p)
 {
     return allPieces[p];
@@ -265,7 +349,13 @@ unsigned short Bitboard::pop(bitboard* b)
 {
     unsigned long scanIndex;
     _BitScanForward64(&scanIndex, *b);
-    *b >>= scanIndex + 1;
+    if (scanIndex != 63) {
+        *b >>= scanIndex + 1;
+    }
+    // Special case where we would >>64 (undef.)
+    else {
+        *b = 0;
+    }
     return scanIndex;
 }
 
@@ -273,7 +363,7 @@ unsigned short Bitboard::count(bitboard b)
 {
     unsigned short count = 0;
     while (b) {
-        pop(&b);
+        b &= b - 1; // removes least significant bit
         count++;
     }
     return count;
