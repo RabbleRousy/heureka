@@ -58,6 +58,8 @@ public:
 	bitboard getKnightAttacks(unsigned short pos);
 	bitboard getKingAttacks(unsigned short pos);
 	bitboard getRookAttacks(unsigned short pos);
+	bitboard getBishopAttacks(unsigned short pos);
+	bitboard getQueenAttacks(unsigned short pos);
 	bool containsSquare(bitboard b, unsigned short square);
 	unsigned short pop(bitboard* b);
 	unsigned short count(bitboard b);

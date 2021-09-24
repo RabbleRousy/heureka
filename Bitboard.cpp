@@ -354,6 +354,17 @@ bitboard Bitboard::getRookAttacks(unsigned short pos)
     return rookAttacks[pos][magicIndex];
 }
 
+bitboard Bitboard::getBishopAttacks(unsigned short pos)
+{
+    int magicIndex = shittyHash(getOccupied() & bishopMasks[pos], bishopMagics[pos], bitsInBishopMask[pos]);
+    return bishopAttacks[pos][magicIndex];
+}
+
+bitboard Bitboard::getQueenAttacks(unsigned short pos)
+{
+    return getRookAttacks(pos) | getBishopAttacks(pos);
+}
+
 bool Bitboard::containsSquare(bitboard b, unsigned short square)
 {
     return (b >> square) & 1;
