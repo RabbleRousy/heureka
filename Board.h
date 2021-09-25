@@ -140,6 +140,8 @@ public:
 	/// </summary>
 	void generateMoves();
 
+	void generatePawnMoves();
+
 	void generateKingMoves();
 
 	void generateKnightMoves();

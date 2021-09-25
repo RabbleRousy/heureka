@@ -34,12 +34,12 @@ std::string Move::toString(Move m)
 
 bool Move::isEnPassant() const
 {
-	return (flags & 0b1000) == 0b1000;
+	return (flags & 0b1000);
 }
 
 bool Move::isPromotion() const
 {
-	return (flags & 0b111) != 0;
+	return (flags & 0b0111) != 0;
 }
 
 short Move::getPromotionResult() const

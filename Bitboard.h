@@ -46,6 +46,8 @@ public:
 	const bitboard notHfile = ~(0x8080808080808080);
 	const bitboard notFirstRank = ~(0x00000000000000FF);
 	const bitboard notEightRank = ~(0xFF00000000000000);
+	const bitboard secondRank = 0x000000000000FF00;
+	const bitboard seventhRank = 0x00FF000000000000;
 
 	Bitboard();
 	~Bitboard();
@@ -55,6 +57,9 @@ public:
 	bitboard getOccupied();
 	bitboard getEmpty();
 	bitboard getAllAttacks(short color);
+	bitboard getSinglePawnSteps(short color);
+	bitboard getDoublePawnSteps(short color);
+	bitboard getPawnAttacks(bool left, short color);
 	bitboard getKnightAttacks(unsigned short pos);
 	bitboard getKingAttacks(unsigned short pos);
 	bitboard getRookAttacks(unsigned short pos);

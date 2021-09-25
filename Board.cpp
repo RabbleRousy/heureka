@@ -305,16 +305,8 @@ std::string Board::getFENfromPos() {
 	}
 	
 	// En passant captures
-	if (moveHistory.empty())
-		return fen;
-	Move* lastMove = &moveHistory.top();
-	if (Piece::getType(lastMove->piece) != Piece::PAWN)
-		return fen;
-
-	// If pawn did two steps
-	if (abs(lastMove->targetSquare - lastMove->startSquare) == 16) {
-		fen += ' ';
-		fen += getSquareName(lastMove->startSquare + (lastMove->targetSquare - lastMove->startSquare) / 2);
+	if (enPassantSquare != 64) {
+		fen += ' ' + getSquareName(enPassantSquare);
 	}
 
 	return fen;
@@ -416,7 +408,6 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		if (debugLogs) {
 			std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
 			std::cout << "New FEN: " << getFENfromPos() << '\n';
-			std::cout << "Occupied Bitboard: " << bb.toString(bb.getOccupied());
 		}
 
 		return true;
@@ -458,7 +449,6 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		if (debugLogs) {
 			std::cout << "New FEN: " << getFENfromPos() << '\n';
-			std::cout << "Occupied Bitboard:\n" << bb.toString(bb.getOccupied());
 		}
 
 		futureMovesBuffer = std::stack<Move>();
@@ -470,6 +460,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 void Board::doMove(const Move* move)
 {
+	enPassantSquare = 64;
 	const unsigned short from = move->startSquare;
 	const unsigned short to = move->targetSquare;
 
@@ -658,129 +649,77 @@ void Board::generateMoves()
 {
 	possibleMoves.clear();
 	generateKnightMoves();
-	//generateKingMoves();
-	for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 8; j++) {
-			short pieceType = Piece::getType(squares[i + j*8]);
-			short pieceColor = Piece::getColor(squares[i + j*8]);
-			if (pieceType == Piece::NONE || pieceColor != currentPlayer || pieceType == Piece::KNIGHT)
-				continue;
-			//-------------- PAWN MOVES -------------------------
-			else if (pieceType == Piece::PAWN) {
+	generateKingMoves();
+	generatePawnMoves();
+}
 
-				//-------- ONE STEP AHEAD ---------------------------
-				int step = (pieceColor == Piece::WHITE) ? UP : DOWN;
-				
-				bool check = false;
-				if (tryAddMove(i, j, step, false, NULL, &check) || check) {
-					//-------- ANOTHER STEP AHEAD ------------------------
-					// If pawn is still on its start square
-					if ((pieceColor == Piece::WHITE && j == 1) || (pieceColor == Piece::BLACK) && j == 6) {
-						step <<= 4;
-						step |= (pieceColor == Piece::WHITE) ? UP : DOWN;
-						tryAddMove(i, j, step, false);
-					}
-				}
-				short targetPiece;
-				// Clear step from double step
-				step &= 0b00001111;
-				step <<= 4;
-				//-------- CAPTURE LEFT ----------------------
-				if (i != 0) {
-					step |= LEFT;
-					tryAddMove(i, j, step, true);
-				}
-				
-				//--------- CAPTURE RIGHT ---------------------
-				if (i != 7) {
-					// Clear step from capture left
-					step &= 0b11110000;
-					step |= RIGHT;
-					tryAddMove(i, j, step, true);
-				}
-				
-			}
-			//----------- ALL OTHER MOVES ----------------------
-			else {
-				short* directions = Move::rookDirections;
-				// Switch to diagonal moves (first) for bishop (and queen and king)
-				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN || pieceType == Piece::KING) {
-					directions = Move::bishopDirections;
-				}
-				bool* check = new bool{};
+void Board::generatePawnMoves() {
+	//---------- Moves one step ahead -----------------
+	bitboard moves = bb.getSinglePawnSteps(currentPlayer);
+	// Pawns may only step on empty fields
+	moves &= bb.getEmpty();
+	unsigned short targetIndex = 0;
+	while (moves) {
+		targetIndex += bb.pop(&moves);
+		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -8 : 8);
+		bool promotionFlag = ((currentPlayer == Piece::WHITE) && (targetIndex > 54)) ||
+							 ((currentPlayer == Piece::BLACK) && (targetIndex < 8));
+		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, promotionFlag);
+		possibleMoves.push_back(move);
+		targetIndex++;
+	}
 
-				for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
-					// Go into one of the directions as long as possible and save possible moves along the way
-					int steps = 0;
-					int stepCounter = 0;
-					while (stepCounter < 7) {
-						// Go one step into the direction
-						steps |= directions[dirIndex];
-						unsigned short target[2];
-						if (tryAddMove(i, j, steps, true, target, check) || *check) 
-						{
-							stepCounter++;
-							steps <<= 4;
+	//---------- Moves two steps ahead ----------------
+	moves = bb.getDoublePawnSteps(currentPlayer);
+	// Target field must be empty
+	moves &= bb.getEmpty();
+	// Previous field must also be empty
+	moves &= (currentPlayer == Piece::WHITE) ? (bb.getEmpty() << 8) : (bb.getEmpty() >> 8);
+	targetIndex = 0;
+	while (moves) {
+		targetIndex += bb.pop(&moves);
+		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -16 : 16);
+		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex);
+		possibleMoves.push_back(move);
+		targetIndex++;
+	}
 
-							// If capturing piece, still stop after accepting
-							if (Piece::getType(getPiece(target[0], target[1])) != Piece::NONE)
-								break;
-							// If king, also stop after accepting
-							if (pieceType == Piece::KING) {
-								break;
-							}
-						}
-						else {
-							break;
-						}
-
-					}
-					// For queen and king, do bishop moves and then rook moves
-					if (dirIndex == 3 && (pieceType == Piece::QUEEN || pieceType == Piece::KING) && directions == Move::bishopDirections) {
-						dirIndex = -1;
-						directions = Move::rookDirections;
-					}
-				}
-				delete check;
-			}
-			//----------- CASTLING MOVES -----------------------
-			if (pieceType == Piece::KING && !kingIsInCheck(currentPlayer)) {
-				short steps = 0;
-				if (currentPlayer == Piece::WHITE) {
-					if ((castleRights & 0b1000) == 0b1000) {
-						//std::cout << "White's short castle \n";
-						// White's short castle
-						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
-							steps = RIGHT | (RIGHT << 4);
-							tryAddMove(i, j, steps, false);
-						}
-					}
-					if ((castleRights & 0b0100) == 0b0100) {
-						// White's long castle
-						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
-							steps = (LEFT << 4) | LEFT;
-							tryAddMove(i, j, steps, false);
-						}
-					}
-				}
-				else {
-					if ((castleRights & 0b0010) == 0b0010) {
-						// Black's short castle
-						if (getPiece(i + 1, j) == Piece::NONE && getPiece(i + 2, j) == Piece::NONE) {
-							steps = (RIGHT << 4) | RIGHT;
-							tryAddMove(i, j, steps, false);
-						}
-					}
-					if ((castleRights & 0b0001) == 0b0001) {
-						// Black's long castle
-						if (getPiece(i - 1, j) == Piece::NONE && getPiece(i - 2, j) == Piece::NONE && getPiece(i - 3, j) == Piece::NONE) {
-							steps = (LEFT << 4) | LEFT;
-							tryAddMove(i, j, steps, false);
-						}
-					}
-				}
-			}
+	//---------- Captures left ------------------------
+	moves = bb.getPawnAttacks(true, currentPlayer);
+	// Capture field has to be occupied by enemy or marked as ep square
+	moves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer)) | (1ULL << enPassantSquare);
+	targetIndex = 0;
+	while (moves) {
+		targetIndex += bb.pop(&moves);
+		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -7 : 9);
+		short flags = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
+			((currentPlayer == Piece::BLACK) && (1ULL << targetIndex & ~bb.notFirstRank));
+		if (targetIndex == enPassantSquare) {
+			flags |= 0b1000;
 		}
+		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, flags);
+		std::cout << "Flags of move >>" << Move::toString(move) << "<<: " << flags << '\n';
+		possibleMoves.push_back(move);
+		targetIndex++;
+	}
+
+	//---------- Captures right -----------------------
+	moves = bb.getPawnAttacks(false, currentPlayer);
+	// Capture field has to be occupied by enemy or marked as ep square
+	moves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer)) | (1ULL << enPassantSquare);
+	targetIndex = 0;
+	while (moves) {
+		targetIndex += bb.pop(&moves);
+		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -9 : 7);
+		short flags = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
+			((currentPlayer == Piece::BLACK) && (1ULL << targetIndex & ~bb.notFirstRank));
+		if (targetIndex == enPassantSquare) {
+			flags |= 0b1000;
+		}
+		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, flags);
+		std::cout << "Flags of move >>" << Move::toString(move) << "<<: " << flags << '\n';
+		possibleMoves.push_back(move);
+		targetIndex++;
 	}
 }
 
@@ -796,7 +735,7 @@ void Board::generateKingMoves() {
 		// Increase index
 		targetIndex += bb.pop(&kingMoves);
 
-		Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
+		Move move(Piece::KING | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
 		possibleMoves.push_back(move);
 
 		// Skip current 1

@@ -16,7 +16,7 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     std::random_device rd;
     randomBitboardGenerator = std::mt19937_64(rd());
 
-    initMagicNumbers();
+    //initMagicNumbers();
 }
 
 Bitboard::~Bitboard() {
@@ -337,6 +337,43 @@ bitboard Bitboard::getAllAttacks(short color)
 {
     return bitboard();
 }
+
+bitboard Bitboard::getSinglePawnSteps(short color)
+{
+    bitboard pawns = allPieces[Piece::PAWN | color];
+    if (color == Piece::WHITE) {
+        pawns = (pawns & notEightRank) << 8;
+    }
+    else {
+        pawns = (pawns & notFirstRank) >> 8;
+    }
+    return pawns;
+}
+
+bitboard Bitboard::getDoublePawnSteps(short color)
+{
+    bitboard pawns = allPieces[Piece::PAWN | color];
+    if (color == Piece::WHITE) {
+        pawns = (pawns & secondRank) << 16;
+    }
+    else {
+        pawns = (pawns & seventhRank) >> 16;
+    }
+    return pawns;
+}
+
+bitboard Bitboard::getPawnAttacks(bool left, short color)
+{
+    bitboard pawns = allPieces[Piece::PAWN | color];
+    if (color == Piece::WHITE) {
+        pawns = (pawns & notEightRank & (left ? notAfile : notHfile)) << (left ? 7 : 9);
+    }
+    else {
+        pawns = (pawns & notFirstRank & (left ? notAfile : notHfile)) >> (left ? 9 : 7);
+    }
+    return pawns;
+}
+
 
 bitboard Bitboard::getKnightAttacks(unsigned short pos)
 {
