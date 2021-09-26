@@ -647,10 +647,14 @@ bool Board::redoLastMove() {
 
 void Board::generateMoves()
 {
+	if (debugLogs) std::cout << "\nGenerating possible moves ...\n";
 	possibleMoves.clear();
 	generateKnightMoves();
 	generateKingMoves();
 	generatePawnMoves();
+	generateRookMoves();
+	generateBishopMoves();
+	generateQueenMoves();
 }
 
 void Board::generatePawnMoves() {
@@ -825,6 +829,87 @@ void Board::generateKnightMoves() {
 			targetIndex++;
 		}
 		knightPos++;
+	}
+}
+
+void Board::generateRookMoves() {
+	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
+	unsigned short rookPos = 0;
+	while (rooks) {
+		rookPos += bb.pop(&rooks);
+
+		if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
+
+		bitboard rookAttacks = bb.getRookAttacks(rookPos);
+		// Remove squares that are blocked by friendly pieces
+		rookAttacks &= ~bb.getBitboard(currentPlayer);
+
+		if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
+
+		unsigned short targetIndex = 0;
+		while (rookAttacks) {
+			targetIndex += bb.pop(&rookAttacks);
+
+			Move move(Piece::ROOK | currentPlayer, getPiece(targetIndex), rookPos, targetIndex);
+			possibleMoves.push_back(move);
+
+			targetIndex++;
+		}
+		rookPos++;
+	}
+}
+
+void Board::generateBishopMoves() {
+	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
+	unsigned short bishopPos = 0;
+	while (bishops) {
+		bishopPos += bb.pop(&bishops);
+
+		if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
+
+		bitboard bishopAttacks = bb.getBishopAttacks(bishopPos);
+		// Remove squares that are blocked by friendly pieces
+		bishopAttacks &= ~bb.getBitboard(currentPlayer);
+
+		if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
+
+		unsigned short targetIndex = 0;
+		while (bishopAttacks) {
+			targetIndex += bb.pop(&bishopAttacks);
+
+			Move move(Piece::BISHOP | currentPlayer, getPiece(targetIndex), bishopPos, targetIndex);
+			possibleMoves.push_back(move);
+
+			targetIndex++;
+		}
+		bishopPos++;
+	}
+}
+
+void Board::generateQueenMoves() {
+	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
+	unsigned short queenPos = 0;
+	while (queens) {
+		queenPos += bb.pop(&queens);
+
+		if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
+
+		bitboard queenAttacks = bb.getRookAttacks(queenPos) | bb.getBishopAttacks(queenPos);
+		// Remove squares that are blocked by friendly pieces
+		queenAttacks &= ~bb.getBitboard(currentPlayer);
+
+		if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
+
+		unsigned short targetIndex = 0;
+		while (queenAttacks) {
+			targetIndex += bb.pop(&queenAttacks);
+
+			Move move(Piece::QUEEN | currentPlayer, getPiece(targetIndex), queenPos, targetIndex);
+			possibleMoves.push_back(move);
+
+			targetIndex++;
+		}
+		queenPos++;
 	}
 }
 

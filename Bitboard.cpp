@@ -16,7 +16,7 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     std::random_device rd;
     randomBitboardGenerator = std::mt19937_64(rd());
 
-    //initMagicNumbers();
+    initMagicNumbers();
 }
 
 Bitboard::~Bitboard() {

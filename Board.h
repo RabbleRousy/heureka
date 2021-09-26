@@ -146,6 +146,12 @@ public:
 
 	void generateKnightMoves();
 
+	void generateRookMoves();
+
+	void generateBishopMoves();
+
+	void generateQueenMoves();
+
 	/// <summary>
 	/// Tries to create a Move struct and add it to the possibleMoves vector.
 	/// Only succeeds if the move is legal, which is determined by wether the king is in check afterwards and other factors.
