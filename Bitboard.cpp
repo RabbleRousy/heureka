@@ -75,6 +75,11 @@ void Bitboard::initKingAttacks() {
         // NorthWest
         *currentMask |= (pos << 7) & notFirstRank & notHfile;
 
+        // Add castle squares
+        if (i == 60 || i == 4) {
+            *currentMask |= (pos >> 2);
+            *currentMask |= (pos << 2);
+        }
         //std::cout << '\n' << toString(*currentMask);
     }
 }

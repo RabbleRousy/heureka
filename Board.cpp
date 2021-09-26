@@ -728,6 +728,8 @@ void Board::generateKingMoves() {
 	bitboard kingMoves = bb.getKingAttacks(kingPos);
 	// King can only move to squares that are not attacked by enemy pieces
 	kingMoves &= ~bb.getAllAttacks(Piece::getOppositeColor(currentPlayer));
+	// Only move to empty or enemy squares
+	kingMoves &= (bb.getEmpty() | bb.getBitboard(Piece::getOppositeColor(currentPlayer)));
 
 	// Index of the current move
 	unsigned short targetIndex = 0;
@@ -735,8 +737,36 @@ void Board::generateKingMoves() {
 		// Increase index
 		targetIndex += bb.pop(&kingMoves);
 
-		Move move(Piece::KING | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
-		possibleMoves.push_back(move);
+		bool castleFailed = false;
+		if (targetIndex - kingPos == 2) {
+			// Short castle
+			castleFailed = !(getPiece(targetIndex + 1) == (Piece::ROOK | currentPlayer));
+			if (currentPlayer == Piece::WHITE) {
+				// Check white's short castle
+				castleFailed |= !(castleRights & 0b1000);
+			}
+			else {
+				// Check black's short castle
+				castleFailed |= !(castleRights & 0b0010);
+			}
+		}
+		else if (targetIndex - kingPos == -2) {
+			// Long castle
+			castleFailed = !(getPiece(targetIndex - 2) == (Piece::ROOK | currentPlayer));
+			if (currentPlayer == Piece::WHITE) {
+				// Check white's long castle
+				castleFailed |= !(castleRights & 0b0100);
+			}
+			else {
+				// Check black's long castle
+				castleFailed |= !(castleRights & 0b0001);
+			}
+		}
+		
+		if (!castleFailed) {
+			Move move(Piece::KING | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
+			possibleMoves.push_back(move);
+		}
 
 		// Skip current 1
 		targetIndex++;
