@@ -662,10 +662,20 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex += bb.pop(&moves);
 		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -8 : 8);
-		bool promotionFlag = ((currentPlayer == Piece::WHITE) && (targetIndex > 54)) ||
+		short promotionFlag = ((currentPlayer == Piece::WHITE) && (targetIndex > 54)) ||
 							 ((currentPlayer == Piece::BLACK) && (targetIndex < 8));
+		
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, promotionFlag);
 		possibleMoves.push_back(move);
+
+		if (promotionFlag) {
+			// Add all other possible promotions
+			for (int i = 2; i < 5; i++) {
+				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i);
+				possibleMoves.push_back(move);
+			}
+		}
+
 		targetIndex++;
 	}
 
@@ -692,14 +702,23 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex += bb.pop(&moves);
 		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -7 : 9);
-		short flags = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
+		short promotionFlag = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
 			((currentPlayer == Piece::BLACK) && (1ULL << targetIndex & ~bb.notFirstRank));
+		short epFlag = 0;
 		if (targetIndex == enPassantSquare) {
-			flags |= 0b1000;
+			epFlag |= 0b1000;
 		}
-		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, flags);
-		std::cout << "Flags of move >>" << Move::toString(move) << "<<: " << flags << '\n';
+		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, promotionFlag | epFlag);
 		possibleMoves.push_back(move);
+
+		if (promotionFlag) {
+			// Add all other possible promotions
+			for (int i = 2; i < 5; i++) {
+				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i | epFlag);
+				possibleMoves.push_back(move);
+			}
+		}
+
 		targetIndex++;
 	}
 
@@ -711,14 +730,23 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex += bb.pop(&moves);
 		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -9 : 7);
-		short flags = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
+		short promotionFlag = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
 			((currentPlayer == Piece::BLACK) && (1ULL << targetIndex & ~bb.notFirstRank));
+		short epFlag = 0;
 		if (targetIndex == enPassantSquare) {
-			flags |= 0b1000;
+			epFlag |= 0b1000;
 		}
-		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, flags);
-		std::cout << "Flags of move >>" << Move::toString(move) << "<<: " << flags << '\n';
+		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, promotionFlag | epFlag);
 		possibleMoves.push_back(move);
+
+		if (promotionFlag) {
+			// Add all other possible promotions
+			for (int i = 2; i < 5; i++) {
+				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i | epFlag);
+				possibleMoves.push_back(move);
+			}
+		}
+
 		targetIndex++;
 	}
 }
