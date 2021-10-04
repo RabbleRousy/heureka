@@ -1,6 +1,7 @@
 #pragma once
 #include "Piece.h"
 #include <iostream>
+#include <fstream>
 #include <random>
 
 typedef unsigned __int64 bitboard;
@@ -36,6 +37,9 @@ private:
 	unsigned long long getMagicNumberCandidate();
 	unsigned long long findMagicNumber(unsigned short pos, bool forRook);
 	void initMagicNumbers();
+	void writeMagicNumbers();
+	void readMagicNumbers();
+	void fillAttackTables();
 
 	int shittyHash(bitboard occupancy, unsigned long long magicNumber, unsigned short bitCount);
 

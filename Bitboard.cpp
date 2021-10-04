@@ -16,7 +16,15 @@ Bitboard::Bitboard() : knightAttacks(), kingAttacks()
     std::random_device rd;
     randomBitboardGenerator = std::mt19937_64(rd());
 
+    // For generating and saving new magic numbers
+    /*
     initMagicNumbers();
+    writeMagicNumbers();
+    */
+
+    // For using existing magic numbers
+    readMagicNumbers();
+    fillAttackTables();
 }
 
 Bitboard::~Bitboard() {
@@ -302,6 +310,57 @@ void Bitboard::initMagicNumbers() {
     for (int pos = 0; pos < 64; pos++) {
         rookMagics[pos] = findMagicNumber(pos, true);
         bishopMagics[pos] = findMagicNumber(pos, false);
+    }
+}
+
+void Bitboard::writeMagicNumbers() {
+    std::ofstream file("MagicNumbers.txt");
+    for (int i = 0; i < 64; i++) {
+        file << rookMagics[i] << '\n';
+    }
+    file << '\n';
+    for (int i = 0; i < 64; i++) {
+        file << bishopMagics[i] << '\n';
+    }
+    file.close();
+}
+
+void Bitboard::readMagicNumbers() {
+    std::string line;
+    std::ifstream file("MagicNumbers.txt");
+
+    int count = 0;
+    while (std::getline(file, line)) {
+        if (count < 64) {
+            rookMagics[count] = std::stoull(line);
+            //std::cout << rookMagics[count] << '\n';
+        }
+        // 64th line is empty
+        if (count > 64 && count < 129) {
+            bishopMagics[count % 65] = std::stoull(line);
+            //std::cout << bishopMagics[count % 64] << '\n';
+        }
+        count++;
+    }
+    file.close();
+}
+
+void Bitboard::fillAttackTables() {
+    // ROOK
+    for (int pos = 0; pos < 64; pos++) {
+        for (int j = 0; j < 4096; j++) {
+            bitboard occupancyCombination = getOccupancy(j, rookMasks[pos]);
+            int magicIndex = shittyHash(occupancyCombination, rookMagics[pos], bitsInRookMask[pos]);
+            rookAttacks[pos][magicIndex] = scanRookDirections(pos, occupancyCombination);
+        }
+    }
+    // BISHOP
+    for (int pos = 0; pos < 64; pos++) {
+        for (int j = 0; j < 512; j++) {
+            bitboard occupancyCombination = getOccupancy(j, bishopMasks[pos]);
+            int magicIndex = shittyHash(occupancyCombination, bishopMagics[pos], bitsInBishopMask[pos]);
+            bishopAttacks[pos][magicIndex] = scanBishopDirections(pos, occupancyCombination);
+        }
     }
 }
 
