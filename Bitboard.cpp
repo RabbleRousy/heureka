@@ -399,7 +399,54 @@ bitboard Bitboard::getEmpty()
 
 bitboard Bitboard::getAllAttacks(short color)
 {
-    return bitboard();
+    // PAWNS
+    bitboard allAttacks = getPawnAttacks(true, color);
+    allAttacks |= getPawnAttacks(false, color);
+    
+    // KNIGHTS
+    bitboard knights = allPieces[Piece::KNIGHT | color];
+    unsigned short pos = 0;
+    while (knights) {
+        pos += pop(&knights);
+        allAttacks |= getKnightAttacks(pos);
+        pos++;
+    }
+
+    // BISHOPS
+    bitboard bishops = allPieces[Piece::BISHOP | color];
+    pos = 0;
+    while (bishops) {
+        pos += pop(&bishops);
+        allAttacks |= getBishopAttacks(pos);
+        pos++;
+    }
+
+    // ROOKS
+    bitboard rooks = allPieces[Piece::ROOK | color];
+    pos = 0;
+    while (rooks) {
+        pos += pop(&rooks);
+        allAttacks |= getRookAttacks(pos);
+        pos++;
+    }
+
+    // QUEEN(S)
+    bitboard queens = allPieces[Piece::QUEEN | color];
+    pos = 0;
+    while (queens) {
+        pos += pop(&queens);
+        allAttacks |= getQueenAttacks(pos);
+        pos++;
+    }
+
+    // KING
+    bitboard king = allPieces[Piece::KING | color];
+    allAttacks |= getKingAttacks(pop(&king));
+
+    // Remove all attackSquares that are occupied by the attacking color
+    allAttacks &= ~(allPieces[color]);
+    std::cout << toString(allAttacks);
+    return allAttacks;
 }
 
 bitboard Bitboard::getSinglePawnSteps(short color)
