@@ -2,6 +2,7 @@
 
 Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
+    allAttacksNeedRebuilding = true;
     for (int i = 0; i < 64; i++) {
         bishopAttacks[i] = new bitboard[512];
         rookAttacks[i] = new bitboard[4096];
@@ -83,11 +84,6 @@ void Bitboard::initKingAttacks() {
         // NorthWest
         *currentMask |= (pos << 7) & notFirstRank & notHfile;
 
-        // Add castle squares
-        if (i == 60 || i == 4) {
-            *currentMask |= (pos >> 2);
-            *currentMask |= (pos << 2);
-        }
         //std::cout << '\n' << toString(*currentMask);
     }
 }
@@ -378,6 +374,7 @@ void Bitboard::setPiece(short p, unsigned short index)
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] |= mask;
     allPieces[Piece::getColor(p)] |= mask;
+    allAttacksNeedRebuilding = true;
 }
 
 void Bitboard::removePiece(short p, unsigned short index)
@@ -385,6 +382,7 @@ void Bitboard::removePiece(short p, unsigned short index)
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] &= ~mask;
     allPieces[Piece::getColor(p)] &= ~mask;
+    allAttacksNeedRebuilding = true;
 }
 
 bitboard Bitboard::getOccupied()
@@ -399,8 +397,10 @@ bitboard Bitboard::getEmpty()
 
 bitboard Bitboard::getAllAttacks(short color)
 {
+    if (!allAttacksNeedRebuilding) return allAttacks;
+
     // PAWNS
-    bitboard allAttacks = getPawnAttacks(true, color);
+    allAttacks = getPawnAttacks(true, color);
     allAttacks |= getPawnAttacks(false, color);
     
     // KNIGHTS
@@ -439,6 +439,7 @@ bitboard Bitboard::getAllAttacks(short color)
     // Remove all attackSquares that are occupied by the attacking color
     allAttacks &= ~(allPieces[color]);
    
+    allAttacksNeedRebuilding = false;
     return allAttacks;
 }
 
@@ -484,9 +485,21 @@ bitboard Bitboard::getKnightAttacks(unsigned short pos)
     return knightAttacks[pos];
 }
 
-bitboard Bitboard::getKingAttacks(unsigned short pos)
+bitboard Bitboard::getKingAttacks(unsigned short pos, bool includeCastle)
 {
-    return kingAttacks[pos];
+    bitboard b = kingAttacks[pos];
+    if (!includeCastle)
+        return b;
+    // King on either startsquare
+    if (pos == 4) {
+        // Add second steps to both sides
+        b |= 0x0000000000000044;
+    }
+    else if (pos == 60){
+        // Add second steps to both sides
+        b |= 0x4400000000000000;
+    }
+    return b;
 }
 
 bitboard Bitboard::getRookAttacks(unsigned short pos)

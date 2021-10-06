@@ -772,7 +772,7 @@ void Board::generatePawnMoves() {
 
 void Board::generateKingMoves() {
 	unsigned short kingPos = (currentPlayer == Piece::WHITE) ? whiteKingPos : blackKingPos;
-	bitboard kingMoves = bb.getKingAttacks(kingPos);
+	bitboard kingMoves = bb.getKingAttacks(kingPos, true);
 	// King can only move to squares that are not attacked by enemy pieces
 	kingMoves &= ~bb.getAllAttacks(Piece::getOppositeColor(currentPlayer));
 	// Only move to empty or enemy squares

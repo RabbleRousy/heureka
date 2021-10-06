@@ -43,6 +43,9 @@ private:
 
 	int shittyHash(bitboard occupancy, unsigned long long magicNumber, unsigned short bitCount);
 
+	bool allAttacksNeedRebuilding;
+	bitboard allAttacks;
+
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
@@ -63,11 +66,15 @@ public:
 
 	Bitboard();
 	~Bitboard();
+	/// <param name="p">is a Piece consisting of Type | Color, or only a Color.</param>
+	/// <returns>a bitboard containing the current positions of the given piece or all pieces of that color. </returns>
 	bitboard getBitboard(short p);
 	void setPiece(short p, unsigned short index);
 	void removePiece(short p, unsigned short index);
 	bitboard getOccupied();
 	bitboard getEmpty();
+	/// <param name="color">of the attacking side.</param>
+	/// <returns>a bitboard with all squares marked that are attacked by any piece of the given color.</returns>
 	bitboard getAllAttacks(short color);
 	/// <param name="color">of the pawns to generate the step bitboard</param>
 	/// <returns>a bitboard with the squares marked that all pawns of that color can reach by stepping one field ahead.</returns>
@@ -78,19 +85,36 @@ public:
 	/// <param name="color">of the pawns to generate the attack bitboard</param>
 	/// <returns>a bitboard with the squares marked that all pawns of that color are attacking.</returns>
 	bitboard getPawnAttacks(bool left, short color);
+	/// <param name="pos">of the knight that's attacking.</param>
+	/// <returns>a bitboard of the fields the knight is attacking from that position.</returns>
 	bitboard getKnightAttacks(unsigned short pos);
-	bitboard getKingAttacks(unsigned short pos);
+	/// <param name="pos">of the king.</param>
+	/// <param name="includeCastle">signals wether to include the castling steps in the bitboard.</param>
+	/// <returns>a bitboard of the fields the king is attacking from that position.</returns>
+	bitboard getKingAttacks(unsigned short pos, bool includeCastle = false);
+	/// <param name="pos">of the rook that's attacking.</param>
+	/// <returns>a bitboard of the fields the rook is attacking from that position, including possible blocker's squares.</returns>
 	bitboard getRookAttacks(unsigned short pos);
+	/// <param name="pos">of the bishop that's attacking.</param>
+	/// <returns>a bitboard of the fields the bishop is attacking from that position, including possible blocker's squares.</returns>
 	bitboard getBishopAttacks(unsigned short pos);
+	/// <param name="pos">of the queen that's attacking.</param>
+	/// <returns>a bitboard of the fields the queen is attacking from that position, including possible blocker's squares.</returns>
 	bitboard getQueenAttacks(unsigned short pos);
+	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
 	/// <summary>
 	/// Removes the least significant bit from the bitboard.
 	/// </summary>
 	/// <returns>index of the popped bit.</returns>
 	unsigned short pop(bitboard* b);
+	/// <returns>number of 1s set in the given bitboard.</returns>
 	unsigned short count(bitboard b);
+	/// <summary>
+	/// Sets the bit on the given bitboard to 1.
+	/// </summary>
 	void set(bitboard* b, unsigned short bit);
+	/// <returns>a string representation of the bitboard.</returns>
 	std::string toString(bitboard b);
 };
 
