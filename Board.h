@@ -140,6 +140,9 @@ public:
 	/// </summary>
 	void generateMoves();
 
+	/// <summary>
+	/// Generates pseudo legal pawn moves and adds them to possible moves vector.
+	/// </summary>
 	void generatePawnMoves();
 
 	void generateKingMoves();

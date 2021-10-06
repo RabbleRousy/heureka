@@ -678,16 +678,18 @@ void Board::generateMoves()
 }
 
 void Board::generatePawnMoves() {
+	bool white = currentPlayer == Piece::WHITE;
 	//---------- Moves one step ahead -----------------
 	bitboard moves = bb.getSinglePawnSteps(currentPlayer);
 	// Pawns may only step on empty fields
 	moves &= bb.getEmpty();
 	unsigned short targetIndex = 0;
+	// Loop over all pawns that can move one step ahead
 	while (moves) {
-		targetIndex += bb.pop(&moves);
-		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -8 : 8);
-		short promotionFlag = ((currentPlayer == Piece::WHITE) && (targetIndex > 54)) ||
-							 ((currentPlayer == Piece::BLACK) && (targetIndex < 8));
+		targetIndex = bb.pop(&moves);
+		unsigned short originIndex = targetIndex + (white ? -8 : 8);
+		short promotionFlag = (white && (targetIndex > 54)) ||
+							 (!white && (targetIndex < 8));
 		
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, promotionFlag);
 		possibleMoves.push_back(move);
@@ -699,8 +701,6 @@ void Board::generatePawnMoves() {
 				possibleMoves.push_back(move);
 			}
 		}
-
-		targetIndex++;
 	}
 
 	//---------- Moves two steps ahead ----------------
@@ -708,26 +708,25 @@ void Board::generatePawnMoves() {
 	// Target field must be empty
 	moves &= bb.getEmpty();
 	// Previous field must also be empty
-	moves &= (currentPlayer == Piece::WHITE) ? (bb.getEmpty() << 8) : (bb.getEmpty() >> 8);
-	targetIndex = 0;
+	moves &= white ? (bb.getEmpty() << 8) : (bb.getEmpty() >> 8);
+	// Loop over all pawns that can move two steps ahead
 	while (moves) {
-		targetIndex += bb.pop(&moves);
-		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -16 : 16);
+		targetIndex = bb.pop(&moves);
+		unsigned short originIndex = targetIndex + (white ? -16 : 16);
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex);
 		possibleMoves.push_back(move);
-		targetIndex++;
 	}
 
 	//---------- Captures left ------------------------
 	moves = bb.getPawnAttacks(true, currentPlayer);
 	// Capture field has to be occupied by enemy or marked as ep square
 	moves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer)) | (1ULL << enPassantSquare);
-	targetIndex = 0;
+	// Loop over all pawn captures to the left
 	while (moves) {
-		targetIndex += bb.pop(&moves);
-		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -7 : 9);
-		short promotionFlag = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
-			((currentPlayer == Piece::BLACK) && (1ULL << targetIndex & ~bb.notFirstRank));
+		targetIndex = bb.pop(&moves);
+		unsigned short originIndex = targetIndex + (white ? -7 : 9);
+		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
+			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
 		short epFlag = 0;
 		if (targetIndex == enPassantSquare) {
 			epFlag |= 0b1000;
@@ -742,20 +741,18 @@ void Board::generatePawnMoves() {
 				possibleMoves.push_back(move);
 			}
 		}
-
-		targetIndex++;
 	}
 
 	//---------- Captures right -----------------------
 	moves = bb.getPawnAttacks(false, currentPlayer);
 	// Capture field has to be occupied by enemy or marked as ep square
 	moves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer)) | (1ULL << enPassantSquare);
-	targetIndex = 0;
+	// Loop over all pawn captures to the right
 	while (moves) {
-		targetIndex += bb.pop(&moves);
-		unsigned short originIndex = targetIndex + ((currentPlayer == Piece::WHITE) ? -9 : 7);
-		short promotionFlag = ((currentPlayer == Piece::WHITE) && (1ULL << targetIndex & ~bb.notEightRank)) ||
-			((currentPlayer == Piece::BLACK) && (1ULL << targetIndex & ~bb.notFirstRank));
+		targetIndex = bb.pop(&moves);
+		unsigned short originIndex = targetIndex + (white ? -9 : 7);
+		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
+			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
 		short epFlag = 0;
 		if (targetIndex == enPassantSquare) {
 			epFlag |= 0b1000;
@@ -770,8 +767,6 @@ void Board::generatePawnMoves() {
 				possibleMoves.push_back(move);
 			}
 		}
-
-		targetIndex++;
 	}
 }
 
@@ -787,7 +782,7 @@ void Board::generateKingMoves() {
 	unsigned short targetIndex = 0;
 	while (kingMoves) {
 		// Increase index
-		targetIndex += bb.pop(&kingMoves);
+		targetIndex = bb.pop(&kingMoves);
 
 		bool castleFailed = false;
 		if (targetIndex - kingPos == 2) {
@@ -835,9 +830,6 @@ void Board::generateKingMoves() {
 			Move move(Piece::KING | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
 			possibleMoves.push_back(move);
 		}
-
-		// Skip current 1
-		targetIndex++;
 	}
 }
 
@@ -846,7 +838,7 @@ void Board::generateKnightMoves() {
 	unsigned short knightPos = 0;
 	while (knights) {
 		// Get the index of next knight
-		knightPos += bb.pop(&knights);
+		knightPos = bb.pop(&knights);
 
 		bitboard knightMoves = bb.getKnightAttacks(knightPos);
 		// Possible Knight moves either go to an empty square or capture an opponent's piece
@@ -856,15 +848,11 @@ void Board::generateKnightMoves() {
 		unsigned short targetIndex = 0;
 		while (knightMoves) {
 			// Increase index
-			targetIndex += bb.pop(&knightMoves);
+			targetIndex = bb.pop(&knightMoves);
 
 			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex);
 			possibleMoves.push_back(move);
-
-			// Skip current 1
-			targetIndex++;
 		}
-		knightPos++;
 	}
 }
 
@@ -872,7 +860,7 @@ void Board::generateRookMoves() {
 	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
 	unsigned short rookPos = 0;
 	while (rooks) {
-		rookPos += bb.pop(&rooks);
+		rookPos = bb.pop(&rooks);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
 
@@ -884,14 +872,11 @@ void Board::generateRookMoves() {
 
 		unsigned short targetIndex = 0;
 		while (rookAttacks) {
-			targetIndex += bb.pop(&rookAttacks);
+			targetIndex = bb.pop(&rookAttacks);
 
 			Move move(Piece::ROOK | currentPlayer, getPiece(targetIndex), rookPos, targetIndex);
 			possibleMoves.push_back(move);
-
-			targetIndex++;
 		}
-		rookPos++;
 	}
 }
 
@@ -899,7 +884,7 @@ void Board::generateBishopMoves() {
 	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
 	unsigned short bishopPos = 0;
 	while (bishops) {
-		bishopPos += bb.pop(&bishops);
+		bishopPos = bb.pop(&bishops);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
 
@@ -911,14 +896,11 @@ void Board::generateBishopMoves() {
 
 		unsigned short targetIndex = 0;
 		while (bishopAttacks) {
-			targetIndex += bb.pop(&bishopAttacks);
+			targetIndex = bb.pop(&bishopAttacks);
 
 			Move move(Piece::BISHOP | currentPlayer, getPiece(targetIndex), bishopPos, targetIndex);
 			possibleMoves.push_back(move);
-
-			targetIndex++;
 		}
-		bishopPos++;
 	}
 }
 
@@ -926,7 +908,7 @@ void Board::generateQueenMoves() {
 	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
 	unsigned short queenPos = 0;
 	while (queens) {
-		queenPos += bb.pop(&queens);
+		queenPos = bb.pop(&queens);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
 
@@ -938,14 +920,11 @@ void Board::generateQueenMoves() {
 
 		unsigned short targetIndex = 0;
 		while (queenAttacks) {
-			targetIndex += bb.pop(&queenAttacks);
+			targetIndex = bb.pop(&queenAttacks);
 
 			Move move(Piece::QUEEN | currentPlayer, getPiece(targetIndex), queenPos, targetIndex);
 			possibleMoves.push_back(move);
-
-			targetIndex++;
 		}
-		queenPos++;
 	}
 }
 

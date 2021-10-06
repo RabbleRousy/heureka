@@ -167,11 +167,11 @@ bitboard Bitboard::getOccupancy(int index, bitboard blockerMask)
     bitboard occupany = bitboard(0);
 
     int bitCount = count(blockerMask);
-    short square = -1;
+    short square = 0;
     
     for (int i = 0; i < bitCount; i++) {
         // Read the next least significant bit
-        square += pop(&blockerMask) + 1;
+        square = pop(&blockerMask);
         // Set the i'th bit if the i'th bit in the index is also set
         // --> guarantees all possible occupancy variations with indexes from 0 - 2^bitCount
         if (index & (1 << i)) {
@@ -407,36 +407,29 @@ bitboard Bitboard::getAllAttacks(short color)
     bitboard knights = allPieces[Piece::KNIGHT | color];
     unsigned short pos = 0;
     while (knights) {
-        pos += pop(&knights);
+        pos = pop(&knights);
         allAttacks |= getKnightAttacks(pos);
-        pos++;
     }
 
     // BISHOPS
     bitboard bishops = allPieces[Piece::BISHOP | color];
-    pos = 0;
     while (bishops) {
-        pos += pop(&bishops);
+        pos = pop(&bishops);
         allAttacks |= getBishopAttacks(pos);
-        pos++;
     }
 
     // ROOKS
     bitboard rooks = allPieces[Piece::ROOK | color];
-    pos = 0;
     while (rooks) {
-        pos += pop(&rooks);
+        pos = pop(&rooks);
         allAttacks |= getRookAttacks(pos);
-        pos++;
     }
 
     // QUEEN(S)
     bitboard queens = allPieces[Piece::QUEEN | color];
-    pos = 0;
     while (queens) {
-        pos += pop(&queens);
+        pos = pop(&queens);
         allAttacks |= getQueenAttacks(pos);
-        pos++;
     }
 
     // KING
@@ -522,13 +515,7 @@ unsigned short Bitboard::pop(bitboard* b)
 {
     unsigned long scanIndex;
     _BitScanForward64(&scanIndex, *b);
-    if (scanIndex != 63) {
-        *b >>= scanIndex + 1;
-    }
-    // Special case where we would >>64 (undef.)
-    else {
-        *b = 0;
-    }
+    *b &= *b - 1;
     return scanIndex;
 }
 

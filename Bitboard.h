@@ -69,8 +69,14 @@ public:
 	bitboard getOccupied();
 	bitboard getEmpty();
 	bitboard getAllAttacks(short color);
+	/// <param name="color">of the pawns to generate the step bitboard</param>
+	/// <returns>a bitboard with the squares marked that all pawns of that color can reach by stepping one field ahead.</returns>
 	bitboard getSinglePawnSteps(short color);
+	/// <param name="color">of the pawns to generate the step bitboard</param>
+	/// <returns>a bitboard with the squares marked that all pawns of that color can reach by stepping two fields ahead.</returns>
 	bitboard getDoublePawnSteps(short color);
+	/// <param name="color">of the pawns to generate the attack bitboard</param>
+	/// <returns>a bitboard with the squares marked that all pawns of that color are attacking.</returns>
 	bitboard getPawnAttacks(bool left, short color);
 	bitboard getKnightAttacks(unsigned short pos);
 	bitboard getKingAttacks(unsigned short pos);
@@ -78,6 +84,10 @@ public:
 	bitboard getBishopAttacks(unsigned short pos);
 	bitboard getQueenAttacks(unsigned short pos);
 	bool containsSquare(bitboard b, unsigned short square);
+	/// <summary>
+	/// Removes the least significant bit from the bitboard.
+	/// </summary>
+	/// <returns>index of the popped bit.</returns>
 	unsigned short pop(bitboard* b);
 	unsigned short count(bitboard b);
 	void set(bitboard* b, unsigned short bit);
