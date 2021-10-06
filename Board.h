@@ -152,32 +152,15 @@ public:
 
 	void generateQueenMoves();
 
-	/// <summary>
-	/// Tries to create a Move struct and add it to the possibleMoves vector.
-	/// Only succeeds if the move is legal, which is determined by wether the king is in check afterwards and other factors.
-	/// </summary>
-	/// <param name="x">is the index of the column where the move starts.</param>
-	/// <param name="y">is the index of the row where the move starts.</param>
-	/// <param name="steps">from the start position to the destination, see Move.h for the direction bitmasks.</param>
-	/// <param name="canCapture">indicates wether the Move is allowed to capture an opposing piece.</param>
-	/// <param name="target">is used to store and optionally return the target coordinates. Can be NULL.</param>
-	/// <param name="illegalBecauseCheck">is a pointer to a flag that gets set if the candidate move got rejected because it would put own king in check.</param>
-	/// <returns>wether the move could be constructed and added to the list.</returns>
-	bool tryAddMove(unsigned short x, unsigned short y, int steps, bool canCapture, unsigned short target[2] = NULL, bool* illegalBecauseCheck = NULL);
+	void pseudoLegalToLegalMoves();
 
+	
 	/// <summary>
 	/// Scans in all possible directions from the king to detect attackers that give check.
 	/// </summary>
 	/// <param name="color"> specifies for which king the method is called.</param>
 	/// <returns>wether there is atleast one opposing piece currently checking this color's king.</returns>
 	bool kingIsInCheck(const short color);
-
-	/// <summary>
-	/// Performs the desired move, looks for check on the currentPlayer's king and undos the move again.
-	/// </summary>
-	/// <param name="move">to be made before the check test.</param>
-	/// <returns>wether the currentPlayer's king was checked after the move, making it an illegal move.</returns>
-	bool kingInCheckAfter(const Move* move);
 
 	/// <summary>
 	/// Converts a step to a x and y direction by bitshifting.

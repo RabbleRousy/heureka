@@ -445,7 +445,7 @@ bitboard Bitboard::getAllAttacks(short color)
 
     // Remove all attackSquares that are occupied by the attacking color
     allAttacks &= ~(allPieces[color]);
-    std::cout << toString(allAttacks);
+   
     return allAttacks;
 }
 

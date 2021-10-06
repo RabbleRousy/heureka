@@ -24,7 +24,7 @@ Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(
 
 void Board::clearBoard() {
 	for (int i = 0; i < 64; i++) {
-		squares[i] = Piece::NONE;
+		removePiece(i);
 	}
 }
 
@@ -136,6 +136,12 @@ bool Board::readPosFromFEN(std::string fen) {
 	// No additional infos
 	if (i >= fen.size()-1) {
 		if (DEBUG) std::cout << "End of FEN reached.\n";
+
+		std::cout << "\nRooks bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::ROOK | currentPlayer) | bb.getBitboard(Piece::ROOK | Piece::getOppositeColor(currentPlayer)));
+		std::cout << "\nKnights bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::KNIGHT | currentPlayer) | bb.getBitboard(Piece::KNIGHT | Piece::getOppositeColor(currentPlayer)));
+		std::cout << "\nBishops bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
+		std::cout << "\nPawns bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::PAWN | currentPlayer) | bb.getBitboard(Piece::PAWN | Piece::getOppositeColor(currentPlayer)));
+
 		return true;
 	}
 
@@ -255,6 +261,14 @@ bool Board::readPosFromFEN(std::string fen) {
 	doMove(&epMove);
 
 	swapCurrentPlayer();
+
+	/*
+
+	std::cout << "\nRooks bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::ROOK | currentPlayer) | bb.getBitboard(Piece::ROOK | Piece::getOppositeColor(currentPlayer)));
+	std::cout << "\nKnights bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::KNIGHT | currentPlayer) | bb.getBitboard(Piece::KNIGHT | Piece::getOppositeColor(currentPlayer)));
+	std::cout << "\nBishops bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
+	std::cout << "\nPawns bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::PAWN | currentPlayer) | bb.getBitboard(Piece::PAWN | Piece::getOppositeColor(currentPlayer)));
+	*/
 
 	return true;
 }
@@ -469,7 +483,10 @@ void Board::doMove(const Move* move)
 	short promoResult = move->getPromotionResult();
 	setPiece(to, promoResult);
 	removePiece(from);
+	
+	std::cout << "\nBishops bitboard after " << Move::toString(*move) << ":\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
 
+	
 	// En passant 
 	if (move->isEnPassant()) {
 		removePiece(currentPlayer == Piece::WHITE ? to - 8 : to + 8);
@@ -482,6 +499,7 @@ void Board::doMove(const Move* move)
 	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
 		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
 		unsigned short rookTo = from + (to - from) / 2;
+		std::cout << "\n------------CASTLED!------------\n";
 		// Castle detected, Rook has to be moved
 		removePiece(rookFrom);
 		setPiece(rookTo, Piece::ROOK | currentPlayer);
@@ -655,6 +673,8 @@ void Board::generateMoves()
 	generateRookMoves();
 	generateBishopMoves();
 	generateQueenMoves();
+
+	//pseudoLegalToLegalMoves();
 }
 
 void Board::generatePawnMoves() {
@@ -913,219 +933,22 @@ void Board::generateQueenMoves() {
 	}
 }
 
-bool Board::tryAddMove(const unsigned short x, const unsigned short y, int steps, bool canCapture, unsigned short target[2], bool* illegalBecauseCheck)
-{
-	short dir[2];
-	stepsToDirection(steps, dir);
-	short moveColor = Piece::getColor(getPiece(x, y));
-
-	bool returnTarget = !(target == NULL);
-
-	if (!returnTarget) {
-		target = new unsigned short[2];
-	}
-
-	target[0] = x + dir[0];
-	target[1] = y + dir[1];
-
-	// If move goes out of bounds, discard
-	if (target[0] > 7 || target[0] < 0 || target[1] > 7 || target[1] < 0) {
-		if (!returnTarget) {
-			delete[] target;
+void Board::pseudoLegalToLegalMoves() {
+	std::vector<Move> legalMoves;
+	for (int i = 0; i < possibleMoves.size(); i++) {
+		Move* move = &possibleMoves[i];
+		doMove(move);
+		if (!kingIsInCheck(currentPlayer)) {
+			legalMoves.push_back(*move);
 		}
-		return false;
+		undoMove(move);
 	}
-		
-	// If move would capture friendly piece, discard
-	if (Piece::getColor(getPiece(target[0], target[1])) == currentPlayer) {
-		if (!returnTarget) {
-			delete[] target;
-		}
-		return false;
-	}
-		
-
-	// Get target piece
-	short capture = getPiece(target[0], target[1]);
-
-	// If move would capture, but it's not allowed (pawn forward), discard
-	if (!canCapture && Piece::getType(capture) != Piece::NONE) {
-		if (!returnTarget) {
-			delete[] target;
-		}
-		return false;
-	}
-
-
-	// Handle pawn move (promotion check)
-	bool promote = false;
-	short flags = 0;
-	if (Piece::getType(getPiece(x, y)) == Piece::PAWN) {
-		promote = (target[1] == 7 && currentPlayer == Piece::WHITE) || (target[1] == 0 && currentPlayer == Piece::BLACK);
-		// Handle pawn captures (enpassant check)
-		if (canCapture) {
-			bool regularCapture = Piece::getType(capture) != Piece::NONE && Piece::getColor(capture) != currentPlayer;
-			bool enPassant = false;
-			if (!regularCapture) {
-				// Check for en passant
-				// White on 5th rank or black on 4th rank
-				if ((moveColor == Piece::WHITE && y == 4) || (moveColor == Piece::BLACK && y == 3)) {
-					// Check if enemy pawn is next to you
-					enPassant = (enPassantSquare == target[0] + target[1] * 8);
-				}
-			}
-			if (!(regularCapture || enPassant))
-				return false;
-			// If ep flag is set
-			if (enPassant) {
-				// Update the captured piece
-				capture = Piece::PAWN | Piece::getOppositeColor(currentPlayer);
-				// Save flag
-				flags = enPassant * 8;
-			}
-		}
-	}
-
-	Move move(getPiece(x, y), capture, x + y * 8, target[0] + target[1] * 8, flags);
-
-	// If king tries to move more than one square, check for castling
-	if (Piece::getType(getPiece(x, y)) == Piece::KING && steps > 8) {
-		move.targetSquare = x + y * 8 + int(dir[0] / 2);
-		if (kingInCheckAfter(&move))
-			// Castling is interrupted on the first step
-			return false;
-		move.targetSquare = target[0] + target[1] * 8;
-	}
-
-	if (!kingInCheckAfter(&move)) {
-
-		// Move accepted
-		if (!promote) {
-			possibleMoves.push_back(move);
-		}
-		else {
-			// If it's a promotion, add one move for each type of promotion and set corresponding flag
-			move.flags |= Move::Promotion::ToBishop;
-			possibleMoves.push_back(move);
-			move.flags |= Move::Promotion::ToKnight;
-			possibleMoves.push_back(move);
-			move.flags |= Move::Promotion::ToQueen;
-			possibleMoves.push_back(move);
-			move.flags |= Move::Promotion::ToRook;
-			possibleMoves.push_back(move);
-		}
-
-		if (debugLogs) {
-			std::cout << "Move " << Move::toString(move) << " accepted.\n";
-		}
-	}
-	else {
-		if (illegalBecauseCheck != NULL) {
-			*illegalBecauseCheck = true;
-		}
-		if (!returnTarget) {
-			delete[] target;
-		}
-		return false;
-	}
-
-	if (!returnTarget) {
-		delete[] target;
-	}
-
-	return true;
+	possibleMoves = legalMoves;
 }
 
-bool Board::kingIsInCheck(const short color)
-{
-	short kingPos[2];
-	kingPos[0] = (color == Piece::WHITE) ? whiteKingPos % 8 : blackKingPos % 8;
-	kingPos[1] = (color == Piece::WHITE) ? whiteKingPos / 8 : blackKingPos / 8;
-	short* directions = Move::bishopDirections;
-
-	for (int dirIndex = 0; dirIndex < 4; dirIndex++) {
-		// Go into one of the directions as long as possible and look for enemy pieces
-		short dir[2];
-		stepsToDirection(directions[dirIndex], dir);
-		
-		for (int i = 1; i < 8; i++) {
-			short pieceOnTargetSquare = getPiece(kingPos[0] + i * dir[0], kingPos[1] + i * dir[1]);
-
-			short pieceType = Piece::getType(pieceOnTargetSquare);
-
-			if (pieceType == Piece::NONE) continue;
-			if (Piece::getColor(pieceOnTargetSquare) == color) break;
-
-			if (directions == Move::bishopDirections) {
-				// "Short range" checks
-				if (i == 1) {
-					// Pawn checks
-					if (pieceType == Piece::PAWN) {
-						// White king get's checked by pawns above him
-						if (color == Piece::WHITE && dirIndex < 2) {
-							return true;
-						}
-						// Black king get's checked by pawns below him
-						else if (color == Piece::BLACK && dirIndex >= 2) {
-							return true;
-						}
-					}
-					// Diagonal King checks
-					else if (pieceType == Piece::KING){
-						return true;
-					}
-				}
-				// Diagonal checks
-				if (pieceType == Piece::BISHOP || pieceType == Piece::QUEEN)
-					return true;
-				else
-					break;
-			}
-			// Horizontal/vertical checks
-			else {
-				if (pieceType == Piece::ROOK || pieceType == Piece::QUEEN || (pieceType == Piece::KING && i == 1))
-					return true;
-				else
-					break;
-			}
-		}
-
-		// Do bishop moves and then rook moves
-		if (dirIndex == 3 && directions == Move::bishopDirections) {
-			dirIndex = -1;
-			directions = Move::rookDirections;
-		}
-	}
-
-	//---------- KNIGHT CHECKS -----------------
-	directions = Move::knightMoves;
-	for (int i = 0; i < 8; i++) {
-		short dir[2];
-		stepsToDirection(directions[i], dir);
-		short pieceOnTargetSquare = getPiece(kingPos[0] + dir[0], kingPos[1] + dir[1]);
-		// Check if there is an enemy knight on one of the squares where it's targeting the king
-		if (pieceOnTargetSquare == (Piece::KNIGHT | Piece::getOppositeColor(color))) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool Board::kingInCheckAfter(const Move* move)
-{
-	if (debugLogs) std::cout << "Is king in check after " << Move::toString(*move) << "? ";
-	// Do the move
-	doMove(move);
-
-	// Is king in check now?
-	bool check = kingIsInCheck(currentPlayer);
-	
-	// Undo move
-	undoMove(move);
-
-	if (debugLogs) std::cout << (check ? "Yes." : "No.") << "\n";
-	return check;
+bool Board::kingIsInCheck(const short color) {
+	bitboard king = bb.getBitboard(Piece::KING | color);
+	return king & bb.getAllAttacks(Piece::getOppositeColor(color));
 }
 
 // Converts an integer (step) to a short[2] x and y direction
@@ -1161,8 +984,7 @@ std::string Board::getSquareName(unsigned short index) {
 	return squareNames[index];
 }
 
-int Board::testMoveGeneration(unsigned int depth, bool divide)
-{
+int Board::testMoveGeneration(unsigned int depth, bool divide) {
 	if (depth == 1) return possibleMoves.size();
 	int positionCount = 0;
 	std::vector<Move> moves = possibleMoves;
@@ -1185,6 +1007,8 @@ int Board::testMoveGeneration(unsigned int depth, bool divide)
 		possibleMoves = moves;
 		if (divide) {
 			std::cout << Move::toString(possibleMoves[i]) << ": " << std::to_string(positionsAfterMove) << '\n';
+			std::string dump;
+			//std::cin >> dump;
 		}
 	}
 	futureMovesBuffer = std::stack<Move>();
