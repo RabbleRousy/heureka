@@ -1,4 +1,4 @@
-KNIGHT MOVES
+--------- KNIGHT MOVES ----------------------------
 
 fen: nnnnknnn/nnnnnnnn/8/8/8/8/NNNNNNNN/NNNNKNNN
 perft 3
@@ -10,9 +10,16 @@ bitboards:
 5.8026 after 105 ms (mac) -> 580.000 m/s
 5.8026 after 45 ms (win) -> 1.300.000 m/s
 
-STARTPOS, PSEUDOLEGAL
+--------- STARTPOS, PSEUDOLEGAL -------------------
 perft 5
 4.894.363 after 880 ms (win) -> 5.561.000 m/s
 
 perft 6
 120.735.711 after 21740 ms (win) -> 5.553.000 m/s
+
+--------- STARTPOS, NAIVE LEGALITY CHECK ----------
+perft 4
+197.281 after 225 ms (win) -> 876.800 m/s
+
+perft 5
+4.865.609 after 5322 ms (win) -> 914.200 m/s

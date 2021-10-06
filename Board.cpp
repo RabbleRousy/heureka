@@ -674,7 +674,7 @@ void Board::generateMoves()
 	generateBishopMoves();
 	generateQueenMoves();
 
-	//pseudoLegalToLegalMoves();
+	pseudoLegalToLegalMoves();
 }
 
 void Board::generatePawnMoves() {
