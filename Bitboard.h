@@ -52,6 +52,10 @@ public:
 	const bitboard notEightRank = ~(0xFF00000000000000);
 	const bitboard secondRank = 0x000000000000FF00;
 	const bitboard seventhRank = 0x00FF000000000000;
+	const bitboard OO = 0x000000000000060;
+	const bitboard OOO = 0x000000000000000E;
+	const bitboard oo = 0x6000000000000000;
+	const bitboard ooo = 0x0E00000000000000;
 
 	Bitboard();
 	~Bitboard();

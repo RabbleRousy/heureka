@@ -484,7 +484,7 @@ void Board::doMove(const Move* move)
 	setPiece(to, promoResult);
 	removePiece(from);
 	
-	std::cout << "\nBishops bitboard after " << Move::toString(*move) << ":\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
+	//std::cout << "\nBishops bitboard after " << Move::toString(*move) << ":\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
 
 	
 	// En passant 
@@ -792,26 +792,42 @@ void Board::generateKingMoves() {
 		bool castleFailed = false;
 		if (targetIndex - kingPos == 2) {
 			// Short castle
-			castleFailed = !(getPiece(targetIndex + 1) == (Piece::ROOK | currentPlayer));
-			if (currentPlayer == Piece::WHITE) {
+			if (currentPlayer == Piece::WHITE && (castleRights & 0b1000)) {
 				// Check white's short castle
-				castleFailed |= !(castleRights & 0b1000);
+				// Two squares next to king have to be empty and not attacked
+				castleFailed |= (bb.OO & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
+			}
+			else if (castleRights & 0b0010) {
+				// Check black's short castle
+				// Two squares next to king have to be empty and not attacked
+				castleFailed |= (bb.oo & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
 			}
 			else {
-				// Check black's short castle
-				castleFailed |= !(castleRights & 0b0010);
+				castleFailed = true;
+			}
+
+			if (!castleFailed) {
+				// Rook has to be on the right square
+				castleFailed |= !(getPiece(targetIndex + 1) == (Piece::ROOK | currentPlayer));
 			}
 		}
 		else if (targetIndex - kingPos == -2) {
 			// Long castle
-			castleFailed = !(getPiece(targetIndex - 2) == (Piece::ROOK | currentPlayer));
-			if (currentPlayer == Piece::WHITE) {
+			if (currentPlayer == Piece::WHITE && (castleRights & 0b0100)) {
 				// Check white's long castle
-				castleFailed |= !(castleRights & 0b0100);
+				// Three squares next to king have to be empty and not attacked
+				castleFailed |= (bb.OOO & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
 			}
-			else {
+			else if (castleRights & 0b0001) {
 				// Check black's long castle
-				castleFailed |= !(castleRights & 0b0001);
+				// Three squares next to king have to be empty and not attacked
+				castleFailed |= (bb.ooo & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
+			}
+			else castleFailed = true;
+
+			if (!castleFailed) {
+				// Rook has to be on the right square
+				castleFailed = !(getPiece(targetIndex - 2) == (Piece::ROOK | currentPlayer));
 			}
 		}
 		

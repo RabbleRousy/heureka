@@ -4,8 +4,15 @@ fen: nnnnknnn/nnnnnnnn/8/8/8/8/NNNNNNNN/NNNNKNNN
 perft 3
 
 old:
-58026 after 747 ms (mac) -> 82.900 m/s
+5.8026 after 747 ms (mac) -> 82.900 m/s
 
 bitboards:
-58026 after 105 ms (mac) -> 580.000 m/s
-58026 after 45 ms (win) -> 1.300.000 m/s
+5.8026 after 105 ms (mac) -> 580.000 m/s
+5.8026 after 45 ms (win) -> 1.300.000 m/s
+
+STARTPOS, PSEUDOLEGAL
+perft 5
+4.894.363 after 880 ms (win) -> 5.561.000 m/s
+
+perft 6
+120.735.711 after 21740 ms (win) -> 5.553.000 m/s
