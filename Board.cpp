@@ -472,8 +472,8 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 	return false;
 }
 
-void Board::doMove(const Move* move)
-{
+void Board::doMove(const Move* move) {
+	PROFILE_FUNCTION();
 	enPassantSquare = 64;
 	const unsigned short from = move->startSquare;
 	const unsigned short to = move->targetSquare;
@@ -605,8 +605,8 @@ void Board::doMove(std::string move) {
 	doMove(&m);
 }
 
-void Board::undoMove(const Move* move)
-{
+void Board::undoMove(const Move* move) {
+	PROFILE_FUNCTION();
 	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*move) << "<<\n";
 
 	unsigned short target = move->targetSquare;
@@ -665,7 +665,9 @@ bool Board::redoLastMove() {
 
 void Board::generateMoves()
 {
+	PROFILE_FUNCTION();
 	if (debugLogs) std::cout << "\nGenerating possible moves ...\n";
+	Instrumentor::Get().BeginSession("Generate Moves Profiling", "moves.json");
 	possibleMoves.clear();
 	generateKnightMoves();
 	generateKingMoves();
@@ -675,9 +677,11 @@ void Board::generateMoves()
 	generateQueenMoves();
 
 	pseudoLegalToLegalMoves();
+	Instrumentor::Get().EndSession();
 }
 
 void Board::generatePawnMoves() {
+	PROFILE_FUNCTION();
 	bool white = currentPlayer == Piece::WHITE;
 	//---------- Moves one step ahead -----------------
 	bitboard moves = bb.getSinglePawnSteps(currentPlayer);
@@ -771,6 +775,7 @@ void Board::generatePawnMoves() {
 }
 
 void Board::generateKingMoves() {
+	PROFILE_FUNCTION();
 	unsigned short kingPos = (currentPlayer == Piece::WHITE) ? whiteKingPos : blackKingPos;
 	bitboard kingMoves = bb.getKingAttacks(kingPos, true);
 	// King can only move to squares that are not attacked by enemy pieces
@@ -834,6 +839,7 @@ void Board::generateKingMoves() {
 }
 
 void Board::generateKnightMoves() {
+	PROFILE_FUNCTION();
 	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
 	unsigned short knightPos = 0;
 	while (knights) {
@@ -857,6 +863,7 @@ void Board::generateKnightMoves() {
 }
 
 void Board::generateRookMoves() {
+	PROFILE_FUNCTION();
 	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
 	unsigned short rookPos = 0;
 	while (rooks) {
@@ -881,6 +888,7 @@ void Board::generateRookMoves() {
 }
 
 void Board::generateBishopMoves() {
+	PROFILE_FUNCTION();
 	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
 	unsigned short bishopPos = 0;
 	while (bishops) {
@@ -905,6 +913,7 @@ void Board::generateBishopMoves() {
 }
 
 void Board::generateQueenMoves() {
+	PROFILE_FUNCTION();
 	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
 	unsigned short queenPos = 0;
 	while (queens) {
@@ -929,6 +938,7 @@ void Board::generateQueenMoves() {
 }
 
 void Board::pseudoLegalToLegalMoves() {
+	PROFILE_FUNCTION();
 	std::vector<Move> legalMoves;
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		Move* move = &possibleMoves[i];
@@ -942,6 +952,7 @@ void Board::pseudoLegalToLegalMoves() {
 }
 
 bool Board::kingIsInCheck(const short color) {
+	PROFILE_FUNCTION();
 	bitboard king = bb.getBitboard(Piece::KING | color);
 	return king & bb.getAllAttacks(Piece::getOppositeColor(color));
 }
@@ -980,6 +991,7 @@ std::string Board::getSquareName(unsigned short index) {
 }
 
 int Board::testMoveGeneration(unsigned int depth, bool divide) {
+	PROFILE_FUNCTION();
 	if (depth == 1) return possibleMoves.size();
 	int positionCount = 0;
 	std::vector<Move> moves = possibleMoves;

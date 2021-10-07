@@ -143,11 +143,9 @@ void ChessGraphics::mainLoop() {
 				std::cout << "Enter move generation test depth: ";
 				int depth;
 				std::cin >> depth;
-				board.accumulatedGenerationTime = 0.0f;
-				Timer timer("Board::testMoveGeneration(" + std::to_string(depth) + ')', NULL);
+				Instrumentor::Get().BeginSession("Perft " + std::to_string(depth) + " profile", "perft.json");
 				int positions = board.testMoveGeneration(depth, true);
-				std::cout << "After " << depth << " moves there are " << positions << " positions.\nAccumulated move generation time: "
-					<< board.accumulatedGenerationTime << '\n';
+				Instrumentor::Get().EndSession();
 			}
 		}
 

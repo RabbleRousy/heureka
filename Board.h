@@ -18,7 +18,6 @@ private:
 	short whiteKingPos;
 	short blackKingPos;
 
-
 public:
 	
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
