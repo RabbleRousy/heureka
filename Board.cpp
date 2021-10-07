@@ -667,7 +667,7 @@ void Board::generateMoves()
 {
 	PROFILE_FUNCTION();
 	if (debugLogs) std::cout << "\nGenerating possible moves ...\n";
-	Instrumentor::Get().BeginSession("Generate Moves Profiling", "moves.json");
+	//Instrumentor::Get().BeginSession("Generate Moves Profiling", "moves.json");
 	possibleMoves.clear();
 	generateKnightMoves();
 	generateKingMoves();
@@ -677,7 +677,7 @@ void Board::generateMoves()
 	generateQueenMoves();
 
 	pseudoLegalToLegalMoves();
-	Instrumentor::Get().EndSession();
+	//Instrumentor::Get().EndSession();
 }
 
 void Board::generatePawnMoves() {
@@ -686,7 +686,8 @@ void Board::generatePawnMoves() {
 	//---------- Moves one step ahead -----------------
 	bitboard moves = bb.getSinglePawnSteps(currentPlayer);
 	// Pawns may only step on empty fields
-	moves &= bb.getEmpty();
+	bitboard empty = bb.getEmpty();
+	moves &= empty;
 	unsigned short targetIndex = 0;
 	// Loop over all pawns that can move one step ahead
 	while (moves) {
@@ -710,9 +711,9 @@ void Board::generatePawnMoves() {
 	//---------- Moves two steps ahead ----------------
 	moves = bb.getDoublePawnSteps(currentPlayer);
 	// Target field must be empty
-	moves &= bb.getEmpty();
+	moves &= empty;
 	// Previous field must also be empty
-	moves &= white ? (bb.getEmpty() << 8) : (bb.getEmpty() >> 8);
+	moves &= white ? (empty << 8) : (empty >> 8);
 	// Loop over all pawns that can move two steps ahead
 	while (moves) {
 		targetIndex = bb.pop(&moves);
@@ -778,10 +779,8 @@ void Board::generateKingMoves() {
 	PROFILE_FUNCTION();
 	unsigned short kingPos = (currentPlayer == Piece::WHITE) ? whiteKingPos : blackKingPos;
 	bitboard kingMoves = bb.getKingAttacks(kingPos, true);
-	// King can only move to squares that are not attacked by enemy pieces
-	kingMoves &= ~bb.getAllAttacks(Piece::getOppositeColor(currentPlayer));
-	// Only move to empty or enemy squares
-	kingMoves &= (bb.getEmpty() | bb.getBitboard(Piece::getOppositeColor(currentPlayer)));
+	// Don't move to squares occupied by your own color
+	kingMoves &= ~bb.getBitboard(currentPlayer);
 
 	// Index of the current move
 	unsigned short targetIndex = 0;
@@ -847,8 +846,8 @@ void Board::generateKnightMoves() {
 		knightPos = bb.pop(&knights);
 
 		bitboard knightMoves = bb.getKnightAttacks(knightPos);
-		// Possible Knight moves either go to an empty square or capture an opponent's piece
-		knightMoves &= (bb.getEmpty() | bb.getBitboard(Piece::getOppositeColor(currentPlayer)));
+		// Possible Knight moves can't go on squares occupied by own color
+		knightMoves &= ~(bb.getBitboard(currentPlayer));
 
 		// Index of the current move
 		unsigned short targetIndex = 0;
