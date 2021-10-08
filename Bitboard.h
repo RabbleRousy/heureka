@@ -26,6 +26,9 @@ private:
 	bitboard* bishopAttacks[64];
 	bitboard* rookAttacks[64];
 
+	bitboard connectingRays[64][64];
+
+	void initConnectingRays();
 	void initKnightAttacks();
 	void initKingAttacks();
 	void initBishopMasks();
@@ -101,6 +104,9 @@ public:
 	/// <param name="pos">of the queen that's attacking.</param>
 	/// <returns>a bitboard of the fields the queen is attacking from that position, including possible blocker's squares.</returns>
 	bitboard getQueenAttacks(unsigned short pos);
+	/// <returns>a bitboard where the bits on a straight or diagonal line between from and to are set.
+	/// Returns an empty bitboard if there is no connecting ray.</returns>
+	bitboard getConnectingRay(unsigned short from, unsigned short to);
 	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
 	/// <summary>
