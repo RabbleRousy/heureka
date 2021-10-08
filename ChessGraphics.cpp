@@ -1,6 +1,6 @@
 #include "ChessGraphics.h"
 #include "Board.h"
-#include "Timer.h"
+#include "Profiling.h"
 
 using namespace sf;
 

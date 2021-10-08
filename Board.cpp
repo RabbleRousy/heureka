@@ -2,7 +2,7 @@
 #include "Piece.h"
 #include <iostream>
 #include <string>
-#include "Timer.h"
+#include "Profiling.h"
 
 const std::string Board::squareNames[] = {
 		"a1","b1","c1","d1","e1","f1","g1","h1",
