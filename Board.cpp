@@ -676,7 +676,7 @@ void Board::generateMoves()
 	generateBishopMoves();
 	generateQueenMoves();
 
-	pseudoLegalToLegalMoves();
+	//pseudoLegalToLegalMoves();
 	//Instrumentor::Get().EndSession();
 }
 
@@ -693,6 +693,9 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex = bb.pop(&moves);
 		unsigned short originIndex = targetIndex + (white ? -8 : 8);
+
+		if (bb.isPinned(originIndex, currentPlayer)) continue;
+
 		short promotionFlag = (white && (targetIndex > 54)) ||
 							 (!white && (targetIndex < 8));
 		
@@ -718,6 +721,9 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex = bb.pop(&moves);
 		unsigned short originIndex = targetIndex + (white ? -16 : 16);
+
+		if (bb.isPinned(originIndex, currentPlayer)) continue;
+
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex);
 		possibleMoves.push_back(move);
 	}
@@ -730,6 +736,10 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex = bb.pop(&moves);
 		unsigned short originIndex = targetIndex + (white ? -7 : 9);
+
+		if (bb.isPinned(originIndex, currentPlayer)) continue;
+
+
 		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
 			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
 		short epFlag = 0;
@@ -756,6 +766,10 @@ void Board::generatePawnMoves() {
 	while (moves) {
 		targetIndex = bb.pop(&moves);
 		unsigned short originIndex = targetIndex + (white ? -9 : 7);
+
+		if (bb.isPinned(originIndex, currentPlayer)) continue;
+
+
 		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
 			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
 		short epFlag = 0;
@@ -845,6 +859,8 @@ void Board::generateKnightMoves() {
 		// Get the index of next knight
 		knightPos = bb.pop(&knights);
 
+		if (bb.isPinned(knightPos, currentPlayer)) continue;
+
 		bitboard knightMoves = bb.getKnightAttacks(knightPos);
 		// Possible Knight moves can't go on squares occupied by own color
 		knightMoves &= ~(bb.getBitboard(currentPlayer));
@@ -869,6 +885,8 @@ void Board::generateRookMoves() {
 		rookPos = bb.pop(&rooks);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
+
+		if (bb.isPinned(rookPos, currentPlayer)) continue;
 
 		bitboard rookAttacks = bb.getRookAttacks(rookPos);
 		// Remove squares that are blocked by friendly pieces
@@ -895,6 +913,8 @@ void Board::generateBishopMoves() {
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
 
+		if (bb.isPinned(bishopPos, currentPlayer)) continue;
+
 		bitboard bishopAttacks = bb.getBishopAttacks(bishopPos);
 		// Remove squares that are blocked by friendly pieces
 		bishopAttacks &= ~bb.getBitboard(currentPlayer);
@@ -919,6 +939,8 @@ void Board::generateQueenMoves() {
 		queenPos = bb.pop(&queens);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
+
+		if (bb.isPinned(queenPos, currentPlayer)) continue;
 
 		bitboard queenAttacks = bb.getRookAttacks(queenPos) | bb.getBishopAttacks(queenPos);
 		// Remove squares that are blocked by friendly pieces

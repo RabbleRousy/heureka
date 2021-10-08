@@ -13,6 +13,7 @@ private:
 	std::mt19937_64 randomBitboardGenerator;
 
 	bitboard allPieces[23];
+	unsigned short whiteKingPos, blackKingPos;
 
 	bitboard bishopMasks[64];
 	bitboard rookMasks[64];
@@ -46,8 +47,12 @@ private:
 
 	int shittyHash(bitboard occupancy, unsigned long long magicNumber, unsigned short bitCount);
 
-	bool allAttacksNeedRebuilding;
+	bool attacksNeedRebuilding;
 	bitboard allAttacks;
+	bool pinsExist;
+	bitboard pinsOnWhiteKing[8], pinsOnBlackKing[8];
+	bool checkExists, doubleCheck;
+	bitboard checksOnWhiteKing[2], checksOnBlackKing[2];
 
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
@@ -106,7 +111,9 @@ public:
 	bitboard getQueenAttacks(unsigned short pos);
 	/// <returns>a bitboard where the bits on a straight or diagonal line between from and to are set.
 	/// Returns an empty bitboard if there is no connecting ray.</returns>
-	bitboard getConnectingRay(unsigned short from, unsigned short to);
+	bitboard getConnectingRay(unsigned short king, unsigned short attacker, short pieceType);
+	void calculateAttacks(short pinnedPiecesColor);
+	bitboard isPinned(unsigned short pos, short color);
 	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
 	/// <summary>

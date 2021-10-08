@@ -2,7 +2,7 @@
 
 Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
-    allAttacksNeedRebuilding = true;
+    attacksNeedRebuilding = true;
     for (int i = 0; i < 64; i++) {
         bishopAttacks[i] = new bitboard[512];
         rookAttacks[i] = new bitboard[4096];
@@ -50,93 +50,93 @@ void Bitboard::initConnectingRays() {
             if (startColumn == endColumn) {
                 // Scan north
                 for (row = startRow+1; row < 8; row++) {
+                    set(&result, row * 8 + startColumn);
                     if (row == endRow) {
                         // Target reached
                         connectingRays[from][to] = result;
                         goto nextPair;
                     }
-                    set(&result, row * 8 + startColumn);
                 }
 
                 // Scan south
                 result = bitboard(0);
                 for (row = startRow-1; row >= 0; row--) {
+                    set(&result, row * 8 + startColumn);
                     if (row == endRow) {
                         // Target reached
                         connectingRays[from][to] = result;
                         goto nextPair;
                     }
-                    set(&result, row * 8 + startColumn);
                 }
             }
             else if (startRow == endRow) {
                 // Scan west
                 result = bitboard(0);
                 for (column = startColumn - 1; column >= 0; column--) {
+                    set(&result, startRow * 8 + column);
                     if (column == endColumn) {
                         // Target reached
                         connectingRays[from][to] = result;
                         goto nextPair;
                     }
-                    set(&result, startRow * 8 + column);
                 }
 
                 // Scan east
                 result = bitboard(0);
                 for (column = startColumn+1; column < 8; column++) {
+                    set(&result, startRow * 8 + column);
                     if (column == endColumn) {
                         // Target reached
                         connectingRays[from][to] = result;
                         goto nextPair;
                     }
-                    set(&result, startRow * 8 + column);
                 }
             }
             else {
                 // Scan northeast
                 result = bitboard(0);
                 for (column = startColumn+1, row = startRow+1; column < 8 && row < 8; column++, row++) {
+                    set(&result, row * 8 + column);
                     if (column == endColumn) {
                         connectingRays[from][to] = (row == endRow ? result : bitboard(0));
                         goto nextPair;
                     }
-                    set(&result, row * 8 + column);
                 }
 
                 // Scan southeast
                 result = bitboard(0);
                 for (column = startColumn+1, row = startRow-1; column < 8 && row >= 0; column++, row--) {
+                    set(&result, row * 8 + column);
                     if (column == endColumn) {
                         connectingRays[from][to] = (row == endRow ? result : bitboard(0));
                         goto nextPair;
                     }
-                    set(&result, row * 8 + column);
                 }
 
                 // Scan southwest
                 result = bitboard(0);
                 for (column = startColumn-1, row = startRow-1; column >= 0 && row >= 0; column--, row--) {
+                    set(&result, row * 8 + column);
                     if (column == endColumn) {
                         connectingRays[from][to] = (row == endRow ? result : bitboard(0));
                         goto nextPair;
                     }
-                    set(&result, row * 8 + column);
                 }
 
                 // Scan northwest
                 result = bitboard(0);
                 for (column = startColumn-1, row = startRow+1; column >= 0 && row < 8; column--, row++) {
+                    set(&result, row * 8 + column);
                     if (column == endColumn) {
                         connectingRays[from][to] = (row == endRow ? result : bitboard(0));
                         goto nextPair;
                     }
-                    set(&result, row * 8 + column);
                 }
             }
             
 
-        nextPair:
-            /* DEBUGPRINT
+        nextPair:;
+            /* //DEBUGPRINT
             if (connectingRays[from][to] != bitboard(0)) {
                 std::cout << "\nFrom " << from << " (" << startColumn << ',' << startRow <<
                     ") to " << to << " (" << endColumn << ',' << endRow << "):\n" << toString(connectingRays[from][to]);
@@ -484,7 +484,11 @@ void Bitboard::setPiece(short p, unsigned short index)
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] |= mask;
     allPieces[Piece::getColor(p)] |= mask;
-    allAttacksNeedRebuilding = true;
+
+    if (p == (Piece::KING | Piece::BLACK)) blackKingPos = index;
+    if (p == (Piece::KING | Piece::WHITE)) whiteKingPos = index;
+
+    attacksNeedRebuilding = true;
 }
 
 void Bitboard::removePiece(short p, unsigned short index)
@@ -492,7 +496,7 @@ void Bitboard::removePiece(short p, unsigned short index)
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] &= ~mask;
     allPieces[Piece::getColor(p)] &= ~mask;
-    allAttacksNeedRebuilding = true;
+    attacksNeedRebuilding = true;
 }
 
 bitboard Bitboard::getOccupied()
@@ -505,51 +509,12 @@ bitboard Bitboard::getEmpty()
     return ~(allPieces[Piece::WHITE] | allPieces[Piece::BLACK]);
 }
 
-bitboard Bitboard::getAllAttacks(short color)
+bitboard Bitboard::getAllAttacks(short attacker)
 {
-    if (!allAttacksNeedRebuilding) return allAttacks;
-
-    // PAWNS
-    allAttacks = getPawnAttacks(true, color);
-    allAttacks |= getPawnAttacks(false, color);
+    if (!attacksNeedRebuilding) return allAttacks;
     
-    // KNIGHTS
-    bitboard knights = allPieces[Piece::KNIGHT | color];
-    unsigned short pos = 0;
-    while (knights) {
-        pos = pop(&knights);
-        allAttacks |= getKnightAttacks(pos);
-    }
+    calculateAttacks(Piece::getOppositeColor(attacker));
 
-    // BISHOPS
-    bitboard bishops = allPieces[Piece::BISHOP | color];
-    while (bishops) {
-        pos = pop(&bishops);
-        allAttacks |= getBishopAttacks(pos);
-    }
-
-    // ROOKS
-    bitboard rooks = allPieces[Piece::ROOK | color];
-    while (rooks) {
-        pos = pop(&rooks);
-        allAttacks |= getRookAttacks(pos);
-    }
-
-    // QUEEN(S)
-    bitboard queens = allPieces[Piece::QUEEN | color];
-    while (queens) {
-        pos = pop(&queens);
-        allAttacks |= getQueenAttacks(pos);
-    }
-
-    // KING
-    bitboard king = allPieces[Piece::KING | color];
-    allAttacks |= getKingAttacks(pop(&king));
-
-    // Remove all attackSquares that are occupied by the attacking color
-    allAttacks &= ~(allPieces[color]);
-   
-    allAttacksNeedRebuilding = false;
     return allAttacks;
 }
 
@@ -629,8 +594,191 @@ bitboard Bitboard::getQueenAttacks(unsigned short pos)
     return getRookAttacks(pos) | getBishopAttacks(pos);
 }
 
-bitboard Bitboard::getConnectingRay(unsigned short from, unsigned short to) {
-    return connectingRays[from][to];
+bitboard Bitboard::getConnectingRay(unsigned short king, unsigned short enemy, short pieceType) {
+    bitboard ray = connectingRays[king][enemy];
+    // We don't need to check for pieceType if there is no ray anyway
+    if (!ray || pieceType == Piece::QUEEN) return ray;
+
+    unsigned short kingRow = king / 8;
+    unsigned short kingColumn = king % 8;
+    unsigned short enemyRow = enemy / 8;
+    unsigned short enemyColumn = enemy % 8;
+    if (pieceType == Piece::ROOK) {
+        return (kingColumn == enemyColumn || kingRow == enemyRow) ? ray : bitboard(0);
+    }
+    else if (pieceType == Piece::BISHOP) {
+        return (abs(kingColumn - enemyColumn) == abs(kingRow - enemyRow)) ? ray : bitboard(0);
+    }
+    return bitboard(0);
+}
+
+void Bitboard::calculateAttacks(short attackedPlayer) {
+    bool white = attackedPlayer == Piece::WHITE;
+    bitboard* pins = white ? pinsOnWhiteKing : pinsOnBlackKing;
+    bitboard* checks = white ? checksOnWhiteKing : checksOnBlackKing;
+    
+    // Clear Attacks
+    allAttacks = bitboard(0);
+
+    // Clear Pins
+    for (int i = 0; i < 8; i++) {
+        pins[i] = bitboard(0);
+    }
+    pinsExist = false;
+
+    // Clear Checks
+    checks[0] = bitboard(0);
+    checks[1] = bitboard(0);
+    checkExists = false;
+    doubleCheck = false;
+
+    short opponent = Piece::getOppositeColor(attackedPlayer);
+    unsigned short myKingPos = (white ? whiteKingPos : blackKingPos);
+    unsigned short pinCount = 0, checkCount = 0;
+
+    // KING
+    bitboard king = allPieces[Piece::KING | opponent];
+    allAttacks |= getKingAttacks(pop(&king));
+
+    // ROOKS
+    bitboard rooks = allPieces[Piece::ROOK | opponent];
+    unsigned short rookPos = 0;
+    while (rooks) {
+        rookPos = pop(&rooks);
+        allAttacks |= getRookAttacks(rookPos);
+
+        bitboard ray = getConnectingRay(myKingPos, rookPos, Piece::ROOK);
+        bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
+        bitboard enemyPiecesOnRay = ray & allPieces[opponent];
+        
+        // None of the enemy pieces is blocking ("except self")
+        if (count(enemyPiecesOnRay) == 1) {
+            unsigned short blockers = count(friendlyPiecesOnRay);
+            if (blockers == 1) {
+                pins[pinCount++] = ray;
+            }
+            else if (blockers == 0) {
+                checks[checkCount++] = ray;
+                (checkExists ? doubleCheck : checkExists) = true;
+            }
+        }
+        
+
+    }
+
+    // BISHOPS
+    bitboard bishops = allPieces[Piece::BISHOP | opponent];
+    unsigned short bishopPos = 0; 
+    while (bishops) {
+        bishopPos = pop(&bishops);
+        bitboard ray = getConnectingRay(myKingPos, bishopPos, Piece::BISHOP);
+        bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
+        bitboard enemyPiecesOnRay = ray & allPieces[opponent];
+        
+        // None of the enemy pieces is blocking ("except self")
+        if (count(enemyPiecesOnRay) == 1) {
+            unsigned short blockers = count(friendlyPiecesOnRay);
+            if (blockers == 1) {
+                pins[pinCount++] = ray;
+            }
+            else if (blockers == 0) {
+                checks[checkCount++] = ray;
+                (checkExists ? doubleCheck : checkExists) = true;
+            }
+        }
+
+        allAttacks |= getBishopAttacks(bishopPos);
+    }
+
+    // QUEENS
+    bitboard queens = allPieces[Piece::QUEEN | opponent];
+    unsigned short queenPos = 0;
+    while (queens) {
+        queenPos = pop(&queens);
+        bitboard ray = getConnectingRay(myKingPos, queenPos, Piece::QUEEN);
+        bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
+        bitboard enemyPiecesOnRay = ray & allPieces[opponent];
+        
+        // None of the enemy pieces is blocking ("except self")
+        if (count(enemyPiecesOnRay) == 1) {
+            unsigned short blockers = count(friendlyPiecesOnRay);
+            if (blockers == 1) {
+                pins[pinCount++] = ray;
+            }
+            else if (blockers == 0) {
+                checks[checkCount++] = ray;
+                (checkExists ? doubleCheck : checkExists) = true;
+            }
+        }
+
+        allAttacks |= getQueenAttacks(queenPos);
+    }
+
+    // KNIGHTS
+    bitboard knights = allPieces[Piece::KNIGHT | opponent];
+    unsigned short knightPos = 0;
+    while (knights) {
+        knightPos = pop(&knights);
+        bitboard knightAttacks = getKnightAttacks(knightPos);
+
+        if (doubleCheck) continue;
+
+        allAttacks |= knightAttacks;
+        while (knightAttacks) {
+            if (myKingPos == pop(&knightAttacks)) {
+                checks[checkCount++] = bitboard(1) << knightPos;
+                (checkExists ? doubleCheck : checkExists) = true;
+            }
+        }
+    }
+
+    // PAWNS
+    bitboard pawnAttacksLeft = getPawnAttacks(true, opponent);
+    allAttacks |= pawnAttacksLeft;
+
+    if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksLeft)) {
+        // King is checked by pawn on his right
+        checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 9 : -7));
+        (checkExists ? doubleCheck : checkExists) = true;
+    }
+
+    bitboard pawnAttacksRight = getPawnAttacks(false, opponent);
+    allAttacks |= pawnAttacksRight;
+
+    if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksRight)) {
+        // King is checked by pawn on his left
+        checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 7 : -9));
+        (checkExists ? doubleCheck : checkExists) = true;
+    }
+
+    // Remove all attackSquares that are occupied by the attacking color
+    allAttacks &= ~(allPieces[opponent]);
+
+    attacksNeedRebuilding = false;
+
+    std::cout << "\nAttacks calculated against " << Piece::name(attackedPlayer) << ".\nAll attacks:\n" << toString(allAttacks)
+        << "\nAll Checks:\n" << toString(checks[0] | checks[1]) << "\nAll Pins:\n"
+        << toString(pins[0] | pins[1] | pins[2] | pins[3] | pins[4] | pins[5] | pins[6] | pins[7]);
+}
+
+bitboard Bitboard::isPinned(unsigned short pos, short color) {
+    if (attacksNeedRebuilding) calculateAttacks(color);
+    if (color == Piece::WHITE) {
+        for (int i = 0; i < 8; i++) {
+            if (containsSquare(pinsOnWhiteKing[i], pos)) {
+                return pinsOnWhiteKing[i];
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < 8; i++) {
+            if (containsSquare(pinsOnBlackKing[i], pos)) {
+                return pinsOnBlackKing[i];
+            }
+        }
+    }
+    
+    return bitboard(0);
 }
 
 bool Bitboard::containsSquare(bitboard b, unsigned short square)
