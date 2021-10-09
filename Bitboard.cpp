@@ -577,21 +577,29 @@ bitboard Bitboard::getKingAttacks(unsigned short pos, bool includeCastle)
     return b;
 }
 
-bitboard Bitboard::getRookAttacks(unsigned short pos)
+bitboard Bitboard::getRookAttacks(unsigned short pos, short attackedPlayer)
 {
-    int magicIndex = shittyHash(getOccupied() & rookMasks[pos], rookMagics[pos], bitsInRookMask[pos]);
+    bitboard blockers = getOccupied();
+    if (attackedPlayer) {
+        blockers &= ~allPieces[Piece::KING | attackedPlayer];
+    }
+    int magicIndex = shittyHash(blockers & rookMasks[pos], rookMagics[pos], bitsInRookMask[pos]);
     return rookAttacks[pos][magicIndex];
 }
 
-bitboard Bitboard::getBishopAttacks(unsigned short pos)
+bitboard Bitboard::getBishopAttacks(unsigned short pos, short attackedPlayer)
 {
-    int magicIndex = shittyHash(getOccupied() & bishopMasks[pos], bishopMagics[pos], bitsInBishopMask[pos]);
+    bitboard blockers = getOccupied();
+    if (attackedPlayer) {
+        blockers &= ~allPieces[Piece::KING | attackedPlayer];
+    }
+    int magicIndex = shittyHash(blockers & bishopMasks[pos], bishopMagics[pos], bitsInBishopMask[pos]);
     return bishopAttacks[pos][magicIndex];
 }
 
-bitboard Bitboard::getQueenAttacks(unsigned short pos)
+bitboard Bitboard::getQueenAttacks(unsigned short pos, short attackedPlayer)
 {
-    return getRookAttacks(pos) | getBishopAttacks(pos);
+    return getRookAttacks(pos, attackedPlayer) | getBishopAttacks(pos, attackedPlayer);
 }
 
 bitboard Bitboard::getConnectingRay(unsigned short king, unsigned short enemy, short pieceType) {
@@ -645,7 +653,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     unsigned short rookPos = 0;
     while (rooks) {
         rookPos = pop(&rooks);
-        allAttacks |= getRookAttacks(rookPos);
+        allAttacks |= getRookAttacks(rookPos, attackedPlayer);
 
         bitboard ray = getConnectingRay(myKingPos, rookPos, Piece::ROOK);
         bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
@@ -687,7 +695,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
         }
 
-        allAttacks |= getBishopAttacks(bishopPos);
+        allAttacks |= getBishopAttacks(bishopPos, attackedPlayer);
     }
 
     // QUEENS
@@ -711,7 +719,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
         }
 
-        allAttacks |= getQueenAttacks(queenPos);
+        allAttacks |= getQueenAttacks(queenPos, attackedPlayer);
     }
 
     // KNIGHTS
@@ -755,10 +763,10 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     allAttacks &= ~(allPieces[opponent]);
 
     attacksNeedRebuilding = false;
-
-    std::cout << "\nAttacks calculated against " << Piece::name(attackedPlayer) << ".\nAll attacks:\n" << toString(allAttacks)
+    
+    /*std::cout << "\nAttacks calculated against " << Piece::name(attackedPlayer) << ".\nAll attacks:\n" << toString(allAttacks)
         << "\nAll Checks:\n" << toString(checks[0] | checks[1]) << "\nAll Pins:\n"
-        << toString(pins[0] | pins[1] | pins[2] | pins[3] | pins[4] | pins[5] | pins[6] | pins[7]);
+        << toString(pins[0] | pins[1] | pins[2] | pins[3] | pins[4] | pins[5] | pins[6] | pins[7]);*/
 }
 
 bitboard Bitboard::isPinned(unsigned short pos, short color) {
@@ -779,6 +787,10 @@ bitboard Bitboard::isPinned(unsigned short pos, short color) {
     }
     
     return bitboard(0);
+}
+
+bitboard Bitboard::getCheckRays(short playerInCheck) {
+    return (playerInCheck == Piece::WHITE ? checksOnWhiteKing[0] | checksOnWhiteKing[1] : checksOnBlackKing[0] | checksOnBlackKing[1]);
 }
 
 bool Bitboard::containsSquare(bitboard b, unsigned short square)

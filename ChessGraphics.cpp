@@ -145,6 +145,7 @@ void ChessGraphics::mainLoop() {
 				std::cin >> depth;
 				Instrumentor::Get().BeginSession("Perft " + std::to_string(depth) + " profile", "perft.json");
 				int positions = board.testMoveGeneration(depth, true);
+				std::cout << "After " << depth << " moves there are " << positions << " possible positions.\n";
 				Instrumentor::Get().EndSession();
 			}
 		}

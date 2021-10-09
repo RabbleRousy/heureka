@@ -49,9 +49,7 @@ private:
 
 	bool attacksNeedRebuilding;
 	bitboard allAttacks;
-	bool pinsExist;
 	bitboard pinsOnWhiteKing[8], pinsOnBlackKing[8];
-	bool checkExists, doubleCheck;
 	bitboard checksOnWhiteKing[2], checksOnBlackKing[2];
 
 public:
@@ -71,6 +69,8 @@ public:
 	const bitboard oo = 0x6000000000000000;
 	// Relevant bits for Black's long castle
 	const bitboard ooo = 0x0E00000000000000;
+
+	bool pinsExist, checkExists, doubleCheck;
 
 	Bitboard();
 	~Bitboard();
@@ -102,18 +102,19 @@ public:
 	bitboard getKingAttacks(unsigned short pos, bool includeCastle = false);
 	/// <param name="pos">of the rook that's attacking.</param>
 	/// <returns>a bitboard of the fields the rook is attacking from that position, including possible blocker's squares.</returns>
-	bitboard getRookAttacks(unsigned short pos);
+	bitboard getRookAttacks(unsigned short pos, short attackedPlayer = 0);
 	/// <param name="pos">of the bishop that's attacking.</param>
 	/// <returns>a bitboard of the fields the bishop is attacking from that position, including possible blocker's squares.</returns>
-	bitboard getBishopAttacks(unsigned short pos);
+	bitboard getBishopAttacks(unsigned short pos, short attackedPlayer = 0);
 	/// <param name="pos">of the queen that's attacking.</param>
 	/// <returns>a bitboard of the fields the queen is attacking from that position, including possible blocker's squares.</returns>
-	bitboard getQueenAttacks(unsigned short pos);
+	bitboard getQueenAttacks(unsigned short pos, short attackedPlayer = 0);
 	/// <returns>a bitboard where the bits on a straight or diagonal line between from and to are set.
 	/// Returns an empty bitboard if there is no connecting ray.</returns>
 	bitboard getConnectingRay(unsigned short king, unsigned short attacker, short pieceType);
 	void calculateAttacks(short pinnedPiecesColor);
 	bitboard isPinned(unsigned short pos, short color);
+	bitboard getCheckRays(short playerInCheck);
 	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
 	/// <summary>
