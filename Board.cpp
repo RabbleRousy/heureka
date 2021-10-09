@@ -786,7 +786,8 @@ void Board::generatePawnMoves() {
 		if (targetIndex == enPassantSquare) {
 			epFlag |= 0b1000;
 		}
-		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, promotionFlag | epFlag);
+		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(currentPlayer) : getPiece(targetIndex));
+		Move move(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
 		possibleMoves.push_back(move);
 
 		if (promotionFlag) {
@@ -827,7 +828,8 @@ void Board::generatePawnMoves() {
 		if (targetIndex == enPassantSquare) {
 			epFlag |= 0b1000;
 		}
-		Move move(Piece::PAWN | currentPlayer, getPiece(targetIndex), originIndex, targetIndex, promotionFlag | epFlag);
+		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(currentPlayer) : getPiece(targetIndex));
+		Move move(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
 		possibleMoves.push_back(move);
 
 		if (promotionFlag) {
