@@ -39,108 +39,67 @@ Bitboard::~Bitboard() {
 
 void Bitboard::initConnectingRays() {
     for (int from = 0; from < 64; from++) {
-        for (int to = 0; to < 64; to++) {
-            unsigned short startColumn = from % 8;
-            unsigned short startRow = from / 8;
-            unsigned short endColumn = to % 8;
-            unsigned short endRow = to / 8;
-            bitboard result = bitboard(0);
-            int column, row;
+        unsigned short startColumn = from % 8;
+        unsigned short startRow = from / 8;
+        bitboard result = bitboard(0);
+        int column, row;
 
-            if (startColumn == endColumn) {
-                // Scan north
-                for (row = startRow+1; row < 8; row++) {
-                    set(&result, row * 8 + startColumn);
-                    if (row == endRow) {
-                        // Target reached
-                        connectingRays[from][to] = result;
-                        goto nextPair;
-                    }
-                }
+        // Scan north
+        for (row = startRow + 1, column = startColumn; row < 8; row++) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
 
-                // Scan south
-                result = bitboard(0);
-                for (row = startRow-1; row >= 0; row--) {
-                    set(&result, row * 8 + startColumn);
-                    if (row == endRow) {
-                        // Target reached
-                        connectingRays[from][to] = result;
-                        goto nextPair;
-                    }
-                }
-            }
-            else if (startRow == endRow) {
-                // Scan west
-                result = bitboard(0);
-                for (column = startColumn - 1; column >= 0; column--) {
-                    set(&result, startRow * 8 + column);
-                    if (column == endColumn) {
-                        // Target reached
-                        connectingRays[from][to] = result;
-                        goto nextPair;
-                    }
-                }
+        // Scan south
+        result = bitboard(0);
+        for (row = startRow - 1, column = startColumn; row >= 0; row--) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
+        // Scan west
+        result = bitboard(0);
+        for (column = startColumn - 1, row = startRow; column >= 0; column--) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
 
-                // Scan east
-                result = bitboard(0);
-                for (column = startColumn+1; column < 8; column++) {
-                    set(&result, startRow * 8 + column);
-                    if (column == endColumn) {
-                        // Target reached
-                        connectingRays[from][to] = result;
-                        goto nextPair;
-                    }
-                }
-            }
-            else {
-                // Scan northeast
-                result = bitboard(0);
-                for (column = startColumn+1, row = startRow+1; column < 8 && row < 8; column++, row++) {
-                    set(&result, row * 8 + column);
-                    if (column == endColumn) {
-                        connectingRays[from][to] = (row == endRow ? result : bitboard(0));
-                        goto nextPair;
-                    }
-                }
-
-                // Scan southeast
-                result = bitboard(0);
-                for (column = startColumn+1, row = startRow-1; column < 8 && row >= 0; column++, row--) {
-                    set(&result, row * 8 + column);
-                    if (column == endColumn) {
-                        connectingRays[from][to] = (row == endRow ? result : bitboard(0));
-                        goto nextPair;
-                    }
-                }
-
-                // Scan southwest
-                result = bitboard(0);
-                for (column = startColumn-1, row = startRow-1; column >= 0 && row >= 0; column--, row--) {
-                    set(&result, row * 8 + column);
-                    if (column == endColumn) {
-                        connectingRays[from][to] = (row == endRow ? result : bitboard(0));
-                        goto nextPair;
-                    }
-                }
-
-                // Scan northwest
-                result = bitboard(0);
-                for (column = startColumn-1, row = startRow+1; column >= 0 && row < 8; column--, row++) {
-                    set(&result, row * 8 + column);
-                    if (column == endColumn) {
-                        connectingRays[from][to] = (row == endRow ? result : bitboard(0));
-                        goto nextPair;
-                    }
-                }
-            }
-            
-
-        nextPair:;
-            /* //DEBUGPRINT
-            if (connectingRays[from][to] != bitboard(0)) {
-                std::cout << "\nFrom " << from << " (" << startColumn << ',' << startRow <<
-                    ") to " << to << " (" << endColumn << ',' << endRow << "):\n" << toString(connectingRays[from][to]);
-            }*/
+        // Scan east
+        result = bitboard(0);
+        for (column = startColumn + 1, row = startRow; column < 8; column++) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
+        // Scan northeast
+        result = bitboard(0);
+        for (column = startColumn + 1, row = startRow + 1; column < 8 && row < 8; column++, row++) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
+        // Scan southeast
+        result = bitboard(0);
+        for (column = startColumn + 1, row = startRow - 1; column < 8 && row >= 0; column++, row--) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
+        // Scan southwest
+        result = bitboard(0);
+        for (column = startColumn - 1, row = startRow - 1; column >= 0 && row >= 0; column--, row--) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
+        }
+        // Scan northwest
+        result = bitboard(0);
+        for (column = startColumn - 1, row = startRow + 1; column >= 0 && row < 8; column--, row++) {
+            unsigned short to = row * 8 + column;
+            set(&result, to);
+            connectingRays[from][to] = result;
         }
     }
 }
@@ -577,29 +536,21 @@ bitboard Bitboard::getKingAttacks(unsigned short pos, bool includeCastle)
     return b;
 }
 
-bitboard Bitboard::getRookAttacks(unsigned short pos, short attackedPlayer)
+bitboard Bitboard::getRookAttacks(unsigned short pos, bitboard blockers)
 {
-    bitboard blockers = getOccupied();
-    if (attackedPlayer) {
-        blockers &= ~allPieces[Piece::KING | attackedPlayer];
-    }
     int magicIndex = shittyHash(blockers & rookMasks[pos], rookMagics[pos], bitsInRookMask[pos]);
     return rookAttacks[pos][magicIndex];
 }
 
-bitboard Bitboard::getBishopAttacks(unsigned short pos, short attackedPlayer)
+bitboard Bitboard::getBishopAttacks(unsigned short pos, bitboard blockers)
 {
-    bitboard blockers = getOccupied();
-    if (attackedPlayer) {
-        blockers &= ~allPieces[Piece::KING | attackedPlayer];
-    }
     int magicIndex = shittyHash(blockers & bishopMasks[pos], bishopMagics[pos], bitsInBishopMask[pos]);
     return bishopAttacks[pos][magicIndex];
 }
 
-bitboard Bitboard::getQueenAttacks(unsigned short pos, short attackedPlayer)
+bitboard Bitboard::getQueenAttacks(unsigned short pos, bitboard blockers)
 {
-    return getRookAttacks(pos, attackedPlayer) | getBishopAttacks(pos, attackedPlayer);
+    return getRookAttacks(pos, blockers) | getBishopAttacks(pos, blockers);
 }
 
 bitboard Bitboard::getConnectingRay(unsigned short king, unsigned short enemy, short pieceType) {
@@ -653,7 +604,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     unsigned short rookPos = 0;
     while (rooks) {
         rookPos = pop(&rooks);
-        allAttacks |= getRookAttacks(rookPos, attackedPlayer);
+        allAttacks |= getRookAttacks(rookPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
 
         bitboard ray = getConnectingRay(myKingPos, rookPos, Piece::ROOK);
         bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
@@ -695,7 +646,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
         }
 
-        allAttacks |= getBishopAttacks(bishopPos, attackedPlayer);
+        allAttacks |= getBishopAttacks(bishopPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
     }
 
     // QUEENS
@@ -719,7 +670,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
         }
 
-        allAttacks |= getQueenAttacks(queenPos, attackedPlayer);
+        allAttacks |= getQueenAttacks(queenPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
     }
 
     // KNIGHTS
@@ -728,10 +679,10 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     while (knights) {
         knightPos = pop(&knights);
         bitboard knightAttacks = getKnightAttacks(knightPos);
+        allAttacks |= knightAttacks;
 
         if (doubleCheck) continue;
 
-        allAttacks |= knightAttacks;
         while (knightAttacks) {
             if (myKingPos == pop(&knightAttacks)) {
                 checks[checkCount++] = bitboard(1) << knightPos;
@@ -758,9 +709,6 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
         checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 7 : -9));
         (checkExists ? doubleCheck : checkExists) = true;
     }
-
-    // Remove all attackSquares that are occupied by the attacking color
-    allAttacks &= ~(allPieces[opponent]);
 
     attacksNeedRebuilding = false;
     

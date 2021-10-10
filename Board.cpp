@@ -457,6 +457,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		if (debugLogs) std::cout << " NO. Doing move: " << Move::toString(possibleMoves[i]) << '\n';
 
 		doMove(&possibleMoves[i]);
+		if (debugLogs) std::cout << "White pawns bitboard:\n" << bb.toString(bb.getBitboard(Piece::PAWN | Piece::WHITE)) << '\n';
 		moveHistory.push(possibleMoves[i]);
 		swapCurrentPlayer();
 		generateMoves();
@@ -499,7 +500,6 @@ void Board::doMove(const Move* move) {
 	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
 		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
 		unsigned short rookTo = from + (to - from) / 2;
-		std::cout << "\n------------CASTLED!------------\n";
 		// Castle detected, Rook has to be moved
 		removePiece(rookFrom);
 		setPiece(rookTo, Piece::ROOK | currentPlayer);
@@ -663,6 +663,15 @@ bool Board::redoLastMove() {
 	return true;
 }
 
+bool Board::inCheckAfter(const Move* move) {
+	doMove(move);
+	bb.calculateAttacks(currentPlayer);
+	bool check = bb.checkExists;
+	undoMove(move);
+	bb.calculateAttacks(currentPlayer);
+	return check;
+}
+
 void Board::generateMoves()
 {
 	PROFILE_FUNCTION();
@@ -722,7 +731,7 @@ void Board::generatePawnMoves() {
 			// Add all other possible promotions
 			for (int i = 2; i < 5; i++) {
 				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i);
-				possibleMoves.push_back(move);
+				possibleMoves.push_back(promoMove);
 			}
 		}
 	}
@@ -759,11 +768,23 @@ void Board::generatePawnMoves() {
 	//---------- Captures left ------------------------
 	moves = bb.getPawnAttacks(true, currentPlayer);
 	// Capture field has to be occupied by enemy or marked as ep square
-	moves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer)) | (1ULL << enPassantSquare);
+	bitboard captures = bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+	// Or marked as en passant
+	captures |= bitboard(enPassantSquare != 64) << enPassantSquare;
+	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
 	if (bb.checkExists) {
-		moves &= bb.getCheckRays(currentPlayer);
+		bitboard checkRays = bb.getCheckRays(currentPlayer);
+		if (enPassantSquare != 64) {
+			if (bb.count(checkRays) == 1) {
+				if (Piece::getType(getPiece(bb.pop(&checkRays))) == Piece::PAWN) {
+					// Or on the enpassant square if it's the pawn giving check
+					checkRays |= bitboard(1) << enPassantSquare;
+				}
+			}
+		}
+		moves &= checkRays;
 	}
 
 	// Loop over all pawn captures to the left
@@ -788,25 +809,40 @@ void Board::generatePawnMoves() {
 		}
 		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(currentPlayer) : getPiece(targetIndex));
 		Move move(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
+
+		if (epFlag && inCheckAfter(&move)) continue;
+
 		possibleMoves.push_back(move);
 
 		if (promotionFlag) {
 			// Add all other possible promotions
 			for (int i = 2; i < 5; i++) {
-				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i | epFlag);
-				possibleMoves.push_back(move);
+				Move promoMove(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, i | epFlag);
+				possibleMoves.push_back(promoMove);
 			}
 		}
 	}
 
 	//---------- Captures right -----------------------
 	moves = bb.getPawnAttacks(false, currentPlayer);
-	// Capture field has to be occupied by enemy or marked as ep square
-	moves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer)) | (1ULL << enPassantSquare);
+	// Capture field has to be occupied by enemy
+	captures = bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+	// Or marked as enpassant
+	captures |= bitboard(enPassantSquare != 64) << enPassantSquare;
+	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
 	if (bb.checkExists) {
-		moves &= bb.getCheckRays(currentPlayer);
+		bitboard checkRays = bb.getCheckRays(currentPlayer);
+		if (enPassantSquare != 64) {
+			if (bb.count(checkRays) == 1) {
+				if (Piece::getType(getPiece(bb.pop(&checkRays))) == Piece::PAWN) {
+					// Or on the enpassant square if it's the pawn giving check
+					checkRays |= bitboard(1) << enPassantSquare;
+				}
+			}
+		}
+		moves &= checkRays;
 	}
 
 	// Loop over all pawn captures to the right
@@ -830,13 +866,16 @@ void Board::generatePawnMoves() {
 		}
 		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(currentPlayer) : getPiece(targetIndex));
 		Move move(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
+
+		if (epFlag && inCheckAfter(&move)) continue;
+
 		possibleMoves.push_back(move);
 
 		if (promotionFlag) {
 			// Add all other possible promotions
 			for (int i = 2; i < 5; i++) {
-				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i | epFlag);
-				possibleMoves.push_back(move);
+				Move promoMove(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, i | epFlag);
+				possibleMoves.push_back(promoMove);
 			}
 		}
 	}
@@ -886,13 +925,17 @@ void Board::generateKingMoves() {
 				// Long castle
 				if (currentPlayer == Piece::WHITE && (castleRights & 0b0100)) {
 					// Check white's long castle
-					// Three squares next to king have to be empty and not attacked
-					castleFailed |= (bb.OOO & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
+					// Three squares next to king have to be empty
+					castleFailed |= (bb.OOO & bb.getOccupied());
+					// Two squares next to king must not be attacked
+					castleFailed |= (0x000000000000000C & bb.getAllAttacks(Piece::getOppositeColor(currentPlayer)));
 				}
 				else if (castleRights & 0b0001) {
 					// Check black's long castle
-					// Three squares next to king have to be empty and not attacked
-					castleFailed |= (bb.ooo & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
+					// Three squares next to king have to be empty
+					castleFailed |= (bb.ooo & bb.getOccupied());
+					// Two squares next to king must not be attacked
+					castleFailed |= (0x0C00000000000000 & bb.getAllAttacks(Piece::getOppositeColor(currentPlayer)));
 				}
 				else castleFailed = true;
 
@@ -954,7 +997,7 @@ void Board::generateRookMoves() {
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
 
-		bitboard rookAttacks = bb.getRookAttacks(rookPos);
+		bitboard rookAttacks = bb.getRookAttacks(rookPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
 		rookAttacks &= ~bb.getBitboard(currentPlayer);
 
@@ -991,7 +1034,7 @@ void Board::generateBishopMoves() {
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
 
-		bitboard bishopAttacks = bb.getBishopAttacks(bishopPos);
+		bitboard bishopAttacks = bb.getBishopAttacks(bishopPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
 		bishopAttacks &= ~bb.getBitboard(currentPlayer);
 
@@ -1028,7 +1071,7 @@ void Board::generateQueenMoves() {
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
 
-		bitboard queenAttacks = bb.getRookAttacks(queenPos) | bb.getBishopAttacks(queenPos);
+		bitboard queenAttacks = bb.getRookAttacks(queenPos, bb.getOccupied()) | bb.getBishopAttacks(queenPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
 		queenAttacks &= ~bb.getBitboard(currentPlayer);
 

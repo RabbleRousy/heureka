@@ -102,13 +102,13 @@ public:
 	bitboard getKingAttacks(unsigned short pos, bool includeCastle = false);
 	/// <param name="pos">of the rook that's attacking.</param>
 	/// <returns>a bitboard of the fields the rook is attacking from that position, including possible blocker's squares.</returns>
-	bitboard getRookAttacks(unsigned short pos, short attackedPlayer = 0);
+	bitboard getRookAttacks(unsigned short pos, bitboard blockers);
 	/// <param name="pos">of the bishop that's attacking.</param>
 	/// <returns>a bitboard of the fields the bishop is attacking from that position, including possible blocker's squares.</returns>
-	bitboard getBishopAttacks(unsigned short pos, short attackedPlayer = 0);
+	bitboard getBishopAttacks(unsigned short pos, bitboard blockers);
 	/// <param name="pos">of the queen that's attacking.</param>
 	/// <returns>a bitboard of the fields the queen is attacking from that position, including possible blocker's squares.</returns>
-	bitboard getQueenAttacks(unsigned short pos, short attackedPlayer = 0);
+	bitboard getQueenAttacks(unsigned short pos, bitboard blockers);
 	/// <returns>a bitboard where the bits on a straight or diagonal line between from and to are set.
 	/// Returns an empty bitboard if there is no connecting ray.</returns>
 	bitboard getConnectingRay(unsigned short king, unsigned short attacker, short pieceType);

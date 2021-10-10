@@ -123,6 +123,8 @@ public:
 	/// <returns>wether there was a move to be redone.</returns>
 	bool redoLastMove();
 
+	bool inCheckAfter(const Move* move);
+
 	/// <summary>
 	/// Tries to call doMove() with the given input and update the board if a corresponding move is found in the possibleMoves vector.
 	/// </summary>
