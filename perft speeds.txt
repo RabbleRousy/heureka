@@ -23,3 +23,10 @@ perft 4
 
 perft 5
 4.865.609 after 5322 ms (win) -> 914.200 m/s
+
+-------- STARTPOS, LEGAL --------------------------
+perft 4
+197.281 after 52 ms (win) -> 3.800.000 m/s
+
+perft 5
+4.865.609 after 1088 ms (win) -> 4.463.000 m/s
