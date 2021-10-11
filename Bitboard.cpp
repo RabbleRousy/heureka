@@ -477,9 +477,8 @@ bitboard Bitboard::getAllAttacks(short attacker)
     return allAttacks;
 }
 
-bitboard Bitboard::getSinglePawnSteps(short color)
+bitboard Bitboard::getSinglePawnSteps(bitboard pawns, short color)
 {
-    bitboard pawns = allPieces[Piece::PAWN | color];
     if (color == Piece::WHITE) {
         pawns = (pawns & notEightRank) << 8;
     }
@@ -489,9 +488,8 @@ bitboard Bitboard::getSinglePawnSteps(short color)
     return pawns;
 }
 
-bitboard Bitboard::getDoublePawnSteps(short color)
+bitboard Bitboard::getDoublePawnSteps(bitboard pawns, short color)
 {
-    bitboard pawns = allPieces[Piece::PAWN | color];
     if (color == Piece::WHITE) {
         pawns = (pawns & secondRank) << 16;
     }
@@ -501,9 +499,8 @@ bitboard Bitboard::getDoublePawnSteps(short color)
     return pawns;
 }
 
-bitboard Bitboard::getPawnAttacks(bool left, short color)
+bitboard Bitboard::getPawnAttacks(bitboard pawns, bool left, short color)
 {
-    bitboard pawns = allPieces[Piece::PAWN | color];
     if (color == Piece::WHITE) {
         pawns = (pawns & notEightRank & (left ? notAfile : notHfile)) << (left ? 7 : 9);
     }
@@ -696,7 +693,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     }
 
     // PAWNS
-    bitboard pawnAttacksLeft = getPawnAttacks(true, opponent);
+    bitboard pawnAttacksLeft = getPawnAttacks(allPieces[Piece::PAWN | opponent], true, opponent);
     allAttacks |= pawnAttacksLeft;
 
     if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksLeft)) {
@@ -706,7 +703,7 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
         checkExists = true;
     }
 
-    bitboard pawnAttacksRight = getPawnAttacks(false, opponent);
+    bitboard pawnAttacksRight = getPawnAttacks(allPieces[Piece::PAWN | opponent], false, opponent);
     allAttacks |= pawnAttacksRight;
 
     if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksRight)) {

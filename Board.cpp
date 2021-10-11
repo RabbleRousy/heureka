@@ -696,8 +696,11 @@ void Board::generateMoves()
 void Board::generatePawnMoves() {
 	PROFILE_FUNCTION();
 	bool white = currentPlayer == Piece::WHITE;
+	bitboard pawns = bb.getBitboard(Piece::PAWN | currentPlayer);
+	// Pinned pawns can't move if there is a check
+	pawns &= pawns ^ (bb.checkExists * bb.getPins(currentPlayer));
 	//---------- Moves one step ahead -----------------
-	bitboard moves = bb.getSinglePawnSteps(currentPlayer);
+	bitboard moves = bb.getSinglePawnSteps(pawns, currentPlayer);
 	// Pawns may only step on empty fields
 	bitboard empty = bb.getEmpty();
 	moves &= empty;
@@ -710,14 +713,9 @@ void Board::generatePawnMoves() {
 	Bitloop (moves) {
 		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -8 : 8);
-
-		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
-		if (pinRay) {
-			// Pinned piece can't move when king is in check
-			if (bb.checkExists) continue;
-			// Pinned piece can only move on pin ray
-			if (!bb.containsSquare(pinRay, targetIndex)) continue;
-		}
+		
+		// If not moving along existing pinray, skip Move
+		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
 
 		short promotionFlag = (white && (targetIndex > 54)) ||
 							 (!white && (targetIndex < 8));
@@ -735,7 +733,7 @@ void Board::generatePawnMoves() {
 	}
 
 	//---------- Moves two steps ahead ----------------
-	moves = bb.getDoublePawnSteps(currentPlayer);
+	moves = bb.getDoublePawnSteps(pawns, currentPlayer);
 	// Target field must be empty
 	moves &= empty;
 	// Previous field must also be empty
@@ -749,20 +747,15 @@ void Board::generatePawnMoves() {
 		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -16 : 16);
 
-		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
-		if (pinRay) {
-			// Pinned piece can't move when king is in check
-			if (bb.checkExists) continue;
-			// Pinned piece can only move on pin ray
-			if (!bb.containsSquare(pinRay, targetIndex)) continue;
-		}
+		// Pinned piece can only move on pin ray
+		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
 
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex);
 		possibleMoves.push_back(move);
 	}
 
 	//---------- Captures left ------------------------
-	moves = bb.getPawnAttacks(true, currentPlayer);
+	moves = bb.getPawnAttacks(pawns, true, currentPlayer);
 	// Capture field has to be occupied by enemy or marked as ep square
 	bitboard captures = bb.getBitboard(Piece::getOppositeColor(currentPlayer));
 	// Or marked as en passant
@@ -786,13 +779,8 @@ void Board::generatePawnMoves() {
 		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -7 : 9);
 
-		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
-		if (pinRay) {
-			// Pinned piece can't move when king is in check
-			if (bb.checkExists) continue;
-			// Pinned pawn can only capture the pinning piece
-			if (!bb.containsSquare(pinRay, targetIndex)) continue;
-		}
+		// Pinned pawn can only capture the pinning piece
+		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
 
 
 		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
@@ -818,7 +806,7 @@ void Board::generatePawnMoves() {
 	}
 
 	//---------- Captures right -----------------------
-	moves = bb.getPawnAttacks(false, currentPlayer);
+	moves = bb.getPawnAttacks(pawns, false, currentPlayer);
 	// Capture field has to be occupied by enemy
 	captures = bb.getBitboard(Piece::getOppositeColor(currentPlayer));
 	// Or marked as enpassant
@@ -842,13 +830,8 @@ void Board::generatePawnMoves() {
 		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -9 : 7);
 
-		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
-		if (pinRay) {
-			// Pinned piece can't move when king is in check
-			if (bb.checkExists) continue;
-			// Pinned pawn can only capture the pinning piece
-			if (!bb.containsSquare(pinRay, targetIndex)) continue;
-		}
+		// Pinned pawn can only capture the pinning piece
+		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
 
 		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
 			(!white && (1ULL << targetIndex & ~bb.notFirstRank));

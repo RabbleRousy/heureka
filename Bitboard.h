@@ -88,13 +88,13 @@ public:
 	bitboard getAllAttacks(short color);
 	/// <param name="color">of the pawns to generate the step bitboard</param>
 	/// <returns>a bitboard with the squares marked that all pawns of that color can reach by stepping one field ahead.</returns>
-	bitboard getSinglePawnSteps(short color);
+	bitboard getSinglePawnSteps(bitboard pawns, short color);
 	/// <param name="color">of the pawns to generate the step bitboard</param>
 	/// <returns>a bitboard with the squares marked that all pawns of that color can reach by stepping two fields ahead.</returns>
-	bitboard getDoublePawnSteps(short color);
+	bitboard getDoublePawnSteps(bitboard pawns, short color);
 	/// <param name="color">of the pawns to generate the attack bitboard</param>
 	/// <returns>a bitboard with the squares marked that all pawns of that color are attacking.</returns>
-	bitboard getPawnAttacks(bool left, short color);
+	bitboard getPawnAttacks(bitboard pawns, bool left, short color);
 	/// <param name="pos">of the knight that's attacking.</param>
 	/// <returns>a bitboard of the fields the knight is attacking from that position.</returns>
 	bitboard getKnightAttacks(unsigned short pos);
