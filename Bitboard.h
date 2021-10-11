@@ -6,6 +6,8 @@
 
 typedef unsigned __int64 bitboard;
 #define C64(constantU64) constantU64##ULL
+#define Bitloop(X) for(;X;X &= (X-1))
+#define getSquare(X) _tzcnt_u64(X)
 
 class Bitboard
 {
@@ -117,11 +119,6 @@ public:
 	bitboard getCheckRays(short playerInCheck);
 	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
-	/// <summary>
-	/// Removes the least significant bit from the bitboard.
-	/// </summary>
-	/// <returns>index of the popped bit.</returns>
-	unsigned short pop(bitboard* b);
 	/// <returns>number of 1s set in the given bitboard.</returns>
 	unsigned short count(bitboard b);
 	/// <summary>

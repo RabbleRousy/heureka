@@ -709,8 +709,8 @@ void Board::generatePawnMoves() {
 
 	unsigned short targetIndex = 0;
 	// Loop over all pawns that can move one step ahead
-	while (moves) {
-		targetIndex = bb.pop(&moves);
+	Bitloop (moves) {
+		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -8 : 8);
 
 		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
@@ -749,8 +749,8 @@ void Board::generatePawnMoves() {
 	}
 
 	// Loop over all pawns that can move two steps ahead
-	while (moves) {
-		targetIndex = bb.pop(&moves);
+	Bitloop (moves) {
+		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -16 : 16);
 
 		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
@@ -778,7 +778,7 @@ void Board::generatePawnMoves() {
 		bitboard checkRays = bb.getCheckRays(currentPlayer);
 		if (enPassantSquare != 64) {
 			if (bb.count(checkRays) == 1) {
-				if (Piece::getType(getPiece(bb.pop(&checkRays))) == Piece::PAWN) {
+				if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
 					// Or on the enpassant square if it's the pawn giving check
 					checkRays |= bitboard(1) << enPassantSquare;
 				}
@@ -788,8 +788,8 @@ void Board::generatePawnMoves() {
 	}
 
 	// Loop over all pawn captures to the left
-	while (moves) {
-		targetIndex = bb.pop(&moves);
+	Bitloop (moves) {
+		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -7 : 9);
 
 		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
@@ -836,7 +836,7 @@ void Board::generatePawnMoves() {
 		bitboard checkRays = bb.getCheckRays(currentPlayer);
 		if (enPassantSquare != 64) {
 			if (bb.count(checkRays) == 1) {
-				if (Piece::getType(getPiece(bb.pop(&checkRays))) == Piece::PAWN) {
+				if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
 					// Or on the enpassant square if it's the pawn giving check
 					checkRays |= bitboard(1) << enPassantSquare;
 				}
@@ -846,8 +846,8 @@ void Board::generatePawnMoves() {
 	}
 
 	// Loop over all pawn captures to the right
-	while (moves) {
-		targetIndex = bb.pop(&moves);
+	Bitloop (moves) {
+		targetIndex = getSquare(moves);
 		unsigned short originIndex = targetIndex + (white ? -9 : 7);
 
 		bitboard pinRay = bb.isPinned(originIndex, currentPlayer);
@@ -892,9 +892,9 @@ void Board::generateKingMoves() {
 
 	// Index of the current move
 	unsigned short targetIndex = 0;
-	while (kingMoves) {
+	Bitloop (kingMoves) {
 		// Increase index
-		targetIndex = bb.pop(&kingMoves);
+		targetIndex = getSquare(kingMoves);
 		// If not in check, look if this is a valid castle move
 		if (abs(targetIndex - kingPos) == 2) {
 			if (bb.checkExists) continue;
@@ -960,9 +960,9 @@ void Board::generateKnightMoves() {
 	PROFILE_FUNCTION();
 	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
 	unsigned short knightPos = 0;
-	while (knights) {
+	Bitloop (knights) {
 		// Get the index of next knight
-		knightPos = bb.pop(&knights);
+		knightPos = getSquare(knights);
 
 		// Pinned knight can't move or capture
 		if (bb.isPinned(knightPos, currentPlayer)) continue;
@@ -978,9 +978,9 @@ void Board::generateKnightMoves() {
 
 		// Index of the current move
 		unsigned short targetIndex = 0;
-		while (knightMoves) {
+		Bitloop (knightMoves) {
 			// Increase index
-			targetIndex = bb.pop(&knightMoves);
+			targetIndex = getSquare(knightMoves);
 
 			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex);
 			possibleMoves.push_back(move);
@@ -992,8 +992,8 @@ void Board::generateRookMoves() {
 	PROFILE_FUNCTION();
 	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
 	unsigned short rookPos = 0;
-	while (rooks) {
-		rookPos = bb.pop(&rooks);
+	Bitloop (rooks) {
+		rookPos = getSquare(rooks);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
 
@@ -1016,8 +1016,8 @@ void Board::generateRookMoves() {
 		if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
 
 		unsigned short targetIndex = 0;
-		while (rookAttacks) {
-			targetIndex = bb.pop(&rookAttacks);
+		Bitloop (rookAttacks) {
+			targetIndex = getSquare(rookAttacks);
 
 			Move move(Piece::ROOK | currentPlayer, getPiece(targetIndex), rookPos, targetIndex);
 			possibleMoves.push_back(move);
@@ -1029,8 +1029,8 @@ void Board::generateBishopMoves() {
 	PROFILE_FUNCTION();
 	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
 	unsigned short bishopPos = 0;
-	while (bishops) {
-		bishopPos = bb.pop(&bishops);
+	Bitloop (bishops) {
+		bishopPos = getSquare(bishops);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
 
@@ -1053,8 +1053,8 @@ void Board::generateBishopMoves() {
 		if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
 
 		unsigned short targetIndex = 0;
-		while (bishopAttacks) {
-			targetIndex = bb.pop(&bishopAttacks);
+		Bitloop (bishopAttacks) {
+			targetIndex = getSquare(bishopAttacks);
 
 			Move move(Piece::BISHOP | currentPlayer, getPiece(targetIndex), bishopPos, targetIndex);
 			possibleMoves.push_back(move);
@@ -1066,8 +1066,8 @@ void Board::generateQueenMoves() {
 	PROFILE_FUNCTION();
 	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
 	unsigned short queenPos = 0;
-	while (queens) {
-		queenPos = bb.pop(&queens);
+	Bitloop (queens) {
+		queenPos = getSquare(queens);
 
 		if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
 
@@ -1090,8 +1090,8 @@ void Board::generateQueenMoves() {
 		if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
 
 		unsigned short targetIndex = 0;
-		while (queenAttacks) {
-			targetIndex = bb.pop(&queenAttacks);
+		Bitloop (queenAttacks) {
+			targetIndex = getSquare(queenAttacks);
 
 			Move move(Piece::QUEEN | currentPlayer, getPiece(targetIndex), queenPos, targetIndex);
 			possibleMoves.push_back(move);

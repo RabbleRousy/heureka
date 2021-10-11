@@ -234,9 +234,9 @@ bitboard Bitboard::getOccupancy(int index, bitboard blockerMask)
     int bitCount = count(blockerMask);
     short square = 0;
     
-    for (int i = 0; i < bitCount; i++) {
+    for (int i = 0; i < bitCount; i++, blockerMask &= blockerMask - 1) {
         // Read the next least significant bit
-        square = pop(&blockerMask);
+        square = getSquare(blockerMask);
         // Set the i'th bit if the i'th bit in the index is also set
         // --> guarantees all possible occupancy variations with indexes from 0 - 2^bitCount
         if (index & (1 << i)) {
@@ -597,13 +597,13 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
 
     // KING
     bitboard king = allPieces[Piece::KING | opponent];
-    allAttacks |= getKingAttacks(pop(&king));
+    allAttacks |= getKingAttacks(getSquare(king));
 
     // ROOKS
     bitboard rooks = allPieces[Piece::ROOK | opponent];
     unsigned short rookPos = 0;
-    while (rooks) {
-        rookPos = pop(&rooks);
+    Bitloop (rooks) {
+        rookPos = getSquare(rooks);
         allAttacks |= getRookAttacks(rookPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
 
         bitboard ray = getConnectingRay(myKingPos, rookPos, Piece::ROOK);
@@ -618,7 +618,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
             else if (blockers == 0) {
                 checks[checkCount++] = ray;
-                (checkExists ? doubleCheck : checkExists) = true;
+                doubleCheck = checkExists;
+                checkExists = true;
             }
         }
         
@@ -628,8 +629,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     // BISHOPS
     bitboard bishops = allPieces[Piece::BISHOP | opponent];
     unsigned short bishopPos = 0; 
-    while (bishops) {
-        bishopPos = pop(&bishops);
+    Bitloop (bishops) {
+        bishopPos = getSquare(bishops);
         bitboard ray = getConnectingRay(myKingPos, bishopPos, Piece::BISHOP);
         bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
         bitboard enemyPiecesOnRay = ray & allPieces[opponent];
@@ -642,7 +643,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
             else if (blockers == 0) {
                 checks[checkCount++] = ray;
-                (checkExists ? doubleCheck : checkExists) = true;
+                doubleCheck = checkExists;
+                checkExists = true;
             }
         }
 
@@ -652,8 +654,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     // QUEENS
     bitboard queens = allPieces[Piece::QUEEN | opponent];
     unsigned short queenPos = 0;
-    while (queens) {
-        queenPos = pop(&queens);
+    Bitloop (queens) {
+        queenPos = getSquare(queens);
         bitboard ray = getConnectingRay(myKingPos, queenPos, Piece::QUEEN);
         bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
         bitboard enemyPiecesOnRay = ray & allPieces[opponent];
@@ -666,7 +668,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
             }
             else if (blockers == 0) {
                 checks[checkCount++] = ray;
-                (checkExists ? doubleCheck : checkExists) = true;
+                doubleCheck = checkExists;
+                checkExists = true;
             }
         }
 
@@ -676,17 +679,18 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     // KNIGHTS
     bitboard knights = allPieces[Piece::KNIGHT | opponent];
     unsigned short knightPos = 0;
-    while (knights) {
-        knightPos = pop(&knights);
+    Bitloop(knights) {
+        knightPos = getSquare(knights);
         bitboard knightAttacks = getKnightAttacks(knightPos);
         allAttacks |= knightAttacks;
 
         if (doubleCheck) continue;
 
-        while (knightAttacks) {
-            if (myKingPos == pop(&knightAttacks)) {
+        Bitloop(knightAttacks) {
+            if (myKingPos == getSquare(knightAttacks)) {
                 checks[checkCount++] = bitboard(1) << knightPos;
-                (checkExists ? doubleCheck : checkExists) = true;
+                doubleCheck = checkExists;
+                checkExists = true;
             }
         }
     }
@@ -698,7 +702,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksLeft)) {
         // King is checked by pawn on his right
         checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 9 : -7));
-        (checkExists ? doubleCheck : checkExists) = true;
+        doubleCheck = checkExists;
+        checkExists = true;
     }
 
     bitboard pawnAttacksRight = getPawnAttacks(false, opponent);
@@ -707,7 +712,8 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksRight)) {
         // King is checked by pawn on his left
         checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 7 : -9));
-        (checkExists ? doubleCheck : checkExists) = true;
+        doubleCheck = checkExists;
+        checkExists = true;
     }
 
     attacksNeedRebuilding = false;
@@ -744,14 +750,6 @@ bitboard Bitboard::getCheckRays(short playerInCheck) {
 bool Bitboard::containsSquare(bitboard b, unsigned short square)
 {
     return (b >> square) & 1;
-}
-
-unsigned short Bitboard::pop(bitboard* b)
-{
-    unsigned long scanIndex;
-    _BitScanForward64(&scanIndex, *b);
-    *b &= *b - 1;
-    return scanIndex;
 }
 
 unsigned short Bitboard::count(bitboard b)
