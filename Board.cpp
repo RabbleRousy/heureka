@@ -703,9 +703,7 @@ void Board::generatePawnMoves() {
 	moves &= empty;
 
 	// If player is in check, pawns may only step inbetween the check ray
-	if (bb.checkExists) {
-		moves &= bb.getCheckRays(currentPlayer);
-	}
+	moves &= bb.getCheckRays(currentPlayer);
 
 	unsigned short targetIndex = 0;
 	// Loop over all pawns that can move one step ahead
@@ -744,9 +742,7 @@ void Board::generatePawnMoves() {
 	moves &= white ? (empty << 8) : (empty >> 8);
 
 	// If player is in check, pawns may only step inbetween the check ray
-	if (bb.checkExists) {
-		moves &= bb.getCheckRays(currentPlayer);
-	}
+	moves &= bb.getCheckRays(currentPlayer);
 
 	// Loop over all pawns that can move two steps ahead
 	Bitloop (moves) {
@@ -774,18 +770,16 @@ void Board::generatePawnMoves() {
 	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
-	if (bb.checkExists) {
-		bitboard checkRays = bb.getCheckRays(currentPlayer);
-		if (enPassantSquare != 64) {
-			if (bb.count(checkRays) == 1) {
-				if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
-					// Or on the enpassant square if it's the pawn giving check
-					checkRays |= bitboard(1) << enPassantSquare;
-				}
+	bitboard checkRays = bb.getCheckRays(currentPlayer);
+	if (enPassantSquare != 64) {
+		if (bb.count(checkRays) == 1) {
+			if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
+				// Or on the enpassant square if it's the pawn giving check
+				checkRays |= bitboard(1) << enPassantSquare;
 			}
 		}
-		moves &= checkRays;
 	}
+	moves &= checkRays;
 
 	// Loop over all pawn captures to the left
 	Bitloop (moves) {
@@ -832,18 +826,16 @@ void Board::generatePawnMoves() {
 	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
-	if (bb.checkExists) {
-		bitboard checkRays = bb.getCheckRays(currentPlayer);
-		if (enPassantSquare != 64) {
-			if (bb.count(checkRays) == 1) {
-				if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
-					// Or on the enpassant square if it's the pawn giving check
-					checkRays |= bitboard(1) << enPassantSquare;
-				}
+	checkRays = bb.getCheckRays(currentPlayer);
+	if (enPassantSquare != 64) {
+		if (bb.count(checkRays) == 1) {
+			if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
+				// Or on the enpassant square if it's the pawn giving check
+				checkRays |= bitboard(1) << enPassantSquare;
 			}
 		}
-		moves &= checkRays;
 	}
+	moves &= checkRays;
 
 	// Loop over all pawn captures to the right
 	Bitloop (moves) {
@@ -972,9 +964,7 @@ void Board::generateKnightMoves() {
 		knightMoves &= ~(bb.getBitboard(currentPlayer));
 
 		// If in check, only try moves that move onto the checking ray
-		if (bb.checkExists) {
-			knightMoves &= bb.getCheckRays(currentPlayer);
-		}
+		knightMoves &= bb.getCheckRays(currentPlayer);
 
 		// Index of the current move
 		unsigned short targetIndex = 0;
@@ -991,6 +981,8 @@ void Board::generateKnightMoves() {
 void Board::generateRookMoves() {
 	PROFILE_FUNCTION();
 	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
+	// Pinned rooks can't move when in check
+	rooks &= rooks ^ (bb.checkExists * bb.getPins(currentPlayer));
 	unsigned short rookPos = 0;
 	Bitloop (rooks) {
 		rookPos = getSquare(rooks);
@@ -1001,17 +993,11 @@ void Board::generateRookMoves() {
 		// Remove squares that are blocked by friendly pieces
 		rookAttacks &= ~bb.getBitboard(currentPlayer);
 
-		bitboard pinRay = bb.isPinned(rookPos, currentPlayer);
-		if (pinRay) {
-			if (bb.checkExists) continue;
-			// Only move along the pin ray
-			rookAttacks &= pinRay;
-		}
+		// If pinned, move along your pin ray
+		rookAttacks &= bb.getPinRay(rookPos, currentPlayer);
 
 		// If in check, only move to blocking squares
-		if (bb.checkExists) {
-			rookAttacks &= bb.getCheckRays(currentPlayer);
-		}
+		rookAttacks &= bb.getCheckRays(currentPlayer);
 
 		if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
 
@@ -1028,6 +1014,9 @@ void Board::generateRookMoves() {
 void Board::generateBishopMoves() {
 	PROFILE_FUNCTION();
 	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
+	// Pinned bishops can't move when in check
+	bishops &= bishops ^ (bb.checkExists * bb.getPins(currentPlayer));
+
 	unsigned short bishopPos = 0;
 	Bitloop (bishops) {
 		bishopPos = getSquare(bishops);
@@ -1038,17 +1027,11 @@ void Board::generateBishopMoves() {
 		// Remove squares that are blocked by friendly pieces
 		bishopAttacks &= ~bb.getBitboard(currentPlayer);
 
-		bitboard pinRay = bb.isPinned(bishopPos, currentPlayer);
-		if (pinRay) {
-			if (bb.checkExists) continue;
-			// Only move along the pin ray
-			bishopAttacks &= pinRay;
-		}
+		// If pinned, move along your pin ray
+		bishopAttacks &= bb.getPinRay(bishopPos, currentPlayer);
 
 		// If in check, only move to blocking squares
-		if (bb.checkExists) {
-			bishopAttacks &= bb.getCheckRays(currentPlayer);
-		}
+		bishopAttacks &= bb.getCheckRays(currentPlayer);
 
 		if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
 
@@ -1065,6 +1048,9 @@ void Board::generateBishopMoves() {
 void Board::generateQueenMoves() {
 	PROFILE_FUNCTION();
 	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
+	// Pinned queens can't move when in check
+	queens &= queens ^ (bb.checkExists * bb.getPins(currentPlayer));
+
 	unsigned short queenPos = 0;
 	Bitloop (queens) {
 		queenPos = getSquare(queens);
@@ -1075,17 +1061,11 @@ void Board::generateQueenMoves() {
 		// Remove squares that are blocked by friendly pieces
 		queenAttacks &= ~bb.getBitboard(currentPlayer);
 
-		bitboard pinRay = bb.isPinned(queenPos, currentPlayer);
-		if (pinRay) {
-			if (bb.checkExists) continue;
-			// Only move along the pin ray
-			queenAttacks &= pinRay;
-		}
+		// If pinned, only move along your pin ray
+		queenAttacks &= bb.getPinRay(queenPos, currentPlayer);
 
 		// If in check, only move to blocking squares
-		if (bb.checkExists) {
-			queenAttacks &= bb.getCheckRays(currentPlayer);
-		}
+		queenAttacks &= bb.getCheckRays(currentPlayer);
 
 		if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
 

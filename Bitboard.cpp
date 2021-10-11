@@ -716,6 +716,11 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
         checkExists = true;
     }
 
+    if (!checkExists) {
+        checks[0] = 0xFFFFFFFFFFFFFFFF;
+        checks[1] = 0xFFFFFFFFFFFFFFFF;
+    }
+
     attacksNeedRebuilding = false;
     
     /*std::cout << "\nAttacks calculated against " << Piece::name(attackedPlayer) << ".\nAll attacks:\n" << toString(allAttacks)
@@ -741,6 +746,26 @@ bitboard Bitboard::isPinned(unsigned short pos, short color) {
     }
     
     return bitboard(0);
+}
+
+bitboard Bitboard::getPinRay(unsigned short pos, short color) {
+    if (attacksNeedRebuilding) calculateAttacks(color);
+    if (color == Piece::WHITE) {
+        for (int i = 0; i < 8; i++) {
+            if (containsSquare(pinsOnWhiteKing[i], pos)) {
+                return pinsOnWhiteKing[i];
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < 8; i++) {
+            if (containsSquare(pinsOnBlackKing[i], pos)) {
+                return pinsOnBlackKing[i];
+            }
+        }
+    }
+
+    return 0xFFFFFFFFFFFFFFFF;
 }
 
 bitboard Bitboard::getPins(short color) {
