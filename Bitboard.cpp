@@ -48,7 +48,7 @@ void Bitboard::initConnectingRays() {
         for (row = startRow + 1, column = startColumn; row < 8; row++) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            straightConnectingRays[from][to] = result;
         }
 
         // Scan south
@@ -56,14 +56,14 @@ void Bitboard::initConnectingRays() {
         for (row = startRow - 1, column = startColumn; row >= 0; row--) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            straightConnectingRays[from][to] = result;
         }
         // Scan west
         result = bitboard(0);
         for (column = startColumn - 1, row = startRow; column >= 0; column--) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            straightConnectingRays[from][to] = result;
         }
 
         // Scan east
@@ -71,35 +71,35 @@ void Bitboard::initConnectingRays() {
         for (column = startColumn + 1, row = startRow; column < 8; column++) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            straightConnectingRays[from][to] = result;
         }
         // Scan northeast
         result = bitboard(0);
         for (column = startColumn + 1, row = startRow + 1; column < 8 && row < 8; column++, row++) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            diagonalConnectingRays[from][to] = result;
         }
         // Scan southeast
         result = bitboard(0);
         for (column = startColumn + 1, row = startRow - 1; column < 8 && row >= 0; column++, row--) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            diagonalConnectingRays[from][to] = result;
         }
         // Scan southwest
         result = bitboard(0);
         for (column = startColumn - 1, row = startRow - 1; column >= 0 && row >= 0; column--, row--) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            diagonalConnectingRays[from][to] = result;
         }
         // Scan northwest
         result = bitboard(0);
         for (column = startColumn - 1, row = startRow + 1; column >= 0 && row < 8; column--, row++) {
             unsigned short to = row * 8 + column;
             set(&result, to);
-            connectingRays[from][to] = result;
+            diagonalConnectingRays[from][to] = result;
         }
     }
 }
@@ -551,21 +551,16 @@ bitboard Bitboard::getQueenAttacks(unsigned short pos, bitboard blockers)
 }
 
 bitboard Bitboard::getConnectingRay(unsigned short king, unsigned short enemy, short pieceType) {
-    bitboard ray = connectingRays[king][enemy];
-    // We don't need to check for pieceType if there is no ray anyway
-    if (!ray || pieceType == Piece::QUEEN) return ray;
-
-    unsigned short kingRow = king / 8;
-    unsigned short kingColumn = king % 8;
-    unsigned short enemyRow = enemy / 8;
-    unsigned short enemyColumn = enemy % 8;
-    if (pieceType == Piece::ROOK) {
-        return (kingColumn == enemyColumn || kingRow == enemyRow) ? ray : bitboard(0);
+    switch (pieceType) {
+    case Piece::QUEEN:
+        return diagonalConnectingRays[king][enemy] | straightConnectingRays[king][enemy];
+    case Piece::ROOK:
+        return straightConnectingRays[king][enemy];
+    case Piece::BISHOP:
+        return diagonalConnectingRays[king][enemy];
+    default:
+        return bitboard(0);
     }
-    else if (pieceType == Piece::BISHOP) {
-        return (abs(kingColumn - enemyColumn) == abs(kingRow - enemyRow)) ? ray : bitboard(0);
-    }
-    return bitboard(0);
 }
 
 void Bitboard::calculateAttacks(short attackedPlayer) {

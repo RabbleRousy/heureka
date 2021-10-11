@@ -29,7 +29,8 @@ private:
 	bitboard* bishopAttacks[64];
 	bitboard* rookAttacks[64];
 
-	bitboard connectingRays[64][64];
+	bitboard diagonalConnectingRays[64][64];
+	bitboard straightConnectingRays[64][64];
 
 	void initConnectingRays();
 	void initKnightAttacks();
