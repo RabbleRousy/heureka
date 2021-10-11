@@ -743,6 +743,13 @@ bitboard Bitboard::isPinned(unsigned short pos, short color) {
     return bitboard(0);
 }
 
+bitboard Bitboard::getPins(short color) {
+    if (color == Piece::WHITE)
+        return pinsOnWhiteKing[0] | pinsOnWhiteKing[1] | pinsOnWhiteKing[2] | pinsOnWhiteKing[3] | pinsOnWhiteKing[4] | pinsOnWhiteKing[5] | pinsOnWhiteKing[6] | pinsOnWhiteKing[7];
+    else 
+        return pinsOnBlackKing[0] | pinsOnBlackKing[1] | pinsOnBlackKing[2] | pinsOnBlackKing[3] | pinsOnBlackKing[4] | pinsOnBlackKing[5] | pinsOnBlackKing[6] | pinsOnBlackKing[7];
+}
+
 bitboard Bitboard::getCheckRays(short playerInCheck) {
     return (playerInCheck == Piece::WHITE ? checksOnWhiteKing[0] | checksOnWhiteKing[1] : checksOnBlackKing[0] | checksOnBlackKing[1]);
 }

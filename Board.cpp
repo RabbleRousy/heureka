@@ -959,13 +959,13 @@ void Board::generateKingMoves() {
 void Board::generateKnightMoves() {
 	PROFILE_FUNCTION();
 	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
+	// Pinned knights can't move
+	knights &= ~bb.getPins(currentPlayer);
+
 	unsigned short knightPos = 0;
 	Bitloop (knights) {
 		// Get the index of next knight
 		knightPos = getSquare(knights);
-
-		// Pinned knight can't move or capture
-		if (bb.isPinned(knightPos, currentPlayer)) continue;
 
 		bitboard knightMoves = bb.getKnightAttacks(knightPos);
 		// Possible Knight moves can't go on squares occupied by own color

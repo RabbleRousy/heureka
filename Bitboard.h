@@ -116,6 +116,7 @@ public:
 	bitboard getConnectingRay(unsigned short king, unsigned short attacker, short pieceType);
 	void calculateAttacks(short pinnedPiecesColor);
 	bitboard isPinned(unsigned short pos, short color);
+	bitboard getPins(short color);
 	bitboard getCheckRays(short playerInCheck);
 	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
