@@ -34,3 +34,7 @@ perft 5
 -------- BITLOOP & GETSQUARE MACROS ---------------
 perft 5
 4.865.609 after 936 ms (win) -> 5.200.000 m/s
+
+-------- LESS BRANCHING ---------------------------
+perft 5
+4.865.609 after 890 ms (win) -> 5.466.000 m/s

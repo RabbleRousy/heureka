@@ -17,6 +17,7 @@ private:
 	short squares[64];
 	short whiteKingPos;
 	short blackKingPos;
+	AttackData attackData;
 
 public:
 	
