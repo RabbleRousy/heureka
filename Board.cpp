@@ -665,10 +665,8 @@ bool Board::redoLastMove() {
 
 bool Board::inCheckAfter(const Move* move) {
 	doMove(move);
-	bb.calculateAttacks(currentPlayer);
-	bool check = bb.checkExists;
+	bool check = bb.getAttackData(currentPlayer).checkExists;
 	undoMove(move);
-	bb.calculateAttacks(currentPlayer);
 	return check;
 }
 
@@ -679,9 +677,11 @@ void Board::generateMoves()
 	//Instrumentor::Get().BeginSession("Generate Moves Profiling", "moves.json");
 	possibleMoves.clear();
 
+	attackData = bb.getAttackData(currentPlayer);
+
 	generateKingMoves();
 
-	if (bb.doubleCheck) return;
+	if (attackData.doubleCheck) return;
 
 	generateKnightMoves();
 	generatePawnMoves();
@@ -698,7 +698,7 @@ void Board::generatePawnMoves() {
 	bool white = currentPlayer == Piece::WHITE;
 	bitboard pawns = bb.getBitboard(Piece::PAWN | currentPlayer);
 	// Pinned pawns can't move if there is a check
-	pawns &= pawns ^ (bb.checkExists * bb.getPins(currentPlayer));
+	pawns &= pawns ^ (attackData.checkExists * attackData.allPins);
 	//---------- Moves one step ahead -----------------
 	bitboard moves = bb.getSinglePawnSteps(pawns, currentPlayer);
 	// Pawns may only step on empty fields
@@ -706,7 +706,7 @@ void Board::generatePawnMoves() {
 	moves &= empty;
 
 	// If player is in check, pawns may only step inbetween the check ray
-	moves &= bb.getCheckRays(currentPlayer);
+	moves &= attackData.allChecks;
 
 	unsigned short targetIndex = 0;
 	// Loop over all pawns that can move one step ahead
@@ -715,7 +715,7 @@ void Board::generatePawnMoves() {
 		unsigned short originIndex = targetIndex + (white ? -8 : 8);
 		
 		// If not moving along existing pinray, skip Move
-		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
+		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
 		short promotionFlag = (white && (targetIndex > 54)) ||
 							 (!white && (targetIndex < 8));
@@ -740,7 +740,7 @@ void Board::generatePawnMoves() {
 	moves &= white ? (empty << 8) : (empty >> 8);
 
 	// If player is in check, pawns may only step inbetween the check ray
-	moves &= bb.getCheckRays(currentPlayer);
+	moves &= attackData.allChecks;
 
 	// Loop over all pawns that can move two steps ahead
 	Bitloop (moves) {
@@ -748,7 +748,7 @@ void Board::generatePawnMoves() {
 		unsigned short originIndex = targetIndex + (white ? -16 : 16);
 
 		// Pinned piece can only move on pin ray
-		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
+		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex);
 		possibleMoves.push_back(move);
@@ -763,7 +763,7 @@ void Board::generatePawnMoves() {
 	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
-	bitboard checkRays = bb.getCheckRays(currentPlayer);
+	bitboard checkRays = attackData.allChecks;
 	if (enPassantSquare != 64) {
 		if (bb.count(checkRays) == 1) {
 			if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
@@ -780,7 +780,7 @@ void Board::generatePawnMoves() {
 		unsigned short originIndex = targetIndex + (white ? -7 : 9);
 
 		// Pinned pawn can only capture the pinning piece
-		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
+		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
 
 		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
@@ -814,7 +814,7 @@ void Board::generatePawnMoves() {
 	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
-	checkRays = bb.getCheckRays(currentPlayer);
+	checkRays = attackData.allChecks;
 	if (enPassantSquare != 64) {
 		if (bb.count(checkRays) == 1) {
 			if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
@@ -831,7 +831,7 @@ void Board::generatePawnMoves() {
 		unsigned short originIndex = targetIndex + (white ? -9 : 7);
 
 		// Pinned pawn can only capture the pinning piece
-		if (!bb.containsSquare(bb.getPinRay(originIndex, currentPlayer), targetIndex)) continue;
+		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
 		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
 			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
@@ -863,7 +863,7 @@ void Board::generateKingMoves() {
 	// Don't move to squares occupied by your own color
 	kingMoves &= ~bb.getBitboard(currentPlayer);
 	// Don't move onto attacked squares
-	kingMoves &= ~bb.getAllAttacks(Piece::getOppositeColor(currentPlayer));
+	kingMoves &= ~attackData.allAttacks;
 
 	// Index of the current move
 	unsigned short targetIndex = 0;
@@ -872,7 +872,7 @@ void Board::generateKingMoves() {
 		targetIndex = getSquare(kingMoves);
 		// If not in check, look if this is a valid castle move
 		if (abs(targetIndex - kingPos) == 2) {
-			if (bb.checkExists) continue;
+			if (attackData.checkExists) continue;
 
 			bool castleFailed = false;
 			if (targetIndex > kingPos) {
@@ -880,12 +880,12 @@ void Board::generateKingMoves() {
 				if (currentPlayer == Piece::WHITE && (castleRights & 0b1000)) {
 					// Check white's short castle
 					// Two squares next to king have to be empty and not attacked
-					castleFailed |= (bb.OO & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
+					castleFailed |= (bb.OO & (bb.getOccupied() | attackData.allAttacks));
 				}
 				else if (castleRights & 0b0010) {
 					// Check black's short castle
 					// Two squares next to king have to be empty and not attacked
-					castleFailed |= (bb.oo & (bb.getOccupied() | bb.getAllAttacks(Piece::getOppositeColor(currentPlayer))));
+					castleFailed |= (bb.oo & (bb.getOccupied() | attackData.allAttacks));
 				}
 				else {
 					castleFailed = true;
@@ -903,14 +903,14 @@ void Board::generateKingMoves() {
 					// Three squares next to king have to be empty
 					castleFailed |= (bb.OOO & bb.getOccupied());
 					// Two squares next to king must not be attacked
-					castleFailed |= (0x000000000000000C & bb.getAllAttacks(Piece::getOppositeColor(currentPlayer)));
+					castleFailed |= (0x000000000000000C & attackData.allAttacks);
 				}
 				else if (castleRights & 0b0001) {
 					// Check black's long castle
 					// Three squares next to king have to be empty
 					castleFailed |= (bb.ooo & bb.getOccupied());
 					// Two squares next to king must not be attacked
-					castleFailed |= (0x0C00000000000000 & bb.getAllAttacks(Piece::getOppositeColor(currentPlayer)));
+					castleFailed |= (0x0C00000000000000 & attackData.allAttacks);
 				}
 				else castleFailed = true;
 
@@ -935,7 +935,7 @@ void Board::generateKnightMoves() {
 	PROFILE_FUNCTION();
 	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
 	// Pinned knights can't move
-	knights &= ~bb.getPins(currentPlayer);
+	knights &= ~attackData.allPins;
 
 	unsigned short knightPos = 0;
 	Bitloop (knights) {
@@ -947,7 +947,7 @@ void Board::generateKnightMoves() {
 		knightMoves &= ~(bb.getBitboard(currentPlayer));
 
 		// If in check, only try moves that move onto the checking ray
-		knightMoves &= bb.getCheckRays(currentPlayer);
+		knightMoves &= attackData.allChecks;
 
 		// Index of the current move
 		unsigned short targetIndex = 0;
@@ -965,7 +965,7 @@ void Board::generateRookMoves() {
 	PROFILE_FUNCTION();
 	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
 	// Pinned rooks can't move when in check
-	rooks &= rooks ^ (bb.checkExists * bb.getPins(currentPlayer));
+	rooks &= rooks ^ (attackData.checkExists * attackData.allPins);
 	unsigned short rookPos = 0;
 	Bitloop (rooks) {
 		rookPos = getSquare(rooks);
@@ -977,10 +977,10 @@ void Board::generateRookMoves() {
 		rookAttacks &= ~bb.getBitboard(currentPlayer);
 
 		// If pinned, move along your pin ray
-		rookAttacks &= bb.getPinRay(rookPos, currentPlayer);
+		rookAttacks &= attackData.pins[rookPos];
 
 		// If in check, only move to blocking squares
-		rookAttacks &= bb.getCheckRays(currentPlayer);
+		rookAttacks &= attackData.allChecks;
 
 		if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
 
@@ -998,7 +998,7 @@ void Board::generateBishopMoves() {
 	PROFILE_FUNCTION();
 	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
 	// Pinned bishops can't move when in check
-	bishops &= bishops ^ (bb.checkExists * bb.getPins(currentPlayer));
+	bishops &= bishops ^ (attackData.checkExists * attackData.allPins);
 
 	unsigned short bishopPos = 0;
 	Bitloop (bishops) {
@@ -1011,10 +1011,10 @@ void Board::generateBishopMoves() {
 		bishopAttacks &= ~bb.getBitboard(currentPlayer);
 
 		// If pinned, move along your pin ray
-		bishopAttacks &= bb.getPinRay(bishopPos, currentPlayer);
+		bishopAttacks &= attackData.pins[bishopPos];
 
 		// If in check, only move to blocking squares
-		bishopAttacks &= bb.getCheckRays(currentPlayer);
+		bishopAttacks &= attackData.allChecks;
 
 		if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
 
@@ -1032,7 +1032,7 @@ void Board::generateQueenMoves() {
 	PROFILE_FUNCTION();
 	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
 	// Pinned queens can't move when in check
-	queens &= queens ^ (bb.checkExists * bb.getPins(currentPlayer));
+	queens &= queens ^ (attackData.checkExists * attackData.allPins);
 
 	unsigned short queenPos = 0;
 	Bitloop (queens) {
@@ -1045,10 +1045,10 @@ void Board::generateQueenMoves() {
 		queenAttacks &= ~bb.getBitboard(currentPlayer);
 
 		// If pinned, only move along your pin ray
-		queenAttacks &= bb.getPinRay(queenPos, currentPlayer);
+		queenAttacks &= attackData.pins[queenPos];
 
 		// If in check, only move to blocking squares
-		queenAttacks &= bb.getCheckRays(currentPlayer);
+		queenAttacks &= attackData.allChecks;
 
 		if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
 
@@ -1079,7 +1079,7 @@ void Board::pseudoLegalToLegalMoves() {
 bool Board::kingIsInCheck(const short color) {
 	PROFILE_FUNCTION();
 	bitboard king = bb.getBitboard(Piece::KING | color);
-	return king & bb.getAllAttacks(Piece::getOppositeColor(color));
+	return king & attackData.allAttacks;
 }
 
 // Converts an integer (step) to a short[2] x and y direction

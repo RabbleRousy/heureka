@@ -2,7 +2,6 @@
 
 Bitboard::Bitboard() : knightAttacks(), kingAttacks()
 {
-    attacksNeedRebuilding = true;
     for (int i = 0; i < 64; i++) {
         bishopAttacks[i] = new bitboard[512];
         rookAttacks[i] = new bitboard[4096];
@@ -446,8 +445,6 @@ void Bitboard::setPiece(short p, unsigned short index)
 
     if (p == (Piece::KING | Piece::BLACK)) blackKingPos = index;
     if (p == (Piece::KING | Piece::WHITE)) whiteKingPos = index;
-
-    attacksNeedRebuilding = true;
 }
 
 void Bitboard::removePiece(short p, unsigned short index)
@@ -455,7 +452,6 @@ void Bitboard::removePiece(short p, unsigned short index)
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] &= ~mask;
     allPieces[Piece::getColor(p)] &= ~mask;
-    attacksNeedRebuilding = true;
 }
 
 bitboard Bitboard::getOccupied()
@@ -466,15 +462,6 @@ bitboard Bitboard::getOccupied()
 bitboard Bitboard::getEmpty()
 {
     return ~(allPieces[Piece::WHITE] | allPieces[Piece::BLACK]);
-}
-
-bitboard Bitboard::getAllAttacks(short attacker)
-{
-    if (!attacksNeedRebuilding) return allAttacks;
-    
-    calculateAttacks(Piece::getOppositeColor(attacker));
-
-    return allAttacks;
 }
 
 bitboard Bitboard::getSinglePawnSteps(bitboard pawns, short color)
@@ -563,40 +550,25 @@ bitboard Bitboard::getConnectingRay(unsigned short king, unsigned short enemy, s
     }
 }
 
-void Bitboard::calculateAttacks(short attackedPlayer) {
+AttackData Bitboard::getAttackData(short attackedPlayer) {
     bool white = attackedPlayer == Piece::WHITE;
-    bitboard* pins = white ? pinsOnWhiteKing : pinsOnBlackKing;
-    bitboard* checks = white ? checksOnWhiteKing : checksOnBlackKing;
     
-    // Clear Attacks
-    allAttacks = bitboard(0);
-
-    // Clear Pins
-    for (int i = 0; i < 8; i++) {
-        pins[i] = bitboard(0);
-    }
-    pinsExist = false;
-
-    // Clear Checks
-    checks[0] = bitboard(0);
-    checks[1] = bitboard(0);
-    checkExists = false;
-    doubleCheck = false;
+    AttackData data;
 
     short opponent = Piece::getOppositeColor(attackedPlayer);
     unsigned short myKingPos = (white ? whiteKingPos : blackKingPos);
-    unsigned short pinCount = 0, checkCount = 0;
+    unsigned short checkCount = 0;
 
     // KING
     bitboard king = allPieces[Piece::KING | opponent];
-    allAttacks |= getKingAttacks(getSquare(king));
+    data.allAttacks |= getKingAttacks(getSquare(king));
 
     // ROOKS
     bitboard rooks = allPieces[Piece::ROOK | opponent];
     unsigned short rookPos = 0;
     Bitloop (rooks) {
         rookPos = getSquare(rooks);
-        allAttacks |= getRookAttacks(rookPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
+        data.allAttacks |= getRookAttacks(rookPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
 
         bitboard ray = getConnectingRay(myKingPos, rookPos, Piece::ROOK);
         bitboard friendlyPiecesOnRay = ray & allPieces[attackedPlayer];
@@ -606,12 +578,14 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
         if (count(enemyPiecesOnRay) == 1) {
             unsigned short blockers = count(friendlyPiecesOnRay);
             if (blockers == 1) {
-                pins[pinCount++] = ray;
+                data.pins[getSquare(friendlyPiecesOnRay)] = ray;
+                data.allPins |= ray;
             }
             else if (blockers == 0) {
-                checks[checkCount++] = ray;
-                doubleCheck = checkExists;
-                checkExists = true;
+                data.checks[checkCount++] = ray;
+                data.allChecks |= ray;
+                data.doubleCheck = data.checkExists;
+                data.checkExists = true;
             }
         }
         
@@ -631,16 +605,18 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
         if (count(enemyPiecesOnRay) == 1) {
             unsigned short blockers = count(friendlyPiecesOnRay);
             if (blockers == 1) {
-                pins[pinCount++] = ray;
+                data.pins[getSquare(friendlyPiecesOnRay)] = ray;
+                data.allPins |= ray;
             }
             else if (blockers == 0) {
-                checks[checkCount++] = ray;
-                doubleCheck = checkExists;
-                checkExists = true;
+                data.checks[checkCount++] = ray;
+                data.allChecks |= ray;
+                data.doubleCheck = data.checkExists;
+                data.checkExists = true;
             }
         }
 
-        allAttacks |= getBishopAttacks(bishopPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
+        data.allAttacks |= getBishopAttacks(bishopPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
     }
 
     // QUEENS
@@ -656,16 +632,18 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
         if (count(enemyPiecesOnRay) == 1) {
             unsigned short blockers = count(friendlyPiecesOnRay);
             if (blockers == 1) {
-                pins[pinCount++] = ray;
+                data.pins[getSquare(friendlyPiecesOnRay)] = ray;
+                data.allPins |= ray;
             }
             else if (blockers == 0) {
-                checks[checkCount++] = ray;
-                doubleCheck = checkExists;
-                checkExists = true;
+                data.checks[checkCount++] = ray;
+                data.allChecks |= ray;
+                data.doubleCheck = data.checkExists;
+                data.checkExists = true;
             }
         }
 
-        allAttacks |= getQueenAttacks(queenPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
+        data.allAttacks |= getQueenAttacks(queenPos, getOccupied() & ~allPieces[Piece::KING | attackedPlayer]);
     }
 
     // KNIGHTS
@@ -674,101 +652,57 @@ void Bitboard::calculateAttacks(short attackedPlayer) {
     Bitloop(knights) {
         knightPos = getSquare(knights);
         bitboard knightAttacks = getKnightAttacks(knightPos);
-        allAttacks |= knightAttacks;
+        data.allAttacks |= knightAttacks;
 
-        if (doubleCheck) continue;
+        if (data.doubleCheck) continue;
 
         Bitloop(knightAttacks) {
             if (myKingPos == getSquare(knightAttacks)) {
-                checks[checkCount++] = bitboard(1) << knightPos;
-                doubleCheck = checkExists;
-                checkExists = true;
+                bitboard checkingKnight = bitboard(1) << knightPos;
+                data.checks[checkCount++] = checkingKnight;
+                data.allChecks |= checkingKnight;
+                data.doubleCheck = data.checkExists;
+                data.checkExists = true;
             }
         }
     }
 
     // PAWNS
     bitboard pawnAttacksLeft = getPawnAttacks(allPieces[Piece::PAWN | opponent], true, opponent);
-    allAttacks |= pawnAttacksLeft;
+    data.allAttacks |= pawnAttacksLeft;
 
-    if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksLeft)) {
+    if (!data.doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksLeft)) {
         // King is checked by pawn on his right
-        checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 9 : -7));
-        doubleCheck = checkExists;
-        checkExists = true;
+        bitboard checkingPawn = bitboard(1) << (myKingPos + (white ? 9 : -7));
+        data.checks[checkCount++] = checkingPawn;
+        data.allChecks |= checkingPawn;
+        data.doubleCheck = data.checkExists;
+        data.checkExists = true;
     }
 
     bitboard pawnAttacksRight = getPawnAttacks(allPieces[Piece::PAWN | opponent], false, opponent);
-    allAttacks |= pawnAttacksRight;
+    data.allAttacks |= pawnAttacksRight;
 
-    if (!doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksRight)) {
+    if (!data.doubleCheck && (getBitboard(Piece::KING | attackedPlayer) & pawnAttacksRight)) {
         // King is checked by pawn on his left
-        checks[checkCount++] = bitboard(1) << (myKingPos + (white ? 7 : -9));
-        doubleCheck = checkExists;
-        checkExists = true;
+        bitboard checkingPawn = bitboard(1) << (myKingPos + (white ? 7 : -9));
+        data.checks[checkCount++] = checkingPawn;
+        data.allChecks |= checkingPawn;
+        data.doubleCheck = data.checkExists;
+        data.checkExists = true;
     }
 
-    if (!checkExists) {
-        checks[0] = 0xFFFFFFFFFFFFFFFF;
-        checks[1] = 0xFFFFFFFFFFFFFFFF;
-    }
-
-    attacksNeedRebuilding = false;
-    
-    /*std::cout << "\nAttacks calculated against " << Piece::name(attackedPlayer) << ".\nAll attacks:\n" << toString(allAttacks)
-        << "\nAll Checks:\n" << toString(checks[0] | checks[1]) << "\nAll Pins:\n"
-        << toString(pins[0] | pins[1] | pins[2] | pins[3] | pins[4] | pins[5] | pins[6] | pins[7]);*/
-}
-
-bitboard Bitboard::isPinned(unsigned short pos, short color) {
-    if (attacksNeedRebuilding) calculateAttacks(color);
-    if (color == Piece::WHITE) {
-        for (int i = 0; i < 8; i++) {
-            if (containsSquare(pinsOnWhiteKing[i], pos)) {
-                return pinsOnWhiteKing[i];
-            }
-        }
-    }
-    else {
-        for (int i = 0; i < 8; i++) {
-            if (containsSquare(pinsOnBlackKing[i], pos)) {
-                return pinsOnBlackKing[i];
-            }
-        }
+    if (!data.checkExists) {
+        data.checks[0] = 0xFFFFFFFFFFFFFFFF;
+        data.checks[1] = 0xFFFFFFFFFFFFFFFF;
+        data.allChecks = 0xFFFFFFFFFFFFFFFF;
     }
     
-    return bitboard(0);
-}
+    /*std::cout << "\nAttacks calculated against " << Piece::name(attackedPlayer) << ".\nAll attacks:\n" << toString(data.allAttacks)
+        << "\nAll Checks:\n" << toString(data.allChecks) << "\nAll Pins:\n"
+        << toString(data.allPins);*/
 
-bitboard Bitboard::getPinRay(unsigned short pos, short color) {
-    if (attacksNeedRebuilding) calculateAttacks(color);
-    if (color == Piece::WHITE) {
-        for (int i = 0; i < 8; i++) {
-            if (containsSquare(pinsOnWhiteKing[i], pos)) {
-                return pinsOnWhiteKing[i];
-            }
-        }
-    }
-    else {
-        for (int i = 0; i < 8; i++) {
-            if (containsSquare(pinsOnBlackKing[i], pos)) {
-                return pinsOnBlackKing[i];
-            }
-        }
-    }
-
-    return 0xFFFFFFFFFFFFFFFF;
-}
-
-bitboard Bitboard::getPins(short color) {
-    if (color == Piece::WHITE)
-        return pinsOnWhiteKing[0] | pinsOnWhiteKing[1] | pinsOnWhiteKing[2] | pinsOnWhiteKing[3] | pinsOnWhiteKing[4] | pinsOnWhiteKing[5] | pinsOnWhiteKing[6] | pinsOnWhiteKing[7];
-    else 
-        return pinsOnBlackKing[0] | pinsOnBlackKing[1] | pinsOnBlackKing[2] | pinsOnBlackKing[3] | pinsOnBlackKing[4] | pinsOnBlackKing[5] | pinsOnBlackKing[6] | pinsOnBlackKing[7];
-}
-
-bitboard Bitboard::getCheckRays(short playerInCheck) {
-    return (playerInCheck == Piece::WHITE ? checksOnWhiteKing[0] | checksOnWhiteKing[1] : checksOnBlackKing[0] | checksOnBlackKing[1]);
+    return data;
 }
 
 bool Bitboard::containsSquare(bitboard b, unsigned short square)

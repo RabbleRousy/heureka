@@ -7,7 +7,38 @@
 typedef unsigned __int64 bitboard;
 #define C64(constantU64) constantU64##ULL
 #define Bitloop(X) for(;X;X &= (X-1))
+#ifdef __GNUC__
 #define getSquare(X) _tzcnt_u64(X)
+#else
+unsigned long __inline getSquare(bitboard value)
+{
+	unsigned long trailing_zero = 0;
+
+	if (_BitScanForward64(&trailing_zero, value))
+	{
+		return trailing_zero;
+	}
+	else
+	{
+		// This is undefined, I better choose 32 than 0
+		return 32;
+	}
+}
+#endif
+
+struct AttackData {
+	bool pinsExist, checkExists, doubleCheck;
+	bitboard allAttacks, allPins, allChecks;
+	bitboard pins[64];
+	bitboard checks[2];
+
+	AttackData() : pinsExist(false), checkExists(false), doubleCheck(false),
+		allAttacks(0), allPins(0), allChecks(0) {
+		memset(pins, 0xFF, sizeof(pins));
+		checks[0] = bitboard(0);
+		checks[1] = bitboard(1);
+	}
+};
 
 class Bitboard
 {
@@ -50,11 +81,6 @@ private:
 
 	int shittyHash(bitboard occupancy, unsigned long long magicNumber, unsigned short bitCount);
 
-	bool attacksNeedRebuilding;
-	bitboard allAttacks;
-	bitboard pinsOnWhiteKing[8], pinsOnBlackKing[8];
-	bitboard checksOnWhiteKing[2], checksOnBlackKing[2];
-
 public:
 	const bitboard notAfile = ~(0x0101010101010101);
 	const bitboard notBfile = ~(0x0202020202020202);
@@ -73,8 +99,6 @@ public:
 	// Relevant bits for Black's long castle
 	const bitboard ooo = 0x0E00000000000000;
 
-	bool pinsExist, checkExists, doubleCheck;
-
 	Bitboard();
 	~Bitboard();
 	/// <param name="p">is a Piece consisting of Type | Color, or only a Color.</param>
@@ -84,9 +108,6 @@ public:
 	void removePiece(short p, unsigned short index);
 	bitboard getOccupied();
 	bitboard getEmpty();
-	/// <param name="color">of the attacking side.</param>
-	/// <returns>a bitboard with all squares marked that are attacked by any piece of the given color.</returns>
-	bitboard getAllAttacks(short color);
 	/// <param name="color">of the pawns to generate the step bitboard</param>
 	/// <returns>a bitboard with the squares marked that all pawns of that color can reach by stepping one field ahead.</returns>
 	bitboard getSinglePawnSteps(bitboard pawns, short color);
@@ -115,11 +136,7 @@ public:
 	/// <returns>a bitboard where the bits on a straight or diagonal line between from and to are set.
 	/// Returns an empty bitboard if there is no connecting ray.</returns>
 	bitboard getConnectingRay(unsigned short king, unsigned short attacker, short pieceType);
-	void calculateAttacks(short pinnedPiecesColor);
-	bitboard isPinned(unsigned short pos, short color);
-	bitboard getPinRay(unsigned short pos, short color);
-	bitboard getPins(short color);
-	bitboard getCheckRays(short playerInCheck);
+	AttackData getAttackData(short pinnedPiecesColor);
 	/// <returns>wether the given bitboard has the bit for the given square set to 1.</returns>
 	bool containsSquare(bitboard b, unsigned short square);
 	/// <returns>number of 1s set in the given bitboard.</returns>
