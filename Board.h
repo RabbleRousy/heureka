@@ -34,13 +34,15 @@ public:
 
 		SearchResults() : positionsSearched(0), evaluation(0) {}
 	};
+
+	bool aiPlayer;
+	unsigned int searchDepth;
 	
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
 	static short castleRights;
 
 	static unsigned short enPassantSquare;
 
-	float accumulatedGenerationTime;
 	/// <summary>
 	/// Constructor for the Board.
 	/// </summary>
@@ -48,6 +50,8 @@ public:
 
 	// Whose turn it is, either Piece::WHITE or Piece::BLACK
 	short currentPlayer;
+
+	bool checkMate, staleMate;
 
 	SearchResults currentSearch;
 
@@ -68,6 +72,8 @@ public:
 
 	// Sets all squares to Piece::NONE
 	void clearBoard();
+
+	void reset();
 
 	/// <summary>
 	/// 
@@ -151,6 +157,10 @@ public:
 	/// <returns>wether the move was contained in the possibleMoves vector and could be made. If true, the game is now updated and ready for the next move.</returns>
 	bool handleMoveInput(const unsigned short from[2], const unsigned short to[2], short promotionChoice = 0);
 	
+	void makePlayerMove(const Move* move);
+
+	void makeAiMove();
+
 	/// <summary>
 	/// Clears the possibleMoves vector and regenerates it.
 	/// For each piece on the board of the current player's color, every step of each direction it can go is calculated.

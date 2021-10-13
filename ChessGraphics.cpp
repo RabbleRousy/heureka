@@ -4,18 +4,22 @@
 
 using namespace sf;
 
-ChessGraphics::ChessGraphics() : window(VideoMode(1160, 1160), "Chess")
+ChessGraphics::ChessGraphics()
 {
-	initGraphics();
 
 	initGame();
 
+	initGraphics();
+
 	mainLoop();
+
+	delete window;
 }
 
 void ChessGraphics::initGraphics()
 {
-	windowRes = window.getSize().x;
+	window = new RenderWindow(VideoMode(1160, 1160), "Chess");
+	windowRes = window->getSize().x;
 	// Board texture is 1160 x 1160 px
 	boardTexture.loadFromFile("Sprites/board.png");
 	// Pieces texture is 2000 x 667 px
@@ -37,8 +41,8 @@ void ChessGraphics::initGraphics()
 
 	boardSprite = Sprite(boardTexture);
 
-	window.draw(boardSprite);
-	window.display();
+	window->draw(boardSprite);
+	window->display();
 }
 
 void ChessGraphics::initGame()
@@ -62,16 +66,52 @@ void ChessGraphics::initGame()
 	if (!board.readPosFromFEN(fen)) {
 		board.readPosFromFEN();
 	}
+
+	std::cout << "Please enter AI player search depth:\n";
+	std::cin >> input;
+
+	int depth = std::stoi(input);
+	if (depth > 10) {
+		std::cout << "Depth capped at 5!\n";
+		depth = 10;
+	}
+	else if (depth < 1) {
+		std::cout << "Invalid depth. Setting depth to 4.\n";
+		depth = 5;
+	}
+	board.searchDepth = depth;
+	board.aiPlayer = true;
+
 	board.generateMoves();
 }
 
 void ChessGraphics::mainLoop() {
-	while (window.isOpen()) {
+	while (window->isOpen()) {
+
+		if (board.checkMate) {
+			std::cout << Piece::name(board.currentPlayer) << " lost. New game? (Y/N)";
+			std::string input;
+			std::cin >> input;
+			if (input == "Y" || input == "y")
+				startNewGame();
+			else window->close();
+		}
+
+		if (board.staleMate) {
+			std::cout << "Stalemate. New game? (Y/N)";
+			std::string input;
+			std::cin >> input;
+			if (input == "Y" || input == "y")
+				startNewGame();
+			else window->close();
+		}
+
+
 		// Check for events
 		Event e;
-		while (window.pollEvent(e)) {
+		while (window->pollEvent(e)) {
 			if (e.type == Event::Closed) {
-				window.close();
+				window->close();
 			}
 			else if (e.type == Event::Resized) {
 				keepAspectRatio();
@@ -79,12 +119,12 @@ void ChessGraphics::mainLoop() {
 
 			else if (e.type == Event::MouseButtonPressed || e.type == Event::MouseButtonReleased || Mouse::isButtonPressed(Mouse::Button::Left)) {
 				// Update mouse position and hovered Square
-				mousePos = Mouse::getPosition(window);
+				mousePos = Mouse::getPosition(*window);
 
 				unsigned short clickedSquare[2];
 				//getSquareAt(mousePos.x, mousePos.y, clickedSquare[0], clickedSquare[1]);
-				clickedSquare[0] = (short)(mousePos.x / (window.getSize().x / 8));
-				clickedSquare[1] = 7 - (short)(mousePos.y / (window.getSize().y / 8));
+				clickedSquare[0] = (short)(mousePos.x / (window->getSize().x / 8));
+				clickedSquare[1] = 7 - (short)(mousePos.y / (window->getSize().y / 8));
 
 				// On mouse down
 				if (e.type == Event::MouseButtonPressed && !board.wantsToPromote) {
@@ -171,8 +211,8 @@ void ChessGraphics::mainLoop() {
 			}
 		}
 
-		window.clear();
-		window.draw(boardSprite);
+		window->clear();
+		window->draw(boardSprite);
 
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
@@ -181,10 +221,10 @@ void ChessGraphics::mainLoop() {
 					bool dragging = false;
 					if (pieceSelected) {
 						if (selectedSquare[0] == i && selectedSquare[1] == j) {
-							float squareWidth = window.getSize().x / 8.0f;
+							float squareWidth = window->getSize().x / 8.0f;
 							// Highlight selected square
 							RectangleShape highlightSquare = getHighlightSquare(i, j);//(Vector2f(squareWidth, squareWidth));
-							window.draw(highlightSquare);
+							window->draw(highlightSquare);
 
 							// Drag piece if mouse is held down
 							dragging = Mouse::isButtonPressed(Mouse::Button::Left);
@@ -196,7 +236,7 @@ void ChessGraphics::mainLoop() {
 					else
 						setPieceSquare(p, i, j);
 
-					window.draw(getPieceSprite(p));
+					window->draw(getPieceSprite(p));
 				}
 			}
 		}
@@ -205,24 +245,28 @@ void ChessGraphics::mainLoop() {
 			// White transparency over board
 			RectangleShape highlightSquare = getBoardOverlay();
 
-			window.draw(highlightSquare);
+			window->draw(highlightSquare);
 
 			// Display possible promotion pieces
 			setPieceSquare(Piece::QUEEN | board.currentPlayer, 3, 4);
-			window.draw(getPieceSprite(Piece::QUEEN | board.currentPlayer));
+			window->draw(getPieceSprite(Piece::QUEEN | board.currentPlayer));
 
 			setPieceSquare(Piece::ROOK | board.currentPlayer, 4, 4);
-			window.draw(getPieceSprite(Piece::ROOK | board.currentPlayer));
+			window->draw(getPieceSprite(Piece::ROOK | board.currentPlayer));
 
 			setPieceSquare(Piece::BISHOP | board.currentPlayer, 3, 3);
-			window.draw(getPieceSprite(Piece::BISHOP | board.currentPlayer));
+			window->draw(getPieceSprite(Piece::BISHOP | board.currentPlayer));
 
 			setPieceSquare(Piece::KNIGHT | board.currentPlayer, 4, 3);
-			window.draw(getPieceSprite(Piece::KNIGHT | board.currentPlayer));
+			window->draw(getPieceSprite(Piece::KNIGHT | board.currentPlayer));
 		}
 
-		window.display();
+		window->display();
 	}
+}
+
+void ChessGraphics::startNewGame() {
+	board.reset();
 }
 
 Sprite& ChessGraphics::getPieceSprite(short p)
@@ -303,7 +347,7 @@ void ChessGraphics::keepAspectRatio() {
 	float screenWidth = 1160.0f;
 	float screenHeight = 1160.0f;
 	// Get the resized size
-	sf::Vector2u size = window.getSize();
+	sf::Vector2u size = window->getSize();
 	// Setup desired aspect ratio
 	float  heightRatio = screenHeight / screenWidth;
 	float  widthRatio = screenWidth / screenHeight;
@@ -316,6 +360,6 @@ void ChessGraphics::keepAspectRatio() {
 	{
 		size.y = size.x * heightRatio;
 	}
-	window.setSize(size);
-	windowRes = window.getSize().x;
+	window->setSize(size);
+	windowRes = window->getSize().x;
 }

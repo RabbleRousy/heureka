@@ -3,6 +3,7 @@
 uci::uci() {
 	cout << "id name myChessEngine" << endl;
 	cout << "id author SimonHetzer" << endl;
+	cout << "id version 1.0" << endl;
 	cout << "uciok" << endl;
 
 	srand(time(NULL));
@@ -64,6 +65,6 @@ void uci::parsePosition(std::string input) {
 }
 
 void uci::parseGo(std::string input) {
-	board.generateMoves();
-	cout << "bestmove " << Move::toString(board.possibleMoves[rand() % board.possibleMoves.size()]) << '\n';
+	board.searchBestMove(4);
+	cout << "bestmove " << Move::toString(board.currentSearch.bestMove) << '\n';
 }

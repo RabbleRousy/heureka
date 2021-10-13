@@ -9,7 +9,7 @@ using namespace sf;
 class ChessGraphics
 {
 private:
-	RenderWindow window;
+	RenderWindow* window;
 	Texture boardTexture, pieces;
 	unsigned int windowRes;
 	unsigned int pieceRes;
@@ -35,6 +35,8 @@ public:
 	void initGame();
 
 	void mainLoop();
+
+	void startNewGame();
 
 	/// <param name="piece">indicates which sprite is needed.</param>
 	/// <returns>the sprite by reference so it may be drawn to the screen.</returns>

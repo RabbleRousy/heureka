@@ -28,6 +28,16 @@ void Board::clearBoard() {
 	}
 }
 
+void Board::reset() {
+	possibleMoves = std::vector<Move>();
+	moveHistory = std::stack<Move>();
+	futureMovesBuffer = std::stack<Move>();
+	wantsToPromote = false;
+	checkMate = false;
+	staleMate = false;
+	readPosFromFEN();
+}
+
 bool Board::readPosFromFEN(std::string fen) {
 
 	const bool DEBUG = debugLogs;
@@ -136,12 +146,6 @@ bool Board::readPosFromFEN(std::string fen) {
 	// No additional infos
 	if (i >= fen.size()-1) {
 		if (DEBUG) std::cout << "End of FEN reached.\n";
-
-		std::cout << "\nRooks bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::ROOK | currentPlayer) | bb.getBitboard(Piece::ROOK | Piece::getOppositeColor(currentPlayer)));
-		std::cout << "\nKnights bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::KNIGHT | currentPlayer) | bb.getBitboard(Piece::KNIGHT | Piece::getOppositeColor(currentPlayer)));
-		std::cout << "\nBishops bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
-		std::cout << "\nPawns bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::PAWN | currentPlayer) | bb.getBitboard(Piece::PAWN | Piece::getOppositeColor(currentPlayer)));
-
 		return true;
 	}
 
@@ -411,13 +415,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 			break;
 		}
 
-		doMove(&promoMoveBuffer);
-		moveHistory.push(promoMoveBuffer);
-
-		swapCurrentPlayer();
-		generateMoves();
-
-		futureMovesBuffer = std::stack<Move>();
+		makePlayerMove(&promoMoveBuffer);
 
 		if (debugLogs) {
 			std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
@@ -456,21 +454,60 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		}
 		if (debugLogs) std::cout << " NO. Doing move: " << Move::toString(possibleMoves[i]) << '\n';
 
-		doMove(&possibleMoves[i]);
+		makePlayerMove(&possibleMoves[i]);
+
 		if (debugLogs) std::cout << "White pawns bitboard:\n" << bb.toString(bb.getBitboard(Piece::PAWN | Piece::WHITE)) << '\n';
-		moveHistory.push(possibleMoves[i]);
-		swapCurrentPlayer();
-		generateMoves();
 
 		if (debugLogs) {
 			std::cout << "New FEN: " << getFENfromPos() << '\n';
 		}
 
-		futureMovesBuffer = std::stack<Move>();
-
 		return true;
 	}
 	return false;
+}
+
+void Board::makePlayerMove(const Move* move) {
+	doMove(move);
+	
+	moveHistory.push(*move);
+	futureMovesBuffer = std::stack<Move>();
+
+	swapCurrentPlayer();
+
+	generateMoves();
+	if (possibleMoves.size() == 0) {
+		if (attackData.checkExists) {
+			checkMate = true;
+		}
+		else {
+			staleMate = true;
+		}
+	}
+
+	else if (aiPlayer) {
+		makeAiMove();
+	}
+}
+
+void Board::makeAiMove() {
+	searchBestMove(searchDepth);
+	doMove(&currentSearch.bestMove);
+
+	moveHistory.push(currentSearch.bestMove);
+	futureMovesBuffer = std::stack<Move>();
+
+	swapCurrentPlayer();
+	generateMoves();
+
+	if (possibleMoves.size() == 0) {
+		if (attackData.checkExists) {
+			checkMate = true;
+		}
+		else {
+			staleMate = true;
+		}
+	}
 }
 
 void Board::doMove(const Move* move) {
@@ -1097,14 +1134,14 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool white, bool fir
 		currentSearch.positionsSearched++;
  
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, !white);
-		std::cout << "Evaluation after " << Move::toString(move) << ": " << evaluation << '\n';
+		//std::cout << "Evaluation after " << Move::toString(move) << ": " << evaluation << '\n';
 
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 
 		if (evaluation >= beta) {
-			std::cout << "Pruning!\n\n";
+			//std::cout << "Pruning!\n\n";
 			// Prune
 			if (firstCall) {
 				currentSearch.bestMove = move;
@@ -1116,6 +1153,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool white, bool fir
 		if (evaluation > alpha) {
 			alpha = evaluation;
 			if (firstCall) {
+				std::cout << "New best move: " << Move::toString(move) << '\n';
 				currentSearch.bestMove = move;
 				currentSearch.evaluation = evaluation;
 			}
