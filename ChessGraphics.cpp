@@ -152,6 +152,23 @@ void ChessGraphics::mainLoop() {
 				std::cout << "Perft " << depth << "; Positions: " << positions << "; Time: " << (end - start) << " ms\n";
 				Instrumentor::Get().EndSession();
 			}
+			else if (Keyboard::isKeyPressed(Keyboard::Key::S)) {
+				// SEARCH
+				std::cout << "Enter search depth: ";
+				int depth;
+				std::cin >> depth;
+				Instrumentor::Get().BeginSession("Search " + std::to_string(depth) + " profile", "search.json");
+				auto startTimePoint = std::chrono::high_resolution_clock::now();
+				
+				board.searchBestMove(depth);
+
+				auto endTimePoint = std::chrono::high_resolution_clock::now();
+				long long start = std::chrono::time_point_cast<std::chrono::milliseconds>(startTimePoint).time_since_epoch().count();
+				long long end = std::chrono::time_point_cast<std::chrono::milliseconds>(endTimePoint).time_since_epoch().count();
+				std::cout << "Evaluation Results:\nEvaluation: " << board.currentSearch.evaluation << "; Best Move: " << Move::toString(board.currentSearch.bestMove)
+					<< "; Depth: " << depth << "; Positions: " << board.currentSearch.positionsSearched << "; Time: " << (end - start) << " ms\n";
+				Instrumentor::Get().EndSession();
+			}
 		}
 
 		window.clear();

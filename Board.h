@@ -19,7 +19,21 @@ private:
 	short blackKingPos;
 	AttackData attackData;
 
+	const int pawnValue = 100;
+	const int knightValue = 300;
+	const int bishopValue = 300;
+	const int rookValue = 500;
+	const int queenValue = 900;
+
 public:
+
+	struct SearchResults {
+		unsigned int positionsSearched;
+		Move bestMove;
+		int evaluation;
+
+		SearchResults() : positionsSearched(0), evaluation(0) {}
+	};
 	
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
 	static short castleRights;
@@ -34,6 +48,8 @@ public:
 
 	// Whose turn it is, either Piece::WHITE or Piece::BLACK
 	short currentPlayer;
+
+	SearchResults currentSearch;
 
 	// Indicates to the GUI wether the player needs to input a promotion choice
 	bool wantsToPromote;
@@ -157,15 +173,13 @@ public:
 
 	void generateQueenMoves();
 
-	void pseudoLegalToLegalMoves();
+	int staticEvaluation();
 
-	
-	/// <summary>
-	/// Scans in all possible directions from the king to detect attackers that give check.
-	/// </summary>
-	/// <param name="color"> specifies for which king the method is called.</param>
-	/// <returns>wether there is atleast one opposing piece currently checking this color's king.</returns>
-	bool kingIsInCheck(const short color);
+	int evaluateMaterial();
+
+	int negaMax(unsigned int depth, int alpha, int beta, bool white, bool firstCall);
+
+	void searchBestMove(unsigned int depth);
 
 	/// <summary>
 	/// Converts a step to a x and y direction by bitshifting.

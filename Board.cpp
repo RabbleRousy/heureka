@@ -1062,24 +1062,71 @@ void Board::generateQueenMoves() {
 	}
 }
 
-void Board::pseudoLegalToLegalMoves() {
-	PROFILE_FUNCTION();
-	std::vector<Move> legalMoves;
-	for (int i = 0; i < possibleMoves.size(); i++) {
-		Move* move = &possibleMoves[i];
-		doMove(move);
-		if (!kingIsInCheck(currentPlayer)) {
-			legalMoves.push_back(*move);
-		}
-		undoMove(move);
-	}
-	possibleMoves = legalMoves;
+int Board::staticEvaluation() {
+	return evaluateMaterial();
 }
 
-bool Board::kingIsInCheck(const short color) {
-	PROFILE_FUNCTION();
-	bitboard king = bb.getBitboard(Piece::KING | color);
-	return king & attackData.allAttacks;
+int Board::evaluateMaterial() {
+	int result = 0;
+	result += (bb.count(bb.getBitboard(Piece::PAWN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::PAWN | Piece::BLACK))) * pawnValue;
+	result += (bb.count(bb.getBitboard(Piece::BISHOP | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::BISHOP | Piece::BLACK))) * bishopValue;
+	result += (bb.count(bb.getBitboard(Piece::KNIGHT | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::KNIGHT | Piece::BLACK))) * knightValue;
+	result += (bb.count(bb.getBitboard(Piece::ROOK | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::ROOK | Piece::BLACK))) * rookValue;
+	result += (bb.count(bb.getBitboard(Piece::QUEEN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::QUEEN | Piece::BLACK))) * queenValue;
+	return result;
+}
+
+int Board::negaMax(unsigned int depth, int alpha, int beta, bool white, bool firstCall = false) {
+	short colorFactor = -1 + (white * 2);
+	if (depth == 0) {
+		return colorFactor * staticEvaluation();
+	}
+
+	generateMoves();
+
+	if (possibleMoves.size() == 0) {
+		if (attackData.checkExists) return colorFactor * -1000000;
+		else return 0;
+	}
+	std::vector<Move> moves = possibleMoves;
+	for (int i = 0; i < possibleMoves.size(); i++) {
+		Move move = possibleMoves[i];
+		doMove(&move);
+		swapCurrentPlayer();
+
+		currentSearch.positionsSearched++;
+ 
+		int evaluation = -negaMax(depth - 1, -beta, -alpha, !white);
+		std::cout << "Evaluation after " << Move::toString(move) << ": " << evaluation << '\n';
+
+		undoMove(&move);
+		swapCurrentPlayer();
+		possibleMoves = moves;
+
+		if (evaluation >= beta) {
+			std::cout << "Pruning!\n\n";
+			// Prune
+			if (firstCall) {
+				currentSearch.bestMove = move;
+				currentSearch.evaluation = evaluation;
+			}
+			return beta;
+		}
+
+		if (evaluation > alpha) {
+			alpha = evaluation;
+			if (firstCall) {
+				currentSearch.bestMove = move;
+				currentSearch.evaluation = evaluation;
+			}
+		}
+	}
+	return alpha;
+}
+
+void Board::searchBestMove(unsigned int depth) {
+	currentSearch.positionsSearched = 0;
+	negaMax(depth, -1000000, 1000000, currentPlayer == Piece::WHITE, true);
 }
 
 // Converts an integer (step) to a short[2] x and y direction
