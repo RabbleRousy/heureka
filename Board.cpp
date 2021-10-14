@@ -491,7 +491,7 @@ void Board::makePlayerMove(const Move* move) {
 }
 
 void Board::makeAiMove() {
-	searchBestMove(searchDepth);
+	iterativeSearch(searchDepth * 1000.0f);
 	doMove(&currentSearch.bestMove);
 
 	moveHistory.push(currentSearch.bestMove);
@@ -1160,6 +1160,24 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 void Board::searchBestMove(unsigned int depth) {
 	currentSearch.positionsSearched = 0;
 	negaMax(depth, INT_MIN+1, INT_MAX, true);
+}
+
+void Board::iterativeSearch(float time) {
+	std::chrono::time_point<std::chrono::steady_clock> start, end;
+	start = std::chrono::high_resolution_clock::now();
+	end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> duration = end - start;
+	unsigned int depth = 1;
+	while (time - (duration.count()*1000.0f) > 0.2f * time) {
+		searchBestMove(depth++);
+
+		std::cout << "Depth: " << depth-1 << "; Eval: " << currentSearch.evaluation
+			<< "; Move: " << Move::toString(currentSearch.bestMove) << "; Positions: "
+			<< currentSearch.positionsSearched << '\n';
+
+		end = std::chrono::high_resolution_clock::now();
+		duration = end - start;
+	}
 }
 
 // Converts an integer (step) to a short[2] x and y direction

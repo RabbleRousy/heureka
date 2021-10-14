@@ -191,6 +191,8 @@ public:
 
 	void searchBestMove(unsigned int depth);
 
+	void iterativeSearch(float time);
+
 	/// <summary>
 	/// Converts a step to a x and y direction by bitshifting.
 	/// </summary>
