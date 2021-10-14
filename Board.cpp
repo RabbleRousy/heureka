@@ -1100,7 +1100,10 @@ void Board::generateQueenMoves() {
 }
 
 int Board::staticEvaluation() {
-	return evaluateMaterial();
+	int sum = evaluateMaterial();
+
+	int perspective = (currentPlayer == Piece::WHITE) ? 1 : -1;
+	return sum * perspective;
 }
 
 int Board::evaluateMaterial() {
@@ -1113,47 +1116,39 @@ int Board::evaluateMaterial() {
 	return result;
 }
 
-int Board::negaMax(unsigned int depth, int alpha, int beta, bool white, bool firstCall = false) {
-	short colorFactor = -1 + (white * 2);
+int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {
+	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	if (depth == 0) {
-		return colorFactor * staticEvaluation();
+		return staticEvaluation();
 	}
-
 	generateMoves();
-
-	if (possibleMoves.size() == 0) {
-		if (attackData.checkExists) return colorFactor * -1000000;
-		else return 0;
-	}
 	std::vector<Move> moves = possibleMoves;
+	if (moves.empty()) {
+		if (attackData.checkExists) {
+			// Checkmate
+			return INT_MIN+1;
+		}
+		// Stalemate
+		return 0;
+	}
+
 	for (int i = 0; i < possibleMoves.size(); i++) {
+		currentSearch.positionsSearched++;
 		Move move = possibleMoves[i];
 		doMove(&move);
 		swapCurrentPlayer();
-
-		currentSearch.positionsSearched++;
- 
-		int evaluation = -negaMax(depth - 1, -beta, -alpha, !white);
-		//std::cout << "Evaluation after " << Move::toString(move) << ": " << evaluation << '\n';
-
+		int evaluation = -negaMax(depth - 1, -beta, -alpha);
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 
 		if (evaluation >= beta) {
-			//std::cout << "Pruning!\n\n";
-			// Prune
-			if (firstCall) {
-				currentSearch.bestMove = move;
-				currentSearch.evaluation = evaluation;
-			}
+			// Prune branch
 			return beta;
 		}
-
 		if (evaluation > alpha) {
 			alpha = evaluation;
 			if (firstCall) {
-				std::cout << "New best move: " << Move::toString(move) << '\n';
 				currentSearch.bestMove = move;
 				currentSearch.evaluation = evaluation;
 			}
@@ -1164,7 +1159,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool white, bool fir
 
 void Board::searchBestMove(unsigned int depth) {
 	currentSearch.positionsSearched = 0;
-	negaMax(depth, -1000000, 1000000, currentPlayer == Piece::WHITE, true);
+	negaMax(depth, INT_MIN+1, INT_MAX, true);
 }
 
 // Converts an integer (step) to a short[2] x and y direction

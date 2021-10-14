@@ -187,7 +187,7 @@ public:
 
 	int evaluateMaterial();
 
-	int negaMax(unsigned int depth, int alpha, int beta, bool white, bool firstCall);
+	int negaMax(unsigned int depth, int alpha, int beta, bool firstCall);
 
 	void searchBestMove(unsigned int depth);
 
