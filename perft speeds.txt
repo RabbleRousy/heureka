@@ -38,3 +38,7 @@ perft 5
 -------- LESS BRANCHING ---------------------------
 perft 5
 4.865.609 after 890 ms (win) -> 5.466.000 m/s
+
+-------- VS OPTIMIZATION --------------------------
+perft 5
+4.865.609 after 660 ms (win) -> 7.372.000 m/s
