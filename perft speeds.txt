@@ -42,3 +42,9 @@ perft 5
 -------- VS OPTIMIZATION --------------------------
 perft 5
 4.865.609 after 660 ms (win) -> 7.372.000 m/s
+
+-------- RELEASE BUILD ----------------------------
+perft 5
+4.865.609 after 660 ms (win) -> 69.500.000 m/s
+perft 6
+119.060.324 after 1650 ms (win) -> 72.157.770 m/s
