@@ -18,7 +18,7 @@ ChessGraphics::ChessGraphics()
 
 void ChessGraphics::initGraphics()
 {
-	window = new RenderWindow(VideoMode(1160, 1160), "Chess");
+	window = new RenderWindow(VideoMode(1160, 1160), "Heureka");
 	windowRes = window->getSize().x;
 	// Board texture is 1160 x 1160 px
 	boardTexture.loadFromFile("Sprites/board.png");
