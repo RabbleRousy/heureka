@@ -1,9 +1,9 @@
 #include "uci.h"
 
 uci::uci() {
-	cout << "id name myChessEngine" << endl;
+	cout << "id name Heureka Engine" << endl;
 	cout << "id author SimonHetzer" << endl;
-	cout << "id version 1.0" << endl;
+	cout << "id version 0.1" << endl;
 	cout << "uciok" << endl;
 
 	srand(time(NULL));
@@ -65,6 +65,6 @@ void uci::parsePosition(std::string input) {
 }
 
 void uci::parseGo(std::string input) {
-	board.searchBestMove(4);
+	board.iterativeSearch(4000.0f);
 	cout << "bestmove " << Move::toString(board.currentSearch.bestMove) << '\n';
 }

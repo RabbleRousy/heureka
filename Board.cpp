@@ -491,7 +491,7 @@ void Board::makePlayerMove(const Move* move) {
 }
 
 void Board::makeAiMove() {
-	iterativeSearch(searchDepth * 1000.0f);
+	searchBestMove(searchDepth);
 	doMove(&currentSearch.bestMove);
 
 	moveHistory.push(currentSearch.bestMove);
@@ -1118,18 +1118,22 @@ int Board::evaluateMaterial() {
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
-	if (depth == 0) {
-		return staticEvaluation();
-	}
 	generateMoves();
 	std::vector<Move> moves = possibleMoves;
 	if (moves.empty()) {
+		//std::cout << "Moves list is empty... ";
 		if (attackData.checkExists) {
 			// Checkmate
-			return INT_MIN+1;
+			//std::cout << "Checkmate!\n";
+			return (currentPlayer == Piece::WHITE) ? -1000000 : 1000000;
 		}
 		// Stalemate
+		//std::cout << "Stalemate!\n";
 		return 0;
+	}
+
+	if (depth == 0) {
+		return staticEvaluation();
 	}
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
@@ -1141,11 +1145,6 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
-
-		if (evaluation >= beta) {
-			// Prune branch
-			return beta;
-		}
 		if (evaluation > alpha) {
 			alpha = evaluation;
 			if (firstCall) {
@@ -1153,13 +1152,17 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 				currentSearch.evaluation = evaluation;
 			}
 		}
+		if (evaluation >= beta) {
+			// Prune branch
+			return beta;
+		}
 	}
 	return alpha;
 }
 
 void Board::searchBestMove(unsigned int depth) {
 	currentSearch.positionsSearched = 0;
-	negaMax(depth, INT_MIN+1, INT_MAX, true);
+	negaMax(depth, -100000, 100000, true);
 }
 
 void Board::iterativeSearch(float time) {
