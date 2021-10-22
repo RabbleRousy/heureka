@@ -8,32 +8,84 @@ uci::uci() {
 
 	srand(time(NULL));
 
-	loop();
+	mainLoop();
 }
 
-void uci::loop() {
-
-	string input;
+void uci::handleInputLoop() {
 	while (true) {
-		input = "";
-		getline(cin, input);
-		if (input == "ucinewgame") {
-			board.readPosFromFEN();
+		if (waitingForBoard) {
+			output = "info depth 1\n";
+			// Board has finished searching
+			if (!board.processing) {
+				output = "bestmove " + Move::toString(board.currentSearch.bestMove) + "\n";
+				waitingForBoard = false;
+				if (searchThread.joinable())
+					searchThread.join();
+			}
+			// Protocol forces board to stop searching
+			// Use best move you found till now
+			if (input == "stop") {
+				output = "bestmove " + Move::toString(board.currentSearch.bestMove) + "\n";
+				waitingForBoard = false;
+				board.stopDemanded = true;
+				if (searchThread.joinable())
+					searchThread.join();
+				input.clear();
+			}
 		}
-		else if (input.substr(0, 8) == "position") {
-			parsePosition(input);
+
+		if (!input.empty()) {
+			if (input == "ucinewgame") {
+				board.readPosFromFEN();
+			}
+			else if (input.substr(0, 8) == "position") {
+				parsePosition(input);
+			}
+			else if (input.substr(0, 2) == "go") {
+				parseGo(input);
+			}
+			else if (input == "isready") {
+				// Check some things ...
+				// ....
+				output = "readyok\n";
+			}
+			else if (input == "quit") {
+				searchThread.join();
+				break;
+			}
+			input.clear();
 		}
-		else if (input.substr(0, 2) == "go") {
-			parseGo(input);
+		this_thread::sleep_for(100ms);
+	}
+	running = false;
+}
+
+void uci::mainLoop() {
+	running = true;
+
+	// Create thread that continuesly reads input
+	thread inputReader(&uci::inputLoop, this);
+
+	// Create thread that continuesly parses input
+	thread inputProcessor(&uci::handleInputLoop, this);
+
+	while (running) {
+		if (!output.empty()) {
+			cout << output;
+			output.clear();
 		}
-		else if (input == "isready") {
-			// Check some things ...
-			// ....
-			cout << "readyok" << endl;
+	}
+	inputProcessor.join();
+	inputReader.join();
+}
+
+void uci::inputLoop() {
+	while (running) {
+		if (input.empty()) {
+			getline(cin, input);
 		}
-		else if (input == "quit") {
-			break;
-		}
+		// Wait for sub thread to process input
+		this_thread::sleep_for(10ms);
 	}
 }
 
@@ -64,7 +116,8 @@ void uci::parsePosition(std::string input) {
 	}
 }
 
+// go wtime 300000 btime 300000 movestogo 40
 void uci::parseGo(std::string input) {
-	board.iterativeSearch(4000.0f);
-	cout << "bestmove " << Move::toString(board.currentSearch.bestMove) << '\n';
+	searchThread = board.launchSearchThread(7);
+	waitingForBoard = true;
 }

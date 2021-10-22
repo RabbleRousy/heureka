@@ -1169,18 +1169,25 @@ void Board::iterativeSearch(float time) {
 	std::chrono::time_point<std::chrono::steady_clock> start, end;
 	start = std::chrono::high_resolution_clock::now();
 	end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<float> duration = end - start;
+	std::chrono::duration<float> duration;
+
+	processing = true;
+
 	unsigned int depth = 1;
-	while (time - (duration.count()*1000.0f) > 0.2f * time) {
+	while ((time - (duration.count()*1000.0f) > 0.2f * time) && !stopDemanded) {
 		searchBestMove(depth++);
 
-		std::cout << "Depth: " << depth-1 << "; Eval: " << currentSearch.evaluation
+		/*std::cout << "Depth: " << depth-1 << "; Eval: " << currentSearch.evaluation
 			<< "; Move: " << Move::toString(currentSearch.bestMove) << "; Positions: "
 			<< currentSearch.positionsSearched << '\n';
+		*/
 
 		end = std::chrono::high_resolution_clock::now();
 		duration = end - start;
 	}
+
+	processing = false;
+	stopDemanded = false;
 }
 
 // Converts an integer (step) to a short[2] x and y direction
@@ -1246,4 +1253,9 @@ int Board::testMoveGeneration(unsigned int depth, bool divide) {
 	}
 	futureMovesBuffer = std::stack<Move>();
 	return positionCount;
+}
+
+std::thread Board::launchSearchThread(float time) {
+	processing = true;
+	return std::thread(&Board::iterativeSearch, this, time);
 }

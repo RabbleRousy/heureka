@@ -4,7 +4,7 @@
 #include "Bitboard.h"
 #include <vector>
 #include <stack>
-
+#include <thread>
 
 
 // Central class that handles everything that happens on the board.
@@ -37,6 +37,8 @@ public:
 
 	bool aiPlayer;
 	unsigned int searchDepth;
+	bool processing;
+	bool stopDemanded;
 	
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
 	static short castleRights;
@@ -212,4 +214,6 @@ public:
 	static std::string getSquareName(unsigned short index);
 
 	int testMoveGeneration(unsigned int depth, bool divide);
+
+	std::thread launchSearchThread(float time);
 };
