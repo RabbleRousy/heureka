@@ -13,11 +13,12 @@ uci::uci() {
 
 void uci::handleInputLoop() {
 	while (true) {
+		ioMutex.lock();
 		if (waitingForBoard) {
-			output = "info depth 1\n";
+			output += "info depth 1\n";
 			// Board has finished searching
 			if (!board.processing) {
-				output = "bestmove " + Move::toString(board.currentSearch.bestMove) + "\n";
+				output += "bestmove " + Move::toString(board.currentSearch.bestMove) + "\n";
 				waitingForBoard = false;
 				if (searchThread.joinable())
 					searchThread.join();
@@ -25,7 +26,7 @@ void uci::handleInputLoop() {
 			// Protocol forces board to stop searching
 			// Use best move you found till now
 			if (input == "stop") {
-				output = "bestmove " + Move::toString(board.currentSearch.bestMove) + "\n";
+				output += "bestmove " + Move::toString(board.currentSearch.bestMove) + "\n";
 				waitingForBoard = false;
 				board.stopDemanded = true;
 				if (searchThread.joinable())
@@ -47,14 +48,16 @@ void uci::handleInputLoop() {
 			else if (input == "isready") {
 				// Check some things ...
 				// ....
-				output = "readyok\n";
+				output += "readyok\n";
 			}
 			else if (input == "quit") {
 				searchThread.join();
+				ioMutex.unlock();
 				break;
 			}
 			input.clear();
 		}
+		ioMutex.unlock();
 		this_thread::sleep_for(100ms);
 	}
 	running = false;
@@ -71,8 +74,14 @@ void uci::mainLoop() {
 
 	while (running) {
 		if (!output.empty()) {
-			cout << output;
-			output.clear();
+			ioMutex.lock();
+
+			size_t lineEnd = output.find_first_of('\n');
+			string line = output.substr(0, lineEnd + 1);
+			cout << line << flush;
+			output = output.substr(lineEnd + 1, output.size() - lineEnd - 1);
+		
+			ioMutex.unlock();
 		}
 	}
 	inputProcessor.join();
@@ -109,7 +118,6 @@ void uci::parsePosition(std::string input) {
 		int wordEnd = input.find(' ', i);
 		if (wordEnd == -1) wordEnd = input.size();
 		std::string move = input.substr(i, wordEnd - i);
-		cout << "Trying to parse move: " << move << '\n';
 		board.doMove(move);
 		board.swapCurrentPlayer();
 		i = wordEnd + 1;
@@ -119,6 +127,6 @@ void uci::parsePosition(std::string input) {
 // go wtime 300000 btime 300000 movestogo 40
 void uci::parseGo(std::string input) {
 	// Start search thread for ~4s
-	searchThread = board.launchSearchThread(4000.0f);
+	searchThread = board.launchSearchThread(1000.0f);
 	waitingForBoard = true;
 }

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <time.h>
+#include <mutex>
 
 
 using namespace std;
@@ -15,6 +16,7 @@ private:
 	Board board;
 	bool waitingForBoard;
 	string input, output;
+	mutex ioMutex;
 	thread searchThread;
 
 public:
