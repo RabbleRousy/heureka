@@ -118,6 +118,7 @@ void uci::parsePosition(std::string input) {
 
 // go wtime 300000 btime 300000 movestogo 40
 void uci::parseGo(std::string input) {
-	searchThread = board.launchSearchThread(7);
+	// Start search thread for ~4s
+	searchThread = board.launchSearchThread(4000.0f);
 	waitingForBoard = true;
 }
