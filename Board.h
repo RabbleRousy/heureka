@@ -28,11 +28,12 @@ private:
 public:
 
 	struct SearchResults {
+		unsigned int depth;
 		unsigned int positionsSearched;
 		Move bestMove;
-		int evaluation;
+		float evaluation;
 
-		SearchResults() : positionsSearched(0), evaluation(0) {}
+		SearchResults() : positionsSearched(0), evaluation(0), depth(0) {}
 	};
 
 	bool aiPlayer;

@@ -1163,6 +1163,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 void Board::searchBestMove(unsigned int depth) {
 	currentSearch.positionsSearched = 0;
 	negaMax(depth, -100000, 100000, true);
+	currentSearch.depth = depth;
 }
 
 void Board::iterativeSearch(float time) {
