@@ -19,6 +19,9 @@ private:
 	unsigned short selectedSquare[2];
 	Vector2i mousePos;
 	bool debugPossibleMoves;
+	bool waitingForBoard;
+	float searchTime;
+	std::thread searchThread;
 
 public:
 	Sprite boardSprite;
@@ -35,6 +38,8 @@ public:
 	void initGame();
 
 	void mainLoop();
+
+	void draw();
 
 	void startNewGame();
 

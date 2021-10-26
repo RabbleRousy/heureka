@@ -484,14 +484,10 @@ void Board::makePlayerMove(const Move* move) {
 			staleMate = true;
 		}
 	}
-
-	else if (aiPlayer) {
-		makeAiMove();
-	}
 }
 
 void Board::makeAiMove() {
-	searchBestMove(searchDepth);
+	iterativeSearch(searchTime);
 	doMove(&currentSearch.bestMove);
 
 	moveHistory.push(currentSearch.bestMove);

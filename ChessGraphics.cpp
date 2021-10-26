@@ -67,25 +67,26 @@ void ChessGraphics::initGame()
 		board.readPosFromFEN();
 	}
 
-	std::cout << "Please enter AI player search depth:\n";
+	std::cout << "Please enter AI player search time in seconds:\n";
 	std::cin >> input;
 
-	int depth = std::stoi(input);
-	if (depth > 10) {
-		std::cout << "Depth capped at 5!\n";
-		depth = 10;
+	int t = std::stoi(input);
+	if (t > 5) {
+		std::cout << "Time capped at 5s!\n";
+		t = 5;
 	}
-	else if (depth < 1) {
-		std::cout << "Invalid depth. Setting depth to 4.\n";
-		depth = 5;
+	else if (t < 1) {
+		std::cout << "Invalid time. Setting time to 2s.\n";
+		t = 5;
 	}
-	board.searchDepth = depth;
+	board.searchTime = 1000.0f * t;
 	board.aiPlayer = true;
 
 	board.generateMoves();
 }
 
 void ChessGraphics::mainLoop() {
+
 	while (window->isOpen()) {
 
 		if (board.checkMate) {
@@ -108,16 +109,16 @@ void ChessGraphics::mainLoop() {
 
 
 		// Check for events
-		Event e;
-		while (window->pollEvent(e)) {
-			if (e.type == Event::Closed) {
+		Event event;
+		while (window->pollEvent(event)) {
+			if (event.type == Event::Closed) {
 				window->close();
 			}
-			else if (e.type == Event::Resized) {
+			else if (event.type == Event::Resized) {
 				keepAspectRatio();
 			}
 
-			else if (e.type == Event::MouseButtonPressed || e.type == Event::MouseButtonReleased || Mouse::isButtonPressed(Mouse::Button::Left)) {
+			else if (event.type == Event::MouseButtonPressed || event.type == Event::MouseButtonReleased || Mouse::isButtonPressed(Mouse::Button::Left)) {
 				// Update mouse position and hovered Square
 				mousePos = Mouse::getPosition(*window);
 
@@ -127,11 +128,13 @@ void ChessGraphics::mainLoop() {
 				clickedSquare[1] = 7 - (short)(mousePos.y / (window->getSize().y / 8));
 
 				// On mouse down
-				if (e.type == Event::MouseButtonPressed && !board.wantsToPromote) {
+				if (event.type == Event::MouseButtonPressed && !board.wantsToPromote) {
 					//std::cout << "Mouse down at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If a piece is currently selected, try move and unselect
 					if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
+						draw();
+						board.makeAiMove();
 					}
 					// Try to select a hovered piece
 					else if (board.getPiece(clickedSquare[0], clickedSquare[1]) != Piece().NONE) {
@@ -142,28 +145,35 @@ void ChessGraphics::mainLoop() {
 					}
 				}
 				// On mouse released
-				else if (e.type == Event::MouseButtonReleased) {
+				else if (event.type == Event::MouseButtonReleased) {
 					// Promotion selection
 					if (board.wantsToPromote) {
+						bool promotionSuccess = false;
 						if (clickedSquare[0] == 3 && clickedSquare[1] == 4) {
-							board.handleMoveInput(selectedSquare, clickedSquare, Piece::QUEEN);
+							promotionSuccess = board.handleMoveInput(selectedSquare, clickedSquare, Piece::QUEEN);
 						}
 						else if (clickedSquare[0] == 4 && clickedSquare[1] == 4) {
-							board.handleMoveInput(selectedSquare, clickedSquare, Piece::ROOK);
+							promotionSuccess = board.handleMoveInput(selectedSquare, clickedSquare, Piece::ROOK);
 						}
 						else if (clickedSquare[0] == 3 && clickedSquare[1] == 3) {
-							board.handleMoveInput(selectedSquare, clickedSquare, Piece::BISHOP);
+							promotionSuccess = board.handleMoveInput(selectedSquare, clickedSquare, Piece::BISHOP);
 						}
 						else if (clickedSquare[0] == 4 && clickedSquare[1] == 3) {
-							board.handleMoveInput(selectedSquare, clickedSquare, Piece::KNIGHT);
+							promotionSuccess = board.handleMoveInput(selectedSquare, clickedSquare, Piece::KNIGHT);
+						}
+
+						if (promotionSuccess) {
+							draw();
+							board.makeAiMove();
 						}
 					}
 					//std::cout << "Mouse released at " << mousePos.x << "/" << mousePos.y << std::endl;
 					// If there was a selected piece, try to place it
-					else if (pieceSelected) {
-						if (board.handleMoveInput(selectedSquare, clickedSquare)) {
-							pieceSelected = false;
-						}
+					else if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
+						// Move could be made
+						pieceSelected = false;
+						draw();
+						board.makeAiMove();
 					}
 				}
 			}
@@ -211,58 +221,63 @@ void ChessGraphics::mainLoop() {
 			}
 		}
 
-		window->clear();
-		window->draw(boardSprite);
+		draw();
+	}
+}
 
-		for (int i = 0; i < 8; i++) {
-			for (int j = 0; j < 8; j++) {
-				short p = board.getPiece(i, j);
-				if (p != Piece::NONE) {
-					bool dragging = false;
-					if (pieceSelected) {
-						if (selectedSquare[0] == i && selectedSquare[1] == j) {
-							float squareWidth = window->getSize().x / 8.0f;
-							// Highlight selected square
-							RectangleShape highlightSquare = getHighlightSquare(i, j);//(Vector2f(squareWidth, squareWidth));
-							window->draw(highlightSquare);
+void ChessGraphics::draw()
+{
+	window->clear();
+	window->draw(boardSprite);
 
-							// Drag piece if mouse is held down
-							dragging = Mouse::isButtonPressed(Mouse::Button::Left);
-						}
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			short p = board.getPiece(i, j);
+			if (p != Piece::NONE) {
+				bool dragging = false;
+				if (pieceSelected) {
+					if (selectedSquare[0] == i && selectedSquare[1] == j) {
+						float squareWidth = window->getSize().x / 8.0f;
+						// Highlight selected square
+						RectangleShape highlightSquare = getHighlightSquare(i, j);//(Vector2f(squareWidth, squareWidth));
+						window->draw(highlightSquare);
+
+						// Drag piece if mouse is held down
+						dragging = Mouse::isButtonPressed(Mouse::Button::Left);
 					}
-
-					if (dragging)
-						setPiecePosition(p, mousePos.x, mousePos.y);
-					else
-						setPieceSquare(p, i, j);
-
-					window->draw(getPieceSprite(p));
 				}
+
+				if (dragging)
+					setPiecePosition(p, mousePos.x, mousePos.y);
+				else
+					setPieceSquare(p, i, j);
+
+				window->draw(getPieceSprite(p));
 			}
 		}
-
-		if (board.wantsToPromote) {
-			// White transparency over board
-			RectangleShape highlightSquare = getBoardOverlay();
-
-			window->draw(highlightSquare);
-
-			// Display possible promotion pieces
-			setPieceSquare(Piece::QUEEN | board.currentPlayer, 3, 4);
-			window->draw(getPieceSprite(Piece::QUEEN | board.currentPlayer));
-
-			setPieceSquare(Piece::ROOK | board.currentPlayer, 4, 4);
-			window->draw(getPieceSprite(Piece::ROOK | board.currentPlayer));
-
-			setPieceSquare(Piece::BISHOP | board.currentPlayer, 3, 3);
-			window->draw(getPieceSprite(Piece::BISHOP | board.currentPlayer));
-
-			setPieceSquare(Piece::KNIGHT | board.currentPlayer, 4, 3);
-			window->draw(getPieceSprite(Piece::KNIGHT | board.currentPlayer));
-		}
-
-		window->display();
 	}
+
+	if (board.wantsToPromote) {
+		// White transparency over board
+		RectangleShape highlightSquare = getBoardOverlay();
+
+		window->draw(highlightSquare);
+
+		// Display possible promotion pieces
+		setPieceSquare(Piece::QUEEN | board.currentPlayer, 3, 4);
+		window->draw(getPieceSprite(Piece::QUEEN | board.currentPlayer));
+
+		setPieceSquare(Piece::ROOK | board.currentPlayer, 4, 4);
+		window->draw(getPieceSprite(Piece::ROOK | board.currentPlayer));
+
+		setPieceSquare(Piece::BISHOP | board.currentPlayer, 3, 3);
+		window->draw(getPieceSprite(Piece::BISHOP | board.currentPlayer));
+
+		setPieceSquare(Piece::KNIGHT | board.currentPlayer, 4, 3);
+		window->draw(getPieceSprite(Piece::KNIGHT | board.currentPlayer));
+	}
+
+	window->display();
 }
 
 void ChessGraphics::startNewGame() {

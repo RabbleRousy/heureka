@@ -19,11 +19,11 @@ private:
 	short blackKingPos;
 	AttackData attackData;
 
-	const int pawnValue = 100;
-	const int knightValue = 300;
-	const int bishopValue = 300;
-	const int rookValue = 500;
-	const int queenValue = 900;
+	const float pawnValue = 1.0f;
+	const float knightValue = 3.1f;
+	const float bishopValue = 3.2f;
+	const float rookValue = 5.0f;
+	const float queenValue = 9.0f;
 
 public:
 
@@ -37,7 +37,7 @@ public:
 	};
 
 	bool aiPlayer;
-	unsigned int searchDepth;
+	float searchTime;
 	bool processing;
 	bool stopDemanded;
 	
