@@ -456,8 +456,6 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		makePlayerMove(&possibleMoves[i]);
 
-		if (debugLogs) std::cout << "White pawns bitboard:\n" << bb.toString(bb.getBitboard(Piece::PAWN | Piece::WHITE)) << '\n';
-
 		if (debugLogs) {
 			std::cout << "New FEN: " << getFENfromPos() << '\n';
 		}
@@ -640,7 +638,7 @@ void Board::doMove(std::string move) {
 
 void Board::undoMove(const Move* move) {
 	PROFILE_FUNCTION();
-	if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*move) << "<<\n";
+	//if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*move) << "<<\n";
 
 	unsigned short target = move->targetSquare;
 
@@ -706,7 +704,7 @@ bool Board::inCheckAfter(const Move* move) {
 void Board::generateMoves()
 {
 	PROFILE_FUNCTION();
-	if (debugLogs) std::cout << "\nGenerating possible moves ...\n";
+	//if (debugLogs) std::cout << "\nGenerating possible moves ...\n";
 	//Instrumentor::Get().BeginSession("Generate Moves Profiling", "moves.json");
 	possibleMoves.clear();
 
@@ -1003,7 +1001,7 @@ void Board::generateRookMoves() {
 	Bitloop (rooks) {
 		rookPos = getSquare(rooks);
 
-		if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
+		//if (debugLogs) std::cout << "\nGenerating Moves for Rook on " << getSquareName(rookPos) << "...\n";
 
 		bitboard rookAttacks = bb.getRookAttacks(rookPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
@@ -1015,7 +1013,7 @@ void Board::generateRookMoves() {
 		// If in check, only move to blocking squares
 		rookAttacks &= attackData.allChecks;
 
-		if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
+		//if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
 
 		unsigned short targetIndex = 0;
 		Bitloop (rookAttacks) {
@@ -1037,7 +1035,7 @@ void Board::generateBishopMoves() {
 	Bitloop (bishops) {
 		bishopPos = getSquare(bishops);
 
-		if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
+		//if (debugLogs) std::cout << "\nGenerating Moves for Bishop on " << getSquareName(bishopPos) << "...\n";
 
 		bitboard bishopAttacks = bb.getBishopAttacks(bishopPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
@@ -1049,7 +1047,7 @@ void Board::generateBishopMoves() {
 		// If in check, only move to blocking squares
 		bishopAttacks &= attackData.allChecks;
 
-		if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
+		//if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
 
 		unsigned short targetIndex = 0;
 		Bitloop (bishopAttacks) {
@@ -1071,7 +1069,7 @@ void Board::generateQueenMoves() {
 	Bitloop (queens) {
 		queenPos = getSquare(queens);
 
-		if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
+		//if (debugLogs) std::cout << "\nGenerating Moves for Queen on " << getSquareName(queenPos) << "...\n";
 
 		bitboard queenAttacks = bb.getRookAttacks(queenPos, bb.getOccupied()) | bb.getBishopAttacks(queenPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
@@ -1083,7 +1081,7 @@ void Board::generateQueenMoves() {
 		// If in check, only move to blocking squares
 		queenAttacks &= attackData.allChecks;
 
-		if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
+		//if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
 
 		unsigned short targetIndex = 0;
 		Bitloop (queenAttacks) {
@@ -1171,16 +1169,18 @@ void Board::iterativeSearch(float time) {
 	processing = true;
 
 	unsigned int depth = 1;
-	while ((time - (duration.count()*1000.0f) > 0.2f * time) && !stopDemanded) {
+	while ((time - (duration.count()*1000.0f) > 0.5f * time) && !stopDemanded) {
 		searchBestMove(depth++);
-
-		/*std::cout << "Depth: " << depth-1 << "; Eval: " << currentSearch.evaluation
-			<< "; Move: " << Move::toString(currentSearch.bestMove) << "; Positions: "
-			<< currentSearch.positionsSearched << '\n';
-		*/
 
 		end = std::chrono::high_resolution_clock::now();
 		duration = end - start;
+
+		if (debugLogs) {
+			std::cout << "Depth: " << depth - 1 << "; Eval: " << currentSearch.evaluation
+				<< "; Move: " << Move::toString(currentSearch.bestMove) << "; Positions: "
+				<< currentSearch.positionsSearched << "; Time searched: "
+				<< duration.count() * 1000.0f << "ms\n";
+		}
 	}
 
 	processing = false;
