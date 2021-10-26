@@ -35,6 +35,8 @@ struct Move {
 	short previousCastlerights;
 	unsigned short previousEPsquare;
 
+	float score;
+
 	// Default constructor, creates Move with all values 0
 	Move();
 

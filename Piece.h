@@ -23,5 +23,6 @@ public:
 	static short getOppositeColor(short color);
 	static std::string name(short piece);
 	static char toChar(short piece);
+	static float getPieceValue(short piece);
 };
 

@@ -17,9 +17,11 @@ const std::string Board::squareNames[] = {
 
 short Board::castleRights = 0b1111;
 unsigned short Board::enPassantSquare = 64;
+Bitboard Board::bb = Bitboard();
 
-Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE)
-{ }
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(),
+debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE) { 
+}
 
 
 void Board::clearBoard() {
@@ -714,11 +716,13 @@ void Board::generateMoves()
 
 	if (attackData.doubleCheck) return;
 
-	generateKnightMoves();
 	generatePawnMoves();
-	generateRookMoves();
+	generateKnightMoves();
 	generateBishopMoves();
+	generateRookMoves();
 	generateQueenMoves();
+
+	orderMoves();
 
 	//pseudoLegalToLegalMoves();
 	//Instrumentor::Get().EndSession();
@@ -1093,6 +1097,15 @@ void Board::generateQueenMoves() {
 	}
 }
 
+void Board::orderMoves() {
+	std::sort(possibleMoves.begin(), possibleMoves.end(), [](const Move &m1, const Move &m2) { return m1.score > m2.score; });
+	/*std::cout << "New move order:\n";
+	for (int i = 0; i < possibleMoves.size(); i++) {
+		std::cout << Move::toString(possibleMoves[i]) 
+		<< "(scoreGuess: " << possibleMoves[i].score << "),\n";
+	}*/
+}
+
 int Board::staticEvaluation() {
 	int sum = evaluateMaterial();
 
@@ -1102,11 +1115,11 @@ int Board::staticEvaluation() {
 
 int Board::evaluateMaterial() {
 	int result = 0;
-	result += (bb.count(bb.getBitboard(Piece::PAWN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::PAWN | Piece::BLACK))) * pawnValue;
-	result += (bb.count(bb.getBitboard(Piece::BISHOP | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::BISHOP | Piece::BLACK))) * bishopValue;
-	result += (bb.count(bb.getBitboard(Piece::KNIGHT | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::KNIGHT | Piece::BLACK))) * knightValue;
-	result += (bb.count(bb.getBitboard(Piece::ROOK | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::ROOK | Piece::BLACK))) * rookValue;
-	result += (bb.count(bb.getBitboard(Piece::QUEEN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::QUEEN | Piece::BLACK))) * queenValue;
+	result += (bb.count(bb.getBitboard(Piece::PAWN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::PAWN | Piece::BLACK))) * Piece::getPieceValue(Piece::PAWN);
+	result += (bb.count(bb.getBitboard(Piece::BISHOP | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::BISHOP | Piece::BLACK))) * Piece::getPieceValue(Piece::BISHOP);
+	result += (bb.count(bb.getBitboard(Piece::KNIGHT | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::KNIGHT | Piece::BLACK))) * Piece::getPieceValue(Piece::KNIGHT);
+	result += (bb.count(bb.getBitboard(Piece::ROOK | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::ROOK | Piece::BLACK))) * Piece::getPieceValue(Piece::ROOK);
+	result += (bb.count(bb.getBitboard(Piece::QUEEN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::QUEEN | Piece::BLACK))) * Piece::getPieceValue(Piece::QUEEN);
 	return result;
 }
 

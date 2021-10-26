@@ -13,19 +13,13 @@ class Board
 private:
 	static const std::string squareNames[64];
 
-	Bitboard bb;
 	short squares[64];
 	short whiteKingPos;
 	short blackKingPos;
 	AttackData attackData;
 
-	const float pawnValue = 1.0f;
-	const float knightValue = 3.1f;
-	const float bishopValue = 3.2f;
-	const float rookValue = 5.0f;
-	const float queenValue = 9.0f;
-
 public:
+	static Bitboard bb;
 
 	struct SearchResults {
 		unsigned int depth;
@@ -185,6 +179,8 @@ public:
 	void generateBishopMoves();
 
 	void generateQueenMoves();
+
+	void orderMoves();
 
 	int staticEvaluation();
 
