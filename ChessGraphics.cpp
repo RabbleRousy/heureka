@@ -134,7 +134,8 @@ void ChessGraphics::mainLoop() {
 					if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
 						draw();
-						board.makeAiMove();
+						if (!(board.checkMate || board.staleMate))
+							board.makeAiMove();
 					}
 					// Try to select a hovered piece
 					else if (board.getPiece(clickedSquare[0], clickedSquare[1]) != Piece().NONE) {
@@ -164,7 +165,8 @@ void ChessGraphics::mainLoop() {
 
 						if (promotionSuccess) {
 							draw();
-							board.makeAiMove();
+							if (!(board.checkMate || board.staleMate))
+								board.makeAiMove();
 						}
 					}
 					//std::cout << "Mouse released at " << mousePos.x << "/" << mousePos.y << std::endl;
@@ -173,7 +175,8 @@ void ChessGraphics::mainLoop() {
 						// Move could be made
 						pieceSelected = false;
 						draw();
-						board.makeAiMove();
+						if (!(board.checkMate || board.staleMate))
+							board.makeAiMove();
 					}
 				}
 			}

@@ -1108,9 +1108,10 @@ void Board::orderMoves() {
 }
 
 int Board::staticEvaluation() {
+	int perspective = (currentPlayer == Piece::WHITE) ? 1 : -1;
+
 	int sum = evaluateMaterial();
 
-	int perspective = (currentPlayer == Piece::WHITE) ? 1 : -1;
 	return sum * perspective;
 }
 
@@ -1133,7 +1134,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 		if (attackData.checkExists) {
 			// Checkmate
 			//std::cout << "Checkmate!\n";
-			return (currentPlayer == Piece::WHITE) ? -1000000 : 1000000;
+			return -1000000;
 		}
 		// Stalemate
 		//std::cout << "Stalemate!\n";
