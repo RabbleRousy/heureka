@@ -19,6 +19,7 @@ private:
 	unsigned short selectedSquare[2];
 	Vector2i mousePos;
 	bool debugPossibleMoves;
+	bool aiPlayer;
 	bool waitingForBoard;
 	float searchTime;
 	std::thread searchThread;

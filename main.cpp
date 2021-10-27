@@ -2,6 +2,10 @@
 #include "uci.h"
 
 int main() {
+	std::cout << "Welcome to Heureka Engine, developed by Simon Hetzer.\n";
+	std::cout << "Enter \"uci\" to start UCI communication (for debugging or Chess GUIs only).\n";
+	std::cout << "Press any other key to launch integrated GUI.\n";
+
 	string line;
 
 	getline(cin, line);

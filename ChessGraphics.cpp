@@ -49,16 +49,42 @@ void ChessGraphics::initGame()
 {
 
 	std::string input;
-	std::cout << "Do you want to debug the move generation? Enter Y for yes.\n";
+	std::cout << "Do you want to log debug information? Enter Y for yes.\n";
 	std::cin >> input;
 	debugPossibleMoves = (input == "Y" || input == "y");
 	board.debugLogs = debugPossibleMoves;
 
-	// Clear cin
-	std::getline(std::cin, input);
+	// Clear CIN
+	std::cin.ignore(100, '\n');
+
+	std::cout << "Do you want to play versus an AI opponent? Enter Y for yes.\n";
+	std::cin >> input;
+	aiPlayer = (input == "Y" || input == "y");
+
+	if (aiPlayer) {
+		// Clear CIN
+		std::cin.ignore(100, '\n');
+
+		std::cout << "Please enter AI player search time in seconds:\n";
+		std::cin >> input;
+
+		int t = std::stoi(input);
+		if (t > 5) {
+			std::cout << "Time capped at 5s!\n";
+			t = 5;
+		}
+		else if (t < 1) {
+			std::cout << "Invalid time. Setting time to 2s.\n";
+			t = 5;
+		}
+		board.searchTime = 1000.0f * t;
+	}
+	
+	// Clear CIN
+	std::cin.ignore(100, '\n');
 
 	std::string fen;
-	std::cout << "Please enter start position in FEN notation:" << std::endl;
+	std::cout << "Please enter position in FEN notation (or press any key for start position):\n";
 	std::getline(std::cin, fen);
 
 	std::cout << fen << std::endl;
@@ -66,21 +92,6 @@ void ChessGraphics::initGame()
 	if (!board.readPosFromFEN(fen)) {
 		board.readPosFromFEN();
 	}
-
-	std::cout << "Please enter AI player search time in seconds:\n";
-	std::cin >> input;
-
-	int t = std::stoi(input);
-	if (t > 5) {
-		std::cout << "Time capped at 5s!\n";
-		t = 5;
-	}
-	else if (t < 1) {
-		std::cout << "Invalid time. Setting time to 2s.\n";
-		t = 5;
-	}
-	board.searchTime = 1000.0f * t;
-	board.aiPlayer = true;
 
 	board.generateMoves();
 }
@@ -134,7 +145,7 @@ void ChessGraphics::mainLoop() {
 					if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
 						draw();
-						if (!(board.checkMate || board.staleMate))
+						if (aiPlayer && !(board.checkMate || board.staleMate))
 							board.makeAiMove();
 					}
 					// Try to select a hovered piece
@@ -165,7 +176,7 @@ void ChessGraphics::mainLoop() {
 
 						if (promotionSuccess) {
 							draw();
-							if (!(board.checkMate || board.staleMate))
+							if (aiPlayer && !(board.checkMate || board.staleMate))
 								board.makeAiMove();
 						}
 					}
@@ -175,7 +186,7 @@ void ChessGraphics::mainLoop() {
 						// Move could be made
 						pieceSelected = false;
 						draw();
-						if (!(board.checkMate || board.staleMate))
+						if (aiPlayer && !(board.checkMate || board.staleMate))
 							board.makeAiMove();
 					}
 				}

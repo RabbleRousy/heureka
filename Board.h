@@ -29,8 +29,6 @@ public:
 
 		SearchResults() : positionsSearched(0), evaluation(0), depth(0) {}
 	};
-
-	bool aiPlayer;
 	float searchTime;
 	bool processing;
 	bool stopDemanded;
