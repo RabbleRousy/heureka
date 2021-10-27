@@ -1,0 +1,10 @@
+------------- SEBLAUGE TestPos -------------------------------
+r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq
+
+Alphabeta w/ Pruning (MacBook):
+Depth 4: Move h3g2; Positions: 158.655; Time: 119 ms
+Depth 5: Move b4c3; Positions: 1.046.017; Time: 836 ms
+
+Alphabeta w/ Pruning & ORDERING (MacBook):
+Depth 4: Move b4c3; Positions: 11.095; Time: 10 ms
+Depth 5: Move b4c3; Positions: 159.081; Time: 137 ms
