@@ -723,8 +723,6 @@ void Board::generateMoves()
 	generateRookMoves();
 	generateQueenMoves();
 
-	orderMoves();
-
 	//pseudoLegalToLegalMoves();
 	//Instrumentor::Get().EndSession();
 }
@@ -1128,8 +1126,7 @@ int Board::evaluateMaterial() {
 int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	generateMoves();
-	std::vector<Move> moves = possibleMoves;
-	if (moves.empty()) {
+	if (possibleMoves.empty()) {
 		//std::cout << "Moves list is empty... ";
 		if (attackData.checkExists) {
 			// Checkmate
@@ -1144,6 +1141,10 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 	if (depth == 0) {
 		return staticEvaluation();
 	}
+	
+	// Order Moves before iterating to maximize pruning
+	orderMoves();
+	std::vector<Move> moves = possibleMoves;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		currentSearch.positionsSearched++;
@@ -1191,7 +1192,7 @@ void Board::iterativeSearch(float time) {
 		duration = end - start;
 
 		if (debugLogs) {
-			std::cout << "Depth: " << depth - 1 << "; Eval: " << currentSearch.evaluation
+			std::cout << "Depth: " << depth - 1 << "; Eval: " << (currentSearch.evaluation / 1000.0f)
 				<< "; Move: " << Move::toString(currentSearch.bestMove) << "; Positions: "
 				<< currentSearch.positionsSearched << "; Time searched: "
 				<< duration.count() * 1000.0f << "ms\n";

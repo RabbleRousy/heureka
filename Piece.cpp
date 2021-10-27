@@ -62,21 +62,21 @@ char Piece::toChar(short piece) {
 	}
 }
 
-float Piece::getPieceValue(short piece) {
+int Piece::getPieceValue(short piece) {
 	switch (getType(piece)) {
 	case NONE:
-		return 0.0f;
+		return 0;
 	case PAWN:
-		return 1.0f;
+		return 100;
 	case ROOK:
-		return 5.0f;
+		return 500;
 	case BISHOP:
-		return 3.2f;
+		return 320;
 	case KNIGHT:
-		return 3.1f;
+		return 310;
 	case QUEEN:
-		return 9.0f;
+		return 900;
 	default:
-		return 0.0f;
+		return 0;
 	}
 }
