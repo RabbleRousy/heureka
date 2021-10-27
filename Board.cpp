@@ -38,6 +38,7 @@ void Board::reset() {
 	checkMate = false;
 	staleMate = false;
 	readPosFromFEN();
+	generateMoves();
 }
 
 bool Board::readPosFromFEN(std::string fen) {
@@ -46,6 +47,7 @@ bool Board::readPosFromFEN(std::string fen) {
 
 	if (DEBUG) std::cout << "Trying to parse FEN: " << fen << std::endl;
 	clearBoard();
+	// Default values
 	currentPlayer = Piece::WHITE;
 	castleRights = 0b1111;
 
