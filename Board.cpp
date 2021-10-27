@@ -686,6 +686,7 @@ bool Board::undoLastMove()
 	moveHistory.pop();
 	undoMove(lastMove);
 	futureMovesBuffer.push(*lastMove);
+	return true;
 }
 
 bool Board::redoLastMove() {
