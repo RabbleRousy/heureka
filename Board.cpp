@@ -1127,6 +1127,8 @@ int Board::evaluateMaterial() {
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
+	if (timeOut) return 0;
+
 	generateMoves();
 	if (possibleMoves.empty()) {
 		//std::cout << "Moves list is empty... ";
@@ -1172,10 +1174,11 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 	return alpha;
 }
 
-void Board::searchBestMove(unsigned int depth) {
+Board::SearchResults Board::searchBestMove(unsigned int depth) {
 	currentSearch.positionsSearched = 0;
 	negaMax(depth, -100000, 100000, true);
 	currentSearch.depth = depth;
+	return currentSearch;
 }
 
 void Board::iterativeSearch(float time) {
@@ -1186,23 +1189,40 @@ void Board::iterativeSearch(float time) {
 
 	processing = true;
 
-	unsigned int depth = 1;
-	while ((time - (duration.count()*1000.0f) > 0.5f * time) && !stopDemanded) {
-		searchBestMove(depth++);
+	unsigned int depth = 0;
+	SearchResults lastSearchResult;
 
-		end = std::chrono::high_resolution_clock::now();
-		duration = end - start;
+	while (!stopDemanded && duration.count() * 1000.0f < time) {
+		depth++;
+		timeOut = false;
+		std::future<SearchResults> future = std::async(&Board::searchBestMove, this, depth);
+
+		while (!(future.wait_for(100ms) == std::future_status::ready)) {
+			end = std::chrono::high_resolution_clock::now();
+			duration = end - start;
+			if (stopDemanded || duration.count() * 1000.0f >= time) {
+				timeOut = true;
+				goto logResults;
+			}
+		}
+		// Future is ready
+		lastSearchResult = future.get();
+
+		logResults:
 
 		if (debugLogs) {
-			std::cout << "Depth: " << depth - 1 << "; Eval: " << (currentSearch.evaluation / 1000.0f)
-				<< "; Move: " << Move::toString(currentSearch.bestMove) << "; Positions: "
-				<< currentSearch.positionsSearched << "; Time searched: "
+			std::cout << "Depth: " << lastSearchResult.depth << "; Eval: " << (lastSearchResult.evaluation / 1000.0f)
+				<< "; Move: " << Move::toString(lastSearchResult.bestMove) << "; Positions: "
+				<< lastSearchResult.positionsSearched << "; Time searched: "
 				<< duration.count() * 1000.0f << "ms\n";
 		}
 	}
 
 	processing = false;
 	stopDemanded = false;
+	timeOut = false;
+	// Set the final search results
+	currentSearch = lastSearchResult;
 }
 
 // Converts an integer (step) to a short[2] x and y direction

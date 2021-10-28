@@ -5,7 +5,9 @@
 #include <vector>
 #include <stack>
 #include <thread>
+#include <future>
 
+using namespace std::literals::chrono_literals;
 
 // Central class that handles everything that happens on the board.
 class Board
@@ -17,6 +19,8 @@ private:
 	short whiteKingPos;
 	short blackKingPos;
 	AttackData attackData;
+
+	bool timeOut;
 
 public:
 	static Bitboard bb;
@@ -186,7 +190,7 @@ public:
 
 	int negaMax(unsigned int depth, int alpha, int beta, bool firstCall);
 
-	void searchBestMove(unsigned int depth);
+	SearchResults searchBestMove(unsigned int depth);
 
 	void iterativeSearch(float time);
 
