@@ -22,6 +22,19 @@ private:
 
 	bool timeOut;
 
+	const int pawnValueMap[64] = {
+	//  A1   B1   C1   D1   E1   F1   G1   H1
+		0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  ,
+		100, 110, 110, 50 , 50 , 110, 110, 100,
+		110, 100, 80 , 110, 110, 80 , 100, 110,
+		100, 110, 100, 150, 150, 100, 110, 100,
+		120, 140, 150, 200, 200, 150, 140, 120,
+		170, 200, 250, 400, 400, 250, 200, 170,
+		600, 600, 600, 600, 600, 600, 600, 600,
+		0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  
+	//  A8	 B8	  C8   D8	E8	 F8   G8   H8
+	};
+
 public:
 	static Bitboard bb;
 
@@ -167,9 +180,6 @@ public:
 	/// </summary>
 	void generateMoves();
 
-	/// <summary>
-	/// Generates pseudo legal pawn moves and adds them to possible moves vector.
-	/// </summary>
 	void generatePawnMoves();
 
 	void generateKingMoves();
@@ -187,6 +197,9 @@ public:
 	int staticEvaluation();
 
 	int evaluateMaterial();
+
+	template <short color>
+	int evaluatePawns();
 
 	int negaMax(unsigned int depth, int alpha, int beta, bool firstCall);
 

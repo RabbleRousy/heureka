@@ -1117,12 +1117,35 @@ int Board::staticEvaluation() {
 
 int Board::evaluateMaterial() {
 	int result = 0;
-	result += (bb.count(bb.getBitboard(Piece::PAWN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::PAWN | Piece::BLACK))) * Piece::getPieceValue(Piece::PAWN);
+	result += evaluatePawns<Piece::WHITE>() - evaluatePawns<Piece::BLACK>();
 	result += (bb.count(bb.getBitboard(Piece::BISHOP | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::BISHOP | Piece::BLACK))) * Piece::getPieceValue(Piece::BISHOP);
 	result += (bb.count(bb.getBitboard(Piece::KNIGHT | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::KNIGHT | Piece::BLACK))) * Piece::getPieceValue(Piece::KNIGHT);
 	result += (bb.count(bb.getBitboard(Piece::ROOK | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::ROOK | Piece::BLACK))) * Piece::getPieceValue(Piece::ROOK);
 	result += (bb.count(bb.getBitboard(Piece::QUEEN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::QUEEN | Piece::BLACK))) * Piece::getPieceValue(Piece::QUEEN);
 	return result;
+}
+
+
+template<short color>
+inline int Board::evaluatePawns() {
+	bitboard pawns = bb.getBitboard(Piece::PAWN | color);
+	int pawnsValue = 0;
+	short offset = 0;
+	// White and black can share the same map
+	// Black's is just flipped upside down
+	if constexpr (color == Piece::BLACK) {
+		offset = 63;
+	}
+	Bitloop(pawns) {
+		unsigned short position = getSquare(pawns);
+		//std::cout << "Value of " << Piece::name(Piece::PAWN | color) << " on " << getSquareName(position);
+		// 63 - pos if black, else pos
+		position = abs(offset - position);
+		int value = pawnValueMap[position];
+		//std::cout << ": " << value << '\n';
+		pawnsValue += value;
+	}
+	return pawnsValue;
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {
