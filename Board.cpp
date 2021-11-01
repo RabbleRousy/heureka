@@ -20,7 +20,7 @@ unsigned short Board::enPassantSquare = 64;
 Bitboard Board::bb = Bitboard();
 
 Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(),
-debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE) { 
+debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
 }
 
 
@@ -519,6 +519,8 @@ void Board::doMove(const Move* move) {
 	short promoResult = move->getPromotionResult();
 	setPiece(to, promoResult);
 	removePiece(from);
+
+	turn++;
 	
 	//std::cout << "\nBishops bitboard after " << Move::toString(*move) << ":\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
 
@@ -657,6 +659,8 @@ void Board::undoMove(const Move* move) {
 
 	// Place piece back at startsquare
 	setPiece(move->startSquare, move->piece);
+
+	turn--;
 
 	// Check if the king moved
 	if (Piece::getType(move->piece) == Piece::KING) {
@@ -1118,6 +1122,7 @@ int Board::staticEvaluation() {
 int Board::evaluateMaterial() {
 	int result = 0;
 	result += evaluatePawns<Piece::WHITE>() - evaluatePawns<Piece::BLACK>();
+	result += evaluateKing<Piece::WHITE>() - evaluateKing<Piece::BLACK>();
 	result += (bb.count(bb.getBitboard(Piece::BISHOP | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::BISHOP | Piece::BLACK))) * Piece::getPieceValue(Piece::BISHOP);
 	result += (bb.count(bb.getBitboard(Piece::KNIGHT | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::KNIGHT | Piece::BLACK))) * Piece::getPieceValue(Piece::KNIGHT);
 	result += (bb.count(bb.getBitboard(Piece::ROOK | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::ROOK | Piece::BLACK))) * Piece::getPieceValue(Piece::ROOK);
@@ -1146,6 +1151,33 @@ inline int Board::evaluatePawns() {
 		pawnsValue += value;
 	}
 	return pawnsValue;
+}
+
+
+float sigmoid(int x, int offset = 0, float stretch = 1.0f) {
+	return 1.0f / (1.0f + expf(-stretch * (x - offset)));
+}
+
+template<short color>
+inline int Board::evaluateKing() {
+	std::cout << "Value of " << Piece::name(color) << " king on ";
+	unsigned short kingPos = whiteKingPos;
+	if constexpr (color == Piece::BLACK) {
+		kingPos = blackKingPos;
+		std::cout << getSquareName(kingPos);
+		kingPos = 63 - kingPos;
+	}
+	else
+		std::cout << getSquareName(kingPos);
+		
+
+	float lateGameFactor = sigmoid(turn, 40, 0.4f);
+	float earlyMidFactor = 1.0f - lateGameFactor;
+
+	int value = int(earlyMidFactor * kingValueMapEarlyMid[kingPos] + lateGameFactor * kingValueMapEnd[kingPos]);
+	std::cout << ": " << value << '\n';
+
+	return value;
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {

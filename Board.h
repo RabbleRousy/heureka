@@ -35,6 +35,32 @@ private:
 	//  A8	 B8	  C8   D8	E8	 F8   G8   H8
 	};
 
+	const int kingValueMapEarlyMid[64] = {
+	//  A1   B1   C1   D1   E1   F1   G1   H1
+		100, 100, 50 , 0  , 0  , 80 , 100, 100,
+		80 , 50 ,-50 ,-50 ,-50 ,-50 , 50 , 80 ,
+		0  ,-30 ,-60 ,-60 ,-60 ,-60 ,-30 , 0  ,
+	   -30 ,-50 ,-70 ,-80 ,-80 ,-70 ,-50 ,-30 ,
+	   -40 ,-60 ,-80 ,-90 ,-90 ,-80 ,-60 ,-40 ,
+	   -50 ,-70 ,-90 ,-100,-100,-90 ,-70 ,-50 ,
+	   -60 ,-80 ,-100,-110,-110,-100,-80 ,-60 ,
+	   -70 ,-90 ,-110,-120,-120,-110,-90 ,-70
+	//  A8	 B8	  C8   D8	E8	 F8   G8   H8
+	};
+
+	const int kingValueMapEnd[64] = {
+	//  A1   B1   C1   D1   E1   F1   G1   H1
+		0  , 0  , 50 , 80 , 80 , 50 , 0  , 0  ,
+		50 , 50 , 80 , 100, 100, 80 , 50 , 50 ,
+		30 , 70 , 100, 150, 150, 100, 70 , 30 ,
+		0  , 100, 150, 200, 200, 150, 100, 0  ,
+		0  , 100, 150, 200, 200, 150, 100, 0  ,
+		30 , 70 , 100, 150, 150, 100, 70 , 30 ,
+		50 , 50 , 80 , 100, 100, 80 , 50 , 50 ,
+		0  , 0  , 50 , 80 , 80 , 50 , 0  , 0
+	//  A8	 B8	  C8   D8	E8	 F8   G8   H8
+	};
+
 public:
 	static Bitboard bb;
 
@@ -64,6 +90,8 @@ public:
 	short currentPlayer;
 
 	bool checkMate, staleMate;
+
+	unsigned short turn;
 
 	SearchResults currentSearch;
 
@@ -200,6 +228,9 @@ public:
 
 	template <short color>
 	int evaluatePawns();
+
+	template <short color>
+	int evaluateKing();
 
 	int negaMax(unsigned int depth, int alpha, int beta, bool firstCall);
 
