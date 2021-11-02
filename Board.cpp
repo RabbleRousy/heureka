@@ -1131,8 +1131,23 @@ int Board::evaluateMaterial() {
 }
 
 
+float sigmoid(int x, int offset = 0, float stretch = 1.0f) {
+	return 1.0f / (1.0f + expf(-stretch * (x - offset)));
+}
+
 template<short color>
-inline int Board::evaluatePawns() {
+int Board::countMaterial() {
+	int sum = 0;
+	sum += bb.count(bb.getBitboard(Piece::PAWN | color)) * Piece::getPieceValue(Piece::PAWN);
+	sum += bb.count(bb.getBitboard(Piece::KNIGHT | color)) * Piece::getPieceValue(Piece::KNIGHT);
+	sum += bb.count(bb.getBitboard(Piece::BISHOP | color)) * Piece::getPieceValue(Piece::BISHOP);
+	sum += bb.count(bb.getBitboard(Piece::ROOK | color)) * Piece::getPieceValue(Piece::ROOK);
+	sum += bb.count(bb.getBitboard(Piece::QUEEN | color)) * Piece::getPieceValue(Piece::QUEEN);
+	return sum;
+}
+
+template<short color>
+int Board::evaluatePawns() {
 	bitboard pawns = bb.getBitboard(Piece::PAWN | color);
 	int pawnsValue = 0;
 	short offset = 0;
@@ -1153,29 +1168,24 @@ inline int Board::evaluatePawns() {
 	return pawnsValue;
 }
 
-
-float sigmoid(int x, int offset = 0, float stretch = 1.0f) {
-	return 1.0f / (1.0f + expf(-stretch * (x - offset)));
-}
-
 template<short color>
-inline int Board::evaluateKing() {
-	std::cout << "Value of " << Piece::name(color) << " king on ";
+int Board::evaluateKing() {
 	unsigned short kingPos = whiteKingPos;
 	if constexpr (color == Piece::BLACK) {
 		kingPos = blackKingPos;
-		std::cout << getSquareName(kingPos);
+		// Flip vertically
 		kingPos = 63 - kingPos;
+		// Flip horizontally when on last (now first) rank
+		if (kingPos < 8) kingPos = 7 - kingPos;
 	}
-	else
-		std::cout << getSquareName(kingPos);
 		
+	int materialCount = countMaterial<Piece::WHITE>() + countMaterial<Piece::BLACK>();
 
-	float lateGameFactor = sigmoid(turn, 40, 0.4f);
-	float earlyMidFactor = 1.0f - lateGameFactor;
+	float earlyGameFactor = sigmoid(materialCount, 4000, 0.003f);
+	float endGameFactor = 1.0f - earlyGameFactor;
 
-	int value = int(earlyMidFactor * kingValueMapEarlyMid[kingPos] + lateGameFactor * kingValueMapEnd[kingPos]);
-	std::cout << ": " << value << '\n';
+	//if (debugLogs) std::cout << "Game Progress: " << endGameFactor << '\n';
+	int value = int(earlyGameFactor * kingValueMapEarlyMid[kingPos] + endGameFactor * kingValueMapEnd[kingPos]);
 
 	return value;
 }

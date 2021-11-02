@@ -37,7 +37,7 @@ private:
 
 	const int kingValueMapEarlyMid[64] = {
 	//  A1   B1   C1   D1   E1   F1   G1   H1
-		100, 100, 50 , 0  , 0  , 80 , 100, 100,
+		100, 100, 80 , 0  , 0  , 0  , 100, 100,
 		80 , 50 ,-50 ,-50 ,-50 ,-50 , 50 , 80 ,
 		0  ,-30 ,-60 ,-60 ,-60 ,-60 ,-30 , 0  ,
 	   -30 ,-50 ,-70 ,-80 ,-80 ,-70 ,-50 ,-30 ,
@@ -225,6 +225,9 @@ public:
 	int staticEvaluation();
 
 	int evaluateMaterial();
+
+	template <short color>
+	int countMaterial();
 
 	template <short color>
 	int evaluatePawns();
