@@ -1123,10 +1123,10 @@ int Board::evaluateMaterial() {
 	int result = 0;
 	result += evaluatePawns<Piece::WHITE>() - evaluatePawns<Piece::BLACK>();
 	result += evaluateKing<Piece::WHITE>() - evaluateKing<Piece::BLACK>();
-	result += (bb.count(bb.getBitboard(Piece::BISHOP | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::BISHOP | Piece::BLACK))) * Piece::getPieceValue(Piece::BISHOP);
-	result += (bb.count(bb.getBitboard(Piece::KNIGHT | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::KNIGHT | Piece::BLACK))) * Piece::getPieceValue(Piece::KNIGHT);
-	result += (bb.count(bb.getBitboard(Piece::ROOK | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::ROOK | Piece::BLACK))) * Piece::getPieceValue(Piece::ROOK);
-	result += (bb.count(bb.getBitboard(Piece::QUEEN | Piece::WHITE)) - bb.count(bb.getBitboard(Piece::QUEEN | Piece::BLACK))) * Piece::getPieceValue(Piece::QUEEN);
+	result += evaluateBishops<Piece::WHITE>() - evaluateBishops<Piece::BLACK>();
+	result += evaluateKnights<Piece::WHITE>() - evaluateKnights<Piece::BLACK>();
+	result += evaluateRooks<Piece::WHITE>() - evaluateRooks<Piece::BLACK>();
+	result += evaluateQueens<Piece::WHITE>() - evaluateQueens<Piece::BLACK>();
 	return result;
 }
 
@@ -1175,8 +1175,6 @@ int Board::evaluateKing() {
 		kingPos = blackKingPos;
 		// Flip vertically
 		kingPos = 63 - kingPos;
-		// Flip horizontally when on last (now first) rank
-		if (kingPos < 8) kingPos = 7 - kingPos;
 	}
 		
 	int materialCount = countMaterial<Piece::WHITE>() + countMaterial<Piece::BLACK>();
@@ -1188,6 +1186,62 @@ int Board::evaluateKing() {
 	int value = int(earlyGameFactor * kingValueMapEarlyMid[kingPos] + endGameFactor * kingValueMapEnd[kingPos]);
 
 	return value;
+}
+
+template<short color>
+int Board::evaluateKnights() {
+	bitboard knights = bb.getBitboard(Piece::KNIGHT | color);
+	int knightsValue = 0;
+	Bitloop(knights) {
+		unsigned short position = getSquare(knights);
+		//std::cout << "Value of " << Piece::name(Piece::PAWN | color) << " on " << getSquareName(position);
+		int value = knightValueMap[position];
+		//std::cout << ": " << value << '\n';
+		knightsValue += value;
+	}
+	return knightsValue;
+}
+
+template<short color>
+int Board::evaluateBishops() {
+	bitboard bishops = bb.getBitboard(Piece::BISHOP | color);
+	int bishopsValue = 0;
+	Bitloop(bishops) {
+		unsigned short position = getSquare(bishops);
+		//std::cout << "Value of " << Piece::name(Piece::PAWN | color) << " on " << getSquareName(position);
+		int value = bishopValueMap[position];
+		//std::cout << ": " << value << '\n';
+		bishopsValue += value;
+	}
+	return bishopsValue;
+}
+
+template<short color>
+int Board::evaluateRooks() {
+	bitboard rooks = bb.getBitboard(Piece::ROOK | color);
+	int rooksValue = 0;
+	Bitloop(rooks) {
+		unsigned short position = getSquare(rooks);
+		//std::cout << "Value of " << Piece::name(Piece::PAWN | color) << " on " << getSquareName(position);
+		int value = rookValueMap[position];
+		//std::cout << ": " << value << '\n';
+		rooksValue += value;
+	}
+	return rooksValue;
+}
+
+template<short color>
+int Board::evaluateQueens() {
+	bitboard queens = bb.getBitboard(Piece::QUEEN | color);
+	int queensValue = 0;
+	Bitloop(queens) {
+		unsigned short position = getSquare(queens);
+		//std::cout << "Value of " << Piece::name(Piece::PAWN | color) << " on " << getSquareName(position);
+		int value = queenValueMap[position];
+		//std::cout << ": " << value << '\n';
+		queensValue += value;
+	}
+	return queensValue;
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {

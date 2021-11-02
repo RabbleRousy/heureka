@@ -3,7 +3,7 @@
 uci::uci() {
 	cout << "id name Heureka Engine" << endl;
 	cout << "id author SimonHetzer" << endl;
-	cout << "id version 0.1" << endl;
+	cout << "id version 0.2" << endl;
 	cout << "uciok" << endl;
 
 	srand(time(NULL));
