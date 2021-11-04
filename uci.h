@@ -18,6 +18,7 @@ private:
 	string input, output;
 	mutex ioMutex;
 	thread searchThread;
+	std::future<Board::SearchResults> searchResults;
 
 public:
 	uci();

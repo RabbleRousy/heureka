@@ -489,7 +489,7 @@ void Board::makePlayerMove(const Move* move) {
 }
 
 void Board::makeAiMove() {
-	iterativeSearch(searchTime);
+	currentSearch = iterativeSearch(searchTime);
 	doMove(&currentSearch.bestMove);
 
 	moveHistory.push(currentSearch.bestMove);
@@ -1103,7 +1103,8 @@ void Board::generateQueenMoves() {
 }
 
 void Board::orderMoves() {
-	std::sort(possibleMoves.begin(), possibleMoves.end(), [](const Move &m1, const Move &m2) { return m1.score > m2.score; });
+	std::sort(possibleMoves.begin(), possibleMoves.end(),
+		[](const Move &m1, const Move &m2) { return m1.score > m2.score; });
 	/*std::cout << "New move order:\n";
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		std::cout << Move::toString(possibleMoves[i]) 
@@ -1244,7 +1245,7 @@ int Board::evaluateQueens() {
 	return queensValue;
 }
 
-int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = false) {
+int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	if (timeOut) return 0;
 
@@ -1270,19 +1271,19 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 	std::vector<Move> moves = possibleMoves;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
-		currentSearch.positionsSearched++;
+		results->positionsSearched++;
 		Move move = possibleMoves[i];
 		doMove(&move);
 		swapCurrentPlayer();
-		int evaluation = -negaMax(depth - 1, -beta, -alpha);
+		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 		if (evaluation > alpha) {
 			alpha = evaluation;
 			if (firstCall) {
-				currentSearch.bestMove = move;
-				currentSearch.evaluation = evaluation;
+				results->bestMove = move;
+				results->evaluation = evaluation;
 			}
 		}
 		if (evaluation >= beta) {
@@ -1294,13 +1295,13 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, bool firstCall = fal
 }
 
 Board::SearchResults Board::searchBestMove(unsigned int depth) {
-	currentSearch.positionsSearched = 0;
-	negaMax(depth, -100000, 100000, true);
-	currentSearch.depth = depth;
-	return currentSearch;
+	SearchResults searchResults;
+	searchResults.depth = depth;
+	negaMax(depth, -100000, 100000, &searchResults, true);
+	return searchResults;
 }
 
-void Board::iterativeSearch(float time) {
+Board::SearchResults Board::iterativeSearch(float time) {
 	std::chrono::time_point<std::chrono::steady_clock> start, end;
 	start = std::chrono::high_resolution_clock::now();
 	end = std::chrono::high_resolution_clock::now();
@@ -1326,11 +1327,12 @@ void Board::iterativeSearch(float time) {
 		}
 		// Future is ready
 		lastSearchResult = future.get();
+		currentSearch = lastSearchResult;
 
 		logResults:
 
 		if (debugLogs) {
-			std::cout << "Depth: " << lastSearchResult.depth << "; Eval: " << (lastSearchResult.evaluation / 1000.0f)
+			std::cout << "Depth: " << lastSearchResult.depth << "; Eval: " << lastSearchResult.evaluation
 				<< "; Move: " << Move::toString(lastSearchResult.bestMove) << "; Positions: "
 				<< lastSearchResult.positionsSearched << "; Time searched: "
 				<< duration.count() * 1000.0f << "ms\n";
@@ -1342,6 +1344,7 @@ void Board::iterativeSearch(float time) {
 	timeOut = false;
 	// Set the final search results
 	currentSearch = lastSearchResult;
+	return lastSearchResult;
 }
 
 // Converts an integer (step) to a short[2] x and y direction

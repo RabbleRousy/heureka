@@ -224,13 +224,13 @@ void ChessGraphics::mainLoop() {
 				Instrumentor::Get().BeginSession("Search " + std::to_string(depth) + " profile", "search.json");
 				auto startTimePoint = std::chrono::high_resolution_clock::now();
 				
-				board.searchBestMove(depth);
+				Board::SearchResults results = board.searchBestMove(depth);
 
 				auto endTimePoint = std::chrono::high_resolution_clock::now();
 				long long start = std::chrono::time_point_cast<std::chrono::milliseconds>(startTimePoint).time_since_epoch().count();
 				long long end = std::chrono::time_point_cast<std::chrono::milliseconds>(endTimePoint).time_since_epoch().count();
-				std::cout << "Evaluation Results:\nEvaluation: " << board.currentSearch.evaluation << "; Best Move: " << Move::toString(board.currentSearch.bestMove)
-					<< "; Depth: " << depth << "; Positions: " << board.currentSearch.positionsSearched << "; Time: " << (end - start) << " ms\n";
+				std::cout << "Evaluation Results:\nEvaluation: " << results.evaluation << "; Best Move: " << Move::toString(results.bestMove)
+					<< "; Depth: " << depth << "; Positions: " << results.positionsSearched << "; Time: " << (end - start) << " ms\n";
 				Instrumentor::Get().EndSession();
 			}
 		}

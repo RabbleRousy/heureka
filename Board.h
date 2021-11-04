@@ -120,7 +120,7 @@ public:
 		unsigned int depth;
 		unsigned int positionsSearched;
 		Move bestMove;
-		float evaluation;
+		int evaluation;
 
 		SearchResults() : positionsSearched(0), evaluation(0), depth(0) {}
 	};
@@ -299,11 +299,11 @@ public:
 	template <short color>
 	int evaluateQueens();
 
-	int negaMax(unsigned int depth, int alpha, int beta, bool firstCall);
+	int negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall);
 
 	SearchResults searchBestMove(unsigned int depth);
 
-	void iterativeSearch(float time);
+	SearchResults iterativeSearch(float time);
 
 	/// <summary>
 	/// Converts a step to a x and y direction by bitshifting.
