@@ -10,7 +10,7 @@ int main() {
 
 	getline(cin, line);
 
-	if (line == "uci") {
+	if (line == "uci" || line == "xboard") {
 		// Creates UCI object that handles coming uci communication
 		uci interface;
 	}
