@@ -1283,6 +1283,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 			alpha = evaluation;
 			if (firstCall) {
 				results->bestMove = move;
+				std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << '\n';
 				results->evaluation = evaluation;
 			}
 		}
@@ -1315,6 +1316,7 @@ Board::SearchResults Board::iterativeSearch(float time) {
 	while (!stopDemanded && duration.count() * 1000.0f < time) {
 		depth++;
 		timeOut = false;
+		std::cout << "Depth: " << depth << '\n';
 		std::future<SearchResults> future = std::async(&Board::searchBestMove, this, depth);
 
 		while (!(future.wait_for(100ms) == std::future_status::ready)) {

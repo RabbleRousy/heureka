@@ -141,6 +141,6 @@ void uci::parsePosition(std::string input) {
 // go wtime 300000 btime 300000 movestogo 40
 void uci::parseGo(std::string input) {
 	// Start search thread for ~4s
-	searchResults = std::async(&Board::iterativeSearch, board, 5000.0f);
+	searchResults = std::async(&Board::iterativeSearch, board, 4000.0f);
 	waitingForBoard = true;
 }
