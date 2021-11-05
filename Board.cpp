@@ -710,7 +710,7 @@ bool Board::inCheckAfter(const Move* move) {
 	return check;
 }
 
-void Board::generateMoves()
+void Board::generateMoves(bool onlyCaptures)
 {
 	PROFILE_FUNCTION();
 	//if (debugLogs) std::cout << "\nGenerating possible moves ...\n";
@@ -719,36 +719,40 @@ void Board::generateMoves()
 
 	attackData = bb.getAttackData(currentPlayer);
 
-	generateKingMoves();
+	generateKingMoves(onlyCaptures);
 
 	if (attackData.doubleCheck) return;
 
-	generatePawnMoves();
-	generateKnightMoves();
-	generateBishopMoves();
-	generateRookMoves();
-	generateQueenMoves();
+	generatePawnMoves(onlyCaptures);
+	generateKnightMoves(onlyCaptures);
+	generateBishopMoves(onlyCaptures);
+	generateRookMoves(onlyCaptures);
+	generateQueenMoves(onlyCaptures);
 
 	//pseudoLegalToLegalMoves();
 	//Instrumentor::Get().EndSession();
 }
 
-void Board::generatePawnMoves() {
+void Board::generatePawnMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
 	bool white = currentPlayer == Piece::WHITE;
 	bitboard pawns = bb.getBitboard(Piece::PAWN | currentPlayer);
 	// Pinned pawns can't move if there is a check
 	pawns &= pawns ^ (attackData.checkExists * attackData.allPins);
-	//---------- Moves one step ahead -----------------
-	bitboard moves = bb.getSinglePawnSteps(pawns, currentPlayer);
-	// Pawns may only step on empty fields
+
+	bitboard moves;
 	bitboard empty = bb.getEmpty();
+	unsigned short targetIndex = 0;
+
+	if (onlyCaptures) goto captures;
+
+	//---------- Moves one step ahead -----------------
+	moves = bb.getSinglePawnSteps(pawns, currentPlayer);
+	// Pawns may only step on empty fields
 	moves &= empty;
 
 	// If player is in check, pawns may only step inbetween the check ray
 	moves &= attackData.allChecks;
-
-	unsigned short targetIndex = 0;
 	// Loop over all pawns that can move one step ahead
 	Bitloop (moves) {
 		targetIndex = getSquare(moves);
@@ -794,6 +798,7 @@ void Board::generatePawnMoves() {
 		possibleMoves.push_back(move);
 	}
 
+	captures:
 	//---------- Captures left ------------------------
 	moves = bb.getPawnAttacks(pawns, true, currentPlayer);
 	// Capture field has to be occupied by enemy or marked as ep square
@@ -896,7 +901,7 @@ void Board::generatePawnMoves() {
 	}
 }
 
-void Board::generateKingMoves() {
+void Board::generateKingMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
 	unsigned short kingPos = (currentPlayer == Piece::WHITE) ? whiteKingPos : blackKingPos;
 	bitboard kingMoves = bb.getKingAttacks(kingPos, true);
@@ -904,6 +909,9 @@ void Board::generateKingMoves() {
 	kingMoves &= ~bb.getBitboard(currentPlayer);
 	// Don't move onto attacked squares
 	kingMoves &= ~attackData.allAttacks;
+
+	if (onlyCaptures)
+		kingMoves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
 
 	// Index of the current move
 	unsigned short targetIndex = 0;
@@ -971,7 +979,7 @@ void Board::generateKingMoves() {
 	}
 }
 
-void Board::generateKnightMoves() {
+void Board::generateKnightMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
 	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
 	// Pinned knights can't move
@@ -989,6 +997,9 @@ void Board::generateKnightMoves() {
 		// If in check, only try moves that move onto the checking ray
 		knightMoves &= attackData.allChecks;
 
+		if (onlyCaptures)
+			knightMoves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+
 		// Index of the current move
 		unsigned short targetIndex = 0;
 		Bitloop (knightMoves) {
@@ -1001,7 +1012,7 @@ void Board::generateKnightMoves() {
 	}
 }
 
-void Board::generateRookMoves() {
+void Board::generateRookMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
 	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
 	// Pinned rooks can't move when in check
@@ -1022,6 +1033,9 @@ void Board::generateRookMoves() {
 		// If in check, only move to blocking squares
 		rookAttacks &= attackData.allChecks;
 
+		if (onlyCaptures)
+			rookAttacks &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+
 		//if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
 
 		unsigned short targetIndex = 0;
@@ -1034,7 +1048,7 @@ void Board::generateRookMoves() {
 	}
 }
 
-void Board::generateBishopMoves() {
+void Board::generateBishopMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
 	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
 	// Pinned bishops can't move when in check
@@ -1056,6 +1070,9 @@ void Board::generateBishopMoves() {
 		// If in check, only move to blocking squares
 		bishopAttacks &= attackData.allChecks;
 
+		if (onlyCaptures)
+			bishopAttacks &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+
 		//if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
 
 		unsigned short targetIndex = 0;
@@ -1068,7 +1085,7 @@ void Board::generateBishopMoves() {
 	}
 }
 
-void Board::generateQueenMoves() {
+void Board::generateQueenMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
 	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
 	// Pinned queens can't move when in check
@@ -1089,6 +1106,9 @@ void Board::generateQueenMoves() {
 
 		// If in check, only move to blocking squares
 		queenAttacks &= attackData.allChecks;
+
+		if (onlyCaptures)
+			queenAttacks &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
 
 		//if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
 
@@ -1263,7 +1283,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 	}
 
 	if (depth == 0) {
-		return staticEvaluation();
+		return negaMaxQuiescence(alpha, beta, results);
 	}
 	
 	// Order Moves before iterating to maximize pruning
@@ -1286,6 +1306,52 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 				results->evaluation = evaluation;
 			}
 		}
+		if (evaluation >= beta) {
+			// Prune branch
+			return beta;
+		}
+	}
+	return alpha;
+}
+
+// Search until a quiet position (no check, no captures) is reached
+// TODO: Consider stalemate
+int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
+	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
+	if (timeOut) return 0;
+
+	int evaluation = staticEvaluation();
+	if (evaluation >= beta)
+		return beta;
+	alpha = std::max(alpha, evaluation);
+
+	generateMoves(true);
+	// Check is not quiet
+	if (attackData.checkExists) {
+		generateMoves();
+		if (possibleMoves.empty()) {
+			//std::cout << "Moves list is empty... ";
+			// Checkmate
+			//std::cout << "Checkmate!\n";
+			return -1000000;
+		}
+	}
+
+	// Order Moves before iterating to maximize pruning
+	orderMoves();
+	std::vector<Move> captures = possibleMoves;
+
+	for (int i = 0; i < possibleMoves.size(); i++) {
+		results->positionsSearched++;
+		Move move = possibleMoves[i];
+		doMove(&move);
+		swapCurrentPlayer();
+		evaluation = -negaMaxQuiescence(-beta, -alpha, results);
+		undoMove(&move);
+		swapCurrentPlayer();
+		possibleMoves = captures;
+		
+		alpha = std::max(alpha, evaluation);
 		if (evaluation >= beta) {
 			// Prune branch
 			return beta;

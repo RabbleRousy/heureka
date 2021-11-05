@@ -258,19 +258,19 @@ public:
 	/// For each piece on the board of the current player's color, every step of each direction it can go is calculated.
 	/// tryAddMove() then tries to construct the corresponding move and if legal, add it to the vector.
 	/// </summary>
-	void generateMoves();
+	void generateMoves(bool onlyCaptures = false);
 
-	void generatePawnMoves();
+	void generatePawnMoves(bool onlyCaptures);
 
-	void generateKingMoves();
+	void generateKingMoves(bool onlyCaptures);
 
-	void generateKnightMoves();
+	void generateKnightMoves(bool onlyCaptures);
 
-	void generateRookMoves();
+	void generateRookMoves(bool onlyCaptures);
 
-	void generateBishopMoves();
+	void generateBishopMoves(bool onlyCaptures);
 
-	void generateQueenMoves();
+	void generateQueenMoves(bool onlyCaptures);
 
 	void orderMoves();
 
@@ -300,6 +300,8 @@ public:
 	int evaluateQueens();
 
 	int negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall);
+
+	int negaMaxQuiescence(int alpha, int beta, SearchResults* results);
 
 	SearchResults searchBestMove(unsigned int depth);
 
