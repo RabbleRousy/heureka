@@ -1292,6 +1292,25 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		results->positionsSearched++;
+
+		// Null Move Pruning
+		const int R = 3;
+		// Avoid situations where zugzwang is most likely
+		if (possibleMoves.size() > 5 && depth > R) {
+			// Skip our move
+			swapCurrentPlayer();
+			// Do a reduced depth search
+			int evaluation = -negaMax(depth - R, -beta, -alpha, results);
+			// Undo stuff
+			swapCurrentPlayer();
+			possibleMoves = moves;
+
+			// PRUNE
+			if (evaluation >= beta)
+				return beta;
+		}
+
+
 		Move move = possibleMoves[i];
 		doMove(&move);
 		swapCurrentPlayer();
