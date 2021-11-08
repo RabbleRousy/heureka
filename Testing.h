@@ -19,7 +19,7 @@ private:
 
 	const string resultsPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TestResults\\";
 
-	const string VERSION_NAME = "0_3 NULL MOVE PRUNING";
+	const string VERSION_NAME = "0_2_2 NULL MOVE PRUNING";
 
 	const TestCase testCases[3] = {
 		TestCase("Seb Lauge Testposition",

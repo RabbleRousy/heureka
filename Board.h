@@ -299,7 +299,7 @@ public:
 	template <short color>
 	int evaluateQueens();
 
-	int negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall);
+	int negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall, bool allowNull);
 
 	int negaMaxQuiescence(int alpha, int beta, SearchResults* results);
 

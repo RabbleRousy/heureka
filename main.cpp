@@ -3,7 +3,7 @@
 #include "Testing.h"
 
 int main() {
-	std::cout << "Welcome to Heureka Engine (Version 0.2), developed by Simon Hetzer.\n";
+	std::cout << "Welcome to Heureka Engine (Version 0.2.2), developed by Simon Hetzer.\n";
 	std::cout << "Enter \"uci\" to start UCI communication (for debugging or Chess GUIs only).\n";
 	std::cout << "Enter \"test\" to run the current test suite.\n";
 	std::cout << "Press any other key to launch integrated GUI.\n";
