@@ -165,6 +165,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Move.cpp" />
     <ClCompile Include="Piece.cpp" />
+    <ClCompile Include="Testing.cpp" />
     <ClCompile Include="uci.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -176,6 +177,7 @@
     <ClInclude Include="Piece.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Profiling.h" />
+    <ClInclude Include="Testing.h" />
     <ClInclude Include="uci.h" />
   </ItemGroup>
   <ItemGroup>

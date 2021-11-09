@@ -1265,7 +1265,7 @@ int Board::evaluateQueens() {
 	return queensValue;
 }
 
-int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false) {
+int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false, bool allowNull = true) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	if (timeOut) return 0;
 
@@ -1292,6 +1292,26 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		results->positionsSearched++;
+
+		if (allowNull && !firstCall && !attackData.checkExists) {
+			// Null Move Pruning
+			const int R = 3;
+			// Avoid situations where zugzwang is most likely
+			if (possibleMoves.size() > 5 && depth > R) {
+				// Skip our move
+				swapCurrentPlayer();
+				// Do a reduced depth search
+				int evaluation = -negaMax(depth - R, -beta, -beta+1, results, false, false);
+				// Undo stuff
+				swapCurrentPlayer();
+				possibleMoves = moves;
+
+				// PRUNE
+				if (evaluation >= beta)
+					return beta;
+			}
+		}
+
 		Move move = possibleMoves[i];
 		doMove(&move);
 		swapCurrentPlayer();
