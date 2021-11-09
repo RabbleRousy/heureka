@@ -23,6 +23,7 @@ private:
 public:
 	uci();
 	void mainLoop();
+	string getWordAfter(const string& s, const string& w);
 	void handleInputLoop();
 	void inputLoop();
 	void parsePosition(std::string input);

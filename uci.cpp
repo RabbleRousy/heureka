@@ -138,9 +138,53 @@ void uci::parsePosition(std::string input) {
 	}
 }
 
+string uci::getWordAfter(const string& sentence, const string& word) {
+	size_t startIndex = sentence.find(word);
+	if (startIndex == string::npos)
+		return "";
+	size_t wordLength = word.length() + 1;
+	size_t searchStart = startIndex + wordLength;
+	size_t searchEnd = sentence.find(' ', searchStart);
+	return sentence.substr(searchStart, searchEnd - searchStart);
+}
+
 // go wtime 300000 btime 300000 movestogo 40
 void uci::parseGo(std::string input) {
+	float movetime = 5000.0f;
+	float wtime = 5000.0f;
+	float btime = 5000.0f;
+	unsigned int movestogo = 1;
+
+	string word = getWordAfter(input, "movetime");
+	if (!word.empty()) {
+		movetime = stof(word);
+		goto search;
+	}
+
+	word = getWordAfter(input, "wtime");
+	if (!word.empty()) {
+		wtime = stof(word);
+	}
+
+	word = getWordAfter(input, "btime");
+	if (!word.empty()) {
+		btime = stof(word);
+	}
+
+	word = getWordAfter(input, "movestogo");
+	if (!word.empty()) {
+		movestogo = stoi(word);
+	}
+
+	// Calculate time for search w.r.t. collected parameters
+	movetime = (board.currentPlayer == Piece::WHITE) ? wtime : btime;
+	movetime /= movestogo;
+
+	search:
+	// Margin time
+	if (movetime > 550.0f) movetime -= 500.0f;
+
 	// Start search thread for ~4s
-	searchResults = std::async(&Board::iterativeSearch, board, 5000.0f);
+	searchResults = std::async(&Board::iterativeSearch, board, movetime);
 	waitingForBoard = true;
 }
