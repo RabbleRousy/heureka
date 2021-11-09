@@ -1323,7 +1323,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 			alpha = evaluation;
 			if (firstCall) {
 				results->bestMove = move;
-				std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << '\n';
+				std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation << '\n';
 				results->evaluation = evaluation;
 			}
 		}
