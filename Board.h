@@ -122,7 +122,7 @@ public:
 		Move bestMove;
 		int evaluation;
 
-		SearchResults() : positionsSearched(0), evaluation(0), depth(0) {}
+		SearchResults() : positionsSearched(0), evaluation(0), depth(0), bestMove(Move::NULLMOVE) {}
 	};
 	float searchTime;
 	bool processing;

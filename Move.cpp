@@ -2,7 +2,7 @@
 #include "Piece.h"
 #include "Board.h"
 
-Move::Move() : piece(0), capturedPiece(0), startSquare(0), targetSquare(0), flags(0), score(0.0f), previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare) {};
+Move::Move() : piece(0), capturedPiece(0), startSquare(0), targetSquare(0), flags(0), score(0.0f), previousCastlerights(0), previousEPsquare(0) {};
 
 Move::Move(short p, short capture, unsigned short start, unsigned short target, short f)
 	: piece(p), capturedPiece(capture), startSquare(start), targetSquare(target), flags(f), score(0.0f), previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare) {
@@ -54,6 +54,8 @@ std::string Move::toString(Move m)
 
 	return name;
 }
+
+const Move Move::NULLMOVE;
 
 bool Move::isEnPassant() const
 {

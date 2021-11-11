@@ -1266,7 +1266,6 @@ int Board::evaluateQueens() {
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false, bool allowNull = true) {
-	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	if (timeOut) return 0;
 
 	generateMoves();
@@ -1275,7 +1274,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		if (attackData.checkExists) {
 			// Checkmate
 			//std::cout << "Checkmate!\n";
-			return -1000000;
+			return -100000 - depth; // Earier checkmates (when depth is still high) are best for the opponent (worse for us)
 		}
 		// Stalemate
 		//std::cout << "Stalemate!\n";
@@ -1283,7 +1282,10 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 	}
 
 	if (depth == 0) {
-		return negaMaxQuiescence(alpha, beta, results);
+		if (results->bestMove != Move::NULLMOVE) {
+			return negaMaxQuiescence(alpha, beta, results);
+		}
+		else return staticEvaluation();
 	}
 	
 	// Order Moves before iterating to maximize pruning
@@ -1316,18 +1318,20 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		doMove(&move);
 		swapCurrentPlayer();
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
+		//if (firstCall) std::cout << "Move #" << i << ' ' << Move::toString(move) << " has evaluation: " << evaluation << '\n';
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 		if (evaluation > alpha) {
-			alpha = evaluation;
 			if (firstCall) {
 				results->bestMove = move;
-				//std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation << '\n';
+				//std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation
+				//<< " (Alpha was " << alpha << ")\n";
 				results->evaluation = evaluation;
 			}
+			alpha = evaluation;
 		}
-		if (evaluation >= beta) {
+		if (!firstCall && (evaluation >= beta)) {
 			// Prune branch
 			return beta;
 		}
@@ -1384,7 +1388,7 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 Board::SearchResults Board::searchBestMove(unsigned int depth) {
 	SearchResults searchResults;
 	searchResults.depth = depth;
-	negaMax(depth, -100000, 100000, &searchResults, true);
+	negaMax(depth, -1000000, 1000000, &searchResults, true);
 	return searchResults;
 }
 
