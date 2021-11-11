@@ -19,8 +19,7 @@ short Board::castleRights = 0b1111;
 unsigned short Board::enPassantSquare = 64;
 Bitboard Board::bb = Bitboard();
 
-Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(),
-debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
 }
 
 
@@ -43,9 +42,7 @@ void Board::reset() {
 
 bool Board::readPosFromFEN(std::string fen) {
 
-	const bool DEBUG = debugLogs;
-
-	if (DEBUG) std::cout << "Trying to parse FEN: " << fen << std::endl;
+	DEBUG_COUT("Trying to parse FEN: " + fen + '\n');
 	clearBoard();
 	// Default values
 	currentPlayer = Piece::WHITE;
@@ -61,7 +58,7 @@ bool Board::readPosFromFEN(std::string fen) {
 		if (row == 0 && column == 8)
 			break;
 
-		if (DEBUG) std::cout << "Parsing " << fen[i] << " ... \n";
+		DEBUG_COUT("Parsing " + std::to_string(fen[i]) + " ... \n");
 
 		// Return false for invalid fens that reach out of bounds
 		if (row < 0 || (column > 7 && fen[i] != '/')) {
@@ -149,7 +146,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	if (!(row == 0 && column == 8))return false;
 	// No additional infos
 	if (i >= fen.size()-1) {
-		if (DEBUG) std::cout << "End of FEN reached.\n";
+		DEBUG_COUT("End of FEN reached.\n");
 		return true;
 	}
 
@@ -162,18 +159,15 @@ bool Board::readPosFromFEN(std::string fen) {
 		currentPlayer = Piece::WHITE;
 		break;
 	}
-	if (DEBUG)
-		std::cout << "Current player read from FEN: " << fen[i] << '\n';
+	DEBUG_COUT("Current player read from FEN: " + fen[i] + '\n');
 
 	// Castling rights
 	castleRights = 0;
 	int j = i+2;
 	for (j; j < (i + 6); j++) {
-		if (DEBUG) std::cout << "j = " << j << ", i = " << i << '\n';
 		if (j == fen.size()) break;
 
 		switch (fen[j]) {
-			if (DEBUG) std::cout << "Parsing " << fen[j] << " ...\n";
 		case '-':
 			return true;
 		case 'K':
@@ -192,12 +186,11 @@ bool Board::readPosFromFEN(std::string fen) {
 			castleRights = 0b1111;
 			return true;
 		}
-		if (DEBUG) std::cout << "Castle right input: " << fen[j] << '\n';
 	}
 	// Something went wrong while parsing castlerights, set all as default
 	if (castleRights == 0)
 		castleRights = 0b1111;
-	if (DEBUG) std::cout << "Castle rights set to: " << std::to_string(castleRights) << '\n';
+	DEBUG_COUT("Castle rights set to: " + std::to_string(castleRights) + '\n');
 
 	// No ep capture left to read
 	if (!(j < fen.size() - 2)) {
@@ -245,12 +238,12 @@ bool Board::readPosFromFEN(std::string fen) {
 		default:
 			return true;
 		}
-		if (DEBUG) std::cout << "EP Capture input: " << fen[i] << '\n';
+		DEBUG_COUT("EP Capture input: " + fen[i] + '\n');
 	}
 
 	// Parsing failed
 	if (column == 8 || !(row == 2 || row == 5)) {
-		std::cerr << "EP capture parsing failed\n";
+		DEBUG_COUT("EP capture parsing failed\n");
 		return true;
 	}
 
@@ -394,7 +387,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		return false;
 	}
 	
-	if (debugLogs) std::cout << "Handling move input from " << getSquareName(start) << " to " << getSquareName(target) << " ...\n";
+	DEBUG_COUT("Handling move input from " + getSquareName(start) + " to " + getSquareName(target) + " ...\n");
 
 	if (wantsToPromote && promotionChoice != 0) {
 		// Promotion choice was made, we already stored the correct move in promoMoveBuffer
@@ -421,10 +414,8 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		makePlayerMove(&promoMoveBuffer);
 
-		if (debugLogs) {
-			std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
-			std::cout << "New FEN: " << getFENfromPos() << '\n';
-		}
+		DEBUG_COUT("Promotion to " + Piece::name(promotionChoice | currentPlayer) + " performed.\n");
+		DEBUG_COUT("New FEN: " + getFENfromPos() + '\n');
 
 		return true;
 	}
@@ -445,24 +436,22 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		//--------- MOVE FOUND ----------------------
 
-		if (debugLogs) std::cout << "Move found in possibleMoves list. Checking if it's promotion ...";
+		DEBUG_COUT("Move found in possibleMoves list. Checking if it's promotion ...");
 
 		// Promotion
 		if (possibleMoves[i].isPromotion()) {
-			if (debugLogs) std::cout << " YES. Setting wantsToPromote flag.\n";
+			DEBUG_COUT(" YES. Setting wantsToPromote flag.\n");
 			// Promotion needs to be completed by player
 			wantsToPromote = true;
 			promoMoveBuffer = possibleMoves[i];
 			// Correct promotion move will be added afterwards
 			return false;
 		}
-		if (debugLogs) std::cout << " NO. Doing move: " << Move::toString(possibleMoves[i]) << '\n';
+		DEBUG_COUT(" NO. Doing move: " + Move::toString(possibleMoves[i]) + '\n');
 
 		makePlayerMove(&possibleMoves[i]);
 
-		if (debugLogs) {
-			std::cout << "New FEN: " << getFENfromPos() << '\n';
-		}
+		DEBUG_COUT("New FEN: " + getFENfromPos() + '\n');
 
 		return true;
 	}
@@ -1315,15 +1304,15 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		doMove(&move);
 		swapCurrentPlayer();
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
-		if (debugLogs && firstCall) std::cout << "Move #" << i << ' ' << Move::toString(move) << " has evaluation: " << evaluation << '\n';
+		if (firstCall) DEBUG_COUT("Move #" + std::to_string(i) + ' ' + Move::toString(move) + " has evaluation: " + std::to_string(evaluation) + '\n');
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 		if (evaluation > alpha) {
 			if (firstCall) {
 				results->bestMove = move;
-				if (debugLogs) std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation
-				<< " (Alpha was " << alpha << ")\n";
+				DEBUG_COUT("New best move: #" + std::to_string(i) + ' ' + Move::toString(results->bestMove) +
+					" with eval=" + std::to_string(evaluation) + " (Alpha was " + std::to_string(alpha) + ")\n");
 				results->evaluation = evaluation;
 			}
 			alpha = evaluation;
@@ -1419,12 +1408,10 @@ Board::SearchResults Board::iterativeSearch(float time) {
 
 		logResults:
 
-		if (debugLogs) {
-			std::cout << "Depth: " << lastSearchResult.depth << "; Eval: " << lastSearchResult.evaluation
-				<< "; Move: " << Move::toString(lastSearchResult.bestMove) << "; Positions: "
-				<< lastSearchResult.positionsSearched << "; Time searched: "
-				<< duration.count() * 1000.0f << "ms\n";
-		}
+		DEBUG_COUT("Depth: " + std::to_string(lastSearchResult.depth) + "; Eval: " + std::to_string(lastSearchResult.evaluation)
+				+ "; Move: " + Move::toString(lastSearchResult.bestMove) + "; Positions: "
+				+ std::to_string(lastSearchResult.positionsSearched) + "; Time searched: "
+				+ std::to_string(duration.count() * 1000.0f) + "ms\n");
 	}
 
 	processing = false;

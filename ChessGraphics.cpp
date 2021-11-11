@@ -49,13 +49,6 @@ void ChessGraphics::initGame()
 {
 
 	std::string input;
-	std::cout << "Do you want to log debug information? Enter Y for yes.\n";
-	std::cin >> input;
-	debugPossibleMoves = (input == "Y" || input == "y");
-	board.debugLogs = debugPossibleMoves;
-
-	// Clear CIN
-	std::cin.ignore(100, '\n');
 
 	std::cout << "Do you want to play versus an AI opponent? Enter Y for yes.\n";
 	std::cin >> input;

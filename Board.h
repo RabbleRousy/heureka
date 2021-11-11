@@ -7,6 +7,14 @@
 #include <thread>
 #include <future>
 
+#ifdef _DEBUG
+#define DEBUG_COUT(x) (std::cout << (x))
+#define DEBUG_CERR(x) (std::cerr << (x))
+#else
+#define DEBUG_COUT(x)
+#define DEBUG_CERR(x)
+#endif
+
 using namespace std::literals::chrono_literals;
 
 // Central class that handles everything that happens on the board.
@@ -149,9 +157,6 @@ public:
 
 	// Indicates to the GUI wether the player needs to input a promotion choice
 	bool wantsToPromote;
-
-	// If set, detailed infos on move generation will be logged into the console
-	bool debugLogs;
 
 	std::vector<Move> possibleMoves;
 
