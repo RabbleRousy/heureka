@@ -36,7 +36,7 @@ std::string Move::toString(Move m)
 	name += Board::getSquareName(m.targetSquare);
 
 	if (m.isPromotion()) {
-		switch (m.getPromotionResult()) {
+		switch (m.flags & 0b111) {
 		case (Promotion::ToQueen):
 			name += 'q';
 			break;
@@ -64,7 +64,7 @@ bool Move::isEnPassant() const
 
 bool Move::isPromotion() const
 {
-	return (flags & 0b0111) != 0;
+	return (Piece::getType(piece) == Piece::PAWN) && (flags & 0b111);
 }
 
 short Move::getPromotionResult() const
@@ -73,12 +73,16 @@ short Move::getPromotionResult() const
 	switch (flags & 0b0111) {
 	case Promotion::ToBishop:
 		return Piece::BISHOP | color;
+		break;
 	case Promotion::ToKnight:
 		return Piece::KNIGHT | color;
+		break;
 	case Promotion::ToQueen:
 		return Piece::QUEEN | color;
+		break;
 	case Promotion::ToRook:
 		return Piece::ROOK | color;
+		break;
 	default:
 		return piece;
 	}
