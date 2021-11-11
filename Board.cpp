@@ -1282,10 +1282,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 	}
 
 	if (depth == 0) {
-		if (results->bestMove != Move::NULLMOVE) {
-			return negaMaxQuiescence(alpha, beta, results);
-		}
-		else return staticEvaluation();
+		return negaMaxQuiescence(alpha, beta, results);
 	}
 	
 	// Order Moves before iterating to maximize pruning
@@ -1318,15 +1315,15 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		doMove(&move);
 		swapCurrentPlayer();
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
-		//if (firstCall) std::cout << "Move #" << i << ' ' << Move::toString(move) << " has evaluation: " << evaluation << '\n';
+		if (debugLogs && firstCall) std::cout << "Move #" << i << ' ' << Move::toString(move) << " has evaluation: " << evaluation << '\n';
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
 		if (evaluation > alpha) {
 			if (firstCall) {
 				results->bestMove = move;
-				//std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation
-				//<< " (Alpha was " << alpha << ")\n";
+				if (debugLogs) std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation
+				<< " (Alpha was " << alpha << ")\n";
 				results->evaluation = evaluation;
 			}
 			alpha = evaluation;
