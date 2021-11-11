@@ -1283,13 +1283,13 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 
 		if (allowNull && !firstCall && !attackData.checkExists) {
 			// Null Move Pruning
-			const int R = 3;
+			const int nullMoveReduction = 3;
 			// Avoid situations where zugzwang is most likely
-			if (possibleMoves.size() > 5 && depth > R) {
+			if (possibleMoves.size() > 5 && depth > nullMoveReduction) {
 				// Skip our move
 				swapCurrentPlayer();
 				// Do a reduced depth search
-				int evaluation = -negaMax(depth - R, -beta, -beta+1, results, false, false);
+				int evaluation = -negaMax(depth - nullMoveReduction, -beta, -beta+1, results, false, false);
 				// Undo stuff
 				swapCurrentPlayer();
 				possibleMoves = moves;
@@ -1303,6 +1303,25 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		Move move = possibleMoves[i];
 		doMove(&move);
 		swapCurrentPlayer();
+
+		//----------------------- FUTILITY PRUNING ----------------------------------------
+		const int futilityReduction = (i < 10) ? 3 : 4;
+		if ((results->bestMove != Move::NULLMOVE) && (i >= 5) && (depth > futilityReduction)) {
+			DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
+				+ ": " + Move::toString(move) + " Doing reduced depth search... ");
+			int evaluation = -negaMax(depth - futilityReduction, -beta, -alpha, results);
+			// Evaluation was worse than best line yet, as expected. PRUNE!
+			if (evaluation < alpha) {
+				DEBUG_COUT("--> Line can be discarded.\n");
+				undoMove(&move);
+				swapCurrentPlayer();
+				possibleMoves = moves;
+				continue;
+			} else 
+				DEBUG_COUT("--> Evaluation was better than expected. Doing deeper search.\n");
+		}
+		//---------------------------------------------------------------------------------
+		
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
 		if (firstCall) DEBUG_COUT("Move #" + std::to_string(i) + ' ' + Move::toString(move) + " has evaluation: " + std::to_string(evaluation) + '\n');
 		undoMove(&move);

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <assert.h>
 
 typedef unsigned __int64 bitboard;
 #define C64(constantU64) constantU64##ULL

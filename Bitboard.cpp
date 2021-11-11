@@ -439,6 +439,7 @@ bitboard Bitboard::getBitboard(short p)
 
 void Bitboard::setPiece(short p, unsigned short index)
 {
+    assert(index < 64);
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] |= mask;
     allPieces[Piece::getColor(p)] |= mask;
