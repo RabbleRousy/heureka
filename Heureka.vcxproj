@@ -167,6 +167,7 @@
     <ClCompile Include="Piece.cpp" />
     <ClCompile Include="Testing.cpp" />
     <ClCompile Include="uci.cpp" />
+    <ClCompile Include="Zobrist.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitboard.h" />
@@ -179,6 +180,7 @@
     <ClInclude Include="Profiling.h" />
     <ClInclude Include="Testing.h" />
     <ClInclude Include="uci.h" />
+    <ClInclude Include="Zobrist.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />

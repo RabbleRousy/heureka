@@ -28,6 +28,8 @@ private:
 	short blackKingPos;
 	AttackData attackData;
 
+	unsigned long long currentZobristKey;
+
 	bool timeOut;
 
 	const int pawnValueMap[64] = {
@@ -171,6 +173,8 @@ public:
 	void clearBoard();
 
 	void reset();
+
+	void init(std::string fen);
 
 	/// <summary>
 	/// 

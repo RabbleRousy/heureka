@@ -82,11 +82,7 @@ void ChessGraphics::initGame()
 
 	std::cout << fen << std::endl;
 
-	if (!board.readPosFromFEN(fen)) {
-		board.readPosFromFEN();
-	}
-
-	board.generateMoves();
+	board.init(fen);
 }
 
 void ChessGraphics::mainLoop() {

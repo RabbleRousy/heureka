@@ -432,7 +432,7 @@ int Bitboard::shittyHash(bitboard occupancy, unsigned long long magicNumber, uns
     return int((occupancy * magicNumber) >> (64 - bitCount));
 }
 
-bitboard Bitboard::getBitboard(short p)
+bitboard Bitboard::getBitboard (short p) const
 {
     return allPieces[p];
 }

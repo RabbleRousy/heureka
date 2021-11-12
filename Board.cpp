@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include "Profiling.h"
+#include "Zobrist.h"
 
 const std::string Board::squareNames[] = {
 		"a1","b1","c1","d1","e1","f1","g1","h1",
@@ -20,6 +21,7 @@ unsigned short Board::enPassantSquare = 64;
 Bitboard Board::bb = Bitboard();
 
 Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
+	Zobrist::initializeHashes();
 }
 
 
@@ -37,6 +39,15 @@ void Board::reset() {
 	checkMate = false;
 	staleMate = false;
 	readPosFromFEN();
+	generateMoves();
+}
+
+void Board::init(std::string fen) {
+	if (!readPosFromFEN(fen)) {
+		readPosFromFEN();
+	}
+	currentZobristKey = Zobrist::getZobristKey(&bb, castleRights, enPassantSquare);
+	DEBUG_COUT("Zobrist key for this position: " + std::to_string(currentZobristKey) + '\n');
 	generateMoves();
 }
 
@@ -187,10 +198,6 @@ bool Board::readPosFromFEN(std::string fen) {
 			return true;
 		}
 	}
-	// Something went wrong while parsing castlerights, set all as default
-	if (castleRights == 0)
-		castleRights = 0b1111;
-	DEBUG_COUT("Castle rights set to: " + std::to_string(castleRights) + '\n');
 
 	// No ep capture left to read
 	if (!(j < fen.size() - 2)) {
@@ -499,6 +506,7 @@ void Board::makeAiMove() {
 
 void Board::doMove(const Move* move) {
 	PROFILE_FUNCTION();
+	unsigned short oldEpSquare = enPassantSquare;
 	enPassantSquare = 64;
 	const unsigned short from = move->startSquare;
 	const unsigned short to = move->targetSquare;
@@ -506,6 +514,10 @@ void Board::doMove(const Move* move) {
 	short pieceFrom = move->piece;
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
+
+	bitboard oldBitboardMovedPiece = bb.getBitboard(pieceFrom);
+	bitboard oldBitboardCapturedPiece = bb.getBitboard(pieceTo);
+
 	setPiece(to, promoResult);
 	removePiece(from);
 
@@ -522,6 +534,8 @@ void Board::doMove(const Move* move) {
 		// Double pawn step
 		enPassantSquare = from + ((to - from) / 2);
 	}
+	// Update Zobrist Key w.r.t. ep Square (might have changed or dissapeared)
+	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, enPassantSquare);
 
 	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
 		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
@@ -533,6 +547,7 @@ void Board::doMove(const Move* move) {
 
 	//----------- UPDATE CASTLE RIGHTS ---------------------
 	if (castleRights != 0) {
+		short oldCastleRights = castleRights;
 		// If king moved, delete that player's castle rights
 		if (Piece::getType(pieceFrom) == Piece::KING) {
 			castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
@@ -583,6 +598,7 @@ void Board::doMove(const Move* move) {
 				}
 			}
 		}
+		Zobrist::updateZobristKey(currentZobristKey, oldCastleRights, castleRights);
 	}
 
 	//----------- UPDATE KING POS --------------------------
@@ -594,6 +610,13 @@ void Board::doMove(const Move* move) {
 			blackKingPos = to;
 		}
 	}
+
+	Zobrist::updateZobristKey(currentZobristKey, oldBitboardMovedPiece, bb.getBitboard(pieceFrom));
+	if (pieceTo) {
+		Zobrist::updateZobristKey(currentZobristKey, oldBitboardCapturedPiece, bb.getBitboard(pieceTo));
+	}
+
+	DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');
 }
 
 void Board::doMove(std::string move) {
@@ -634,6 +657,8 @@ void Board::doMove(std::string move) {
 void Board::undoMove(const Move* move) {
 	PROFILE_FUNCTION();
 	//if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*move) << "<<\n";
+	bitboard oldBitboardMovedPiece = bb.getBitboard(move->piece);
+	bitboard oldBitboardCapturedPiece = bb.getBitboard(move->capturedPiece);
 
 	unsigned short target = move->targetSquare;
 
@@ -668,9 +693,20 @@ void Board::undoMove(const Move* move) {
 			removePiece(from);
 		}
 	}
+
+	// Update Zobrist key w.r.t. pieces that moved / got captured
+	Zobrist::updateZobristKey(currentZobristKey, oldBitboardMovedPiece, bb.getBitboard(move->piece));
+	if (move->capturedPiece) {
+		Zobrist::updateZobristKey(currentZobristKey, oldBitboardCapturedPiece, bb.getBitboard(move->capturedPiece));
+	}
+
 	// Restore the castlerights and epsquare from before that move
+	Zobrist::updateZobristKey(currentZobristKey, castleRights, move->previousCastlerights);
+	Zobrist::updateZobristKey(currentZobristKey, enPassantSquare, move->previousEPsquare);
 	castleRights = move->previousCastlerights;
 	enPassantSquare = move->previousEPsquare;
+
+	DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');
 }
 
 bool Board::undoLastMove()
@@ -1281,8 +1317,8 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		results->positionsSearched++;
 
+		//----------------------- NULL MOVE PRUNING ----------------------------------------
 		if (allowNull && !firstCall && !attackData.checkExists) {
-			// Null Move Pruning
 			const int nullMoveReduction = 3;
 			// Avoid situations where zugzwang is most likely
 			if (possibleMoves.size() > 5 && depth > nullMoveReduction) {
@@ -1299,6 +1335,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 					return beta;
 			}
 		}
+		//---------------------------------------------------------------------------------
 
 		Move move = possibleMoves[i];
 		doMove(&move);
@@ -1307,18 +1344,18 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		//----------------------- FUTILITY PRUNING ----------------------------------------
 		const int futilityReduction = (i < 10) ? 3 : 4;
 		if ((results->bestMove != Move::NULLMOVE) && (i >= 5) && (depth > futilityReduction)) {
-			DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
-				+ ": " + Move::toString(move) + " Doing reduced depth search... ");
+		//	DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
+		//		+ ": " + Move::toString(move) + " Doing reduced depth search... ");
 			int evaluation = -negaMax(depth - futilityReduction, -beta, -alpha, results);
 			// Evaluation was worse than best line yet, as expected. PRUNE!
 			if (evaluation < alpha) {
-				DEBUG_COUT("--> Line can be discarded.\n");
+				//		DEBUG_COUT("--> Line can be discarded.\n");
 				undoMove(&move);
 				swapCurrentPlayer();
 				possibleMoves = moves;
 				continue;
-			} else 
-				DEBUG_COUT("--> Evaluation was better than expected. Doing deeper search.\n");
+			} //else 
+				//DEBUG_COUT("--> Evaluation was better than expected. Doing deeper search.\n");
 		}
 		//---------------------------------------------------------------------------------
 		
