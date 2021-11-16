@@ -46,7 +46,7 @@ void Board::init(std::string fen) {
 	if (!readPosFromFEN(fen)) {
 		readPosFromFEN();
 	}
-	currentZobristKey = Zobrist::getZobristKey(&bb, castleRights, enPassantSquare);
+	currentZobristKey = Zobrist::getZobristKey(&bb, castleRights, enPassantSquare, currentPlayer == Piece::WHITE);
 	DEBUG_COUT("Zobrist key for this position: " + std::to_string(currentZobristKey) + '\n');
 	generateMoves();
 }
@@ -492,6 +492,7 @@ void Board::makeAiMove() {
 	futureMovesBuffer = std::stack<Move>();
 
 	swapCurrentPlayer();
+
 	generateMoves();
 
 	if (possibleMoves.size() == 0) {
@@ -515,11 +516,18 @@ void Board::doMove(const Move* move) {
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
 
-	bitboard oldBitboardMovedPiece = bb.getBitboard(pieceFrom);
-	bitboard oldBitboardCapturedPiece = bb.getBitboard(pieceTo);
-
 	setPiece(to, promoResult);
+	if ((Piece::getType(pieceTo) != Piece::NONE) && !move->isEnPassant()) {
+		// Remove captured piece from hash
+		Zobrist::updatePieceHash(currentZobristKey, pieceTo, to);
+	}
+	// Add piece to hash on target square
+	Zobrist::updatePieceHash(currentZobristKey, promoResult, to);
+	
 	removePiece(from);
+
+	// Remove piece from hash at origin position
+	Zobrist::updatePieceHash(currentZobristKey, pieceFrom, from);
 
 	turn++;
 	
@@ -528,7 +536,10 @@ void Board::doMove(const Move* move) {
 	
 	// En passant 
 	if (move->isEnPassant()) {
-		removePiece(currentPlayer == Piece::WHITE ? to - 8 : to + 8);
+		unsigned short square = currentPlayer == Piece::WHITE ? to - 8 : to + 8;
+		removePiece(square);
+		// Remove captured pawn from hash
+		Zobrist::updatePieceHash(currentZobristKey, pieceTo, square);
 	}
 	else if (Piece::getType(pieceFrom) == Piece::PAWN && (abs(to - from) == 16)) {
 		// Double pawn step
@@ -542,7 +553,9 @@ void Board::doMove(const Move* move) {
 		unsigned short rookTo = from + (to - from) / 2;
 		// Castle detected, Rook has to be moved
 		removePiece(rookFrom);
+		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | currentPlayer, rookFrom);
 		setPiece(rookTo, Piece::ROOK | currentPlayer);
+		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | currentPlayer, rookTo);
 	}
 
 	//----------- UPDATE CASTLE RIGHTS ---------------------
@@ -610,13 +623,6 @@ void Board::doMove(const Move* move) {
 			blackKingPos = to;
 		}
 	}
-
-	Zobrist::updateZobristKey(currentZobristKey, oldBitboardMovedPiece, bb.getBitboard(pieceFrom));
-	if (pieceTo) {
-		Zobrist::updateZobristKey(currentZobristKey, oldBitboardCapturedPiece, bb.getBitboard(pieceTo));
-	}
-
-	DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');
 }
 
 void Board::doMove(std::string move) {
@@ -657,22 +663,30 @@ void Board::doMove(std::string move) {
 void Board::undoMove(const Move* move) {
 	PROFILE_FUNCTION();
 	//if (debugLogs) std::cout << "Trying to undo Move >>" << Move::toString(*move) << "<<\n";
-	bitboard oldBitboardMovedPiece = bb.getBitboard(move->piece);
-	bitboard oldBitboardCapturedPiece = bb.getBitboard(move->capturedPiece);
 
 	unsigned short target = move->targetSquare;
 
 	// Place captured piece / clear target square
 	if (move->isEnPassant()) {
 		removePiece(target);
-		setPiece(Piece::getColor(move->piece) == Piece::WHITE ? target - 8 : target + 8, move->capturedPiece);
+		Zobrist::updatePieceHash(currentZobristKey, move->piece, target);
+		unsigned short capturedPawnSquare = Piece::getColor(move->piece) == Piece::WHITE ? target - 8 : target + 8;
+		setPiece(capturedPawnSquare, move->capturedPiece);
+		Zobrist::updatePieceHash(currentZobristKey, move->capturedPiece, capturedPawnSquare);
 	}
 	else {
 		setPiece(target, move->capturedPiece);
+		if (Piece::getType(move->capturedPiece) != Piece::NONE) {
+			// Add captured piece back to the hash
+			Zobrist::updatePieceHash(currentZobristKey, move->capturedPiece, target);
+		}
+		// Remove moved piece from the hash at target pos
+		Zobrist::updatePieceHash(currentZobristKey, move->getPromotionResult(), target);
 	}
 
 	// Place piece back at startsquare
 	setPiece(move->startSquare, move->piece);
+	Zobrist::updatePieceHash(currentZobristKey, move->piece, move->startSquare);
 
 	turn--;
 
@@ -688,16 +702,13 @@ void Board::undoMove(const Move* move) {
 		if (abs(move->startSquare - target) == 2) {
 			unsigned short from = move->startSquare + (target - move->startSquare) / 2;
 			unsigned short to = target + (target - move->startSquare) / ((target - move->startSquare == 2) ? 2 : 1);
+			short rook = Piece::ROOK | Piece::getColor(move->piece);
 			// Castle detected, Rook has to be moved
-			setPiece(to, Piece::ROOK | Piece::getColor(move->piece));
+			setPiece(to, rook);
+			Zobrist::updatePieceHash(currentZobristKey, rook, to);
 			removePiece(from);
+			Zobrist::updatePieceHash(currentZobristKey, rook, from);
 		}
-	}
-
-	// Update Zobrist key w.r.t. pieces that moved / got captured
-	Zobrist::updateZobristKey(currentZobristKey, oldBitboardMovedPiece, bb.getBitboard(move->piece));
-	if (move->capturedPiece) {
-		Zobrist::updateZobristKey(currentZobristKey, oldBitboardCapturedPiece, bb.getBitboard(move->capturedPiece));
 	}
 
 	// Restore the castlerights and epsquare from before that move
@@ -705,8 +716,6 @@ void Board::undoMove(const Move* move) {
 	Zobrist::updateZobristKey(currentZobristKey, enPassantSquare, move->previousEPsquare);
 	castleRights = move->previousCastlerights;
 	enPassantSquare = move->previousEPsquare;
-
-	DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');
 }
 
 bool Board::undoLastMove()
@@ -717,6 +726,7 @@ bool Board::undoLastMove()
 	moveHistory.pop();
 	undoMove(lastMove);
 	futureMovesBuffer.push(*lastMove);
+
 	return true;
 }
 
@@ -725,6 +735,7 @@ bool Board::redoLastMove() {
 	doMove(&futureMovesBuffer.top());
 	moveHistory.push(futureMovesBuffer.top());
 	futureMovesBuffer.pop();
+
 	return true;
 }
 
@@ -1504,6 +1515,9 @@ void Board::swapCurrentPlayer() {
 		currentPlayer = Piece::BLACK;
 	else
 		currentPlayer = Piece::WHITE;
+
+	Zobrist::swapPlayerHash(currentZobristKey);
+	//DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');
 }
 
 std::string Board::getSquareName(unsigned short index) {
