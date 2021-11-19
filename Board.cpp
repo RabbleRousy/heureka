@@ -4,6 +4,7 @@
 #include <string>
 #include "Profiling.h"
 #include "Zobrist.h"
+#include "TranspositionTable.h"
 
 const std::string Board::squareNames[] = {
 		"a1","b1","c1","d1","e1","f1","g1","h1",
@@ -38,6 +39,7 @@ void Board::reset() {
 	wantsToPromote = false;
 	checkMate = false;
 	staleMate = false;
+	TranspositionTable::clear();
 	readPosFromFEN();
 	generateMoves();
 }
@@ -1302,6 +1304,41 @@ int Board::evaluateQueens() {
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false, bool allowNull = true) {
+	//----------------------- TRANSPOSITION TABLE LOOKUP ------------------------------
+
+	TableEntry* transposition = TranspositionTable::get(currentZobristKey);
+	if (transposition) {
+		DEBUG_COUT("Transposition Hit ... ");
+		if (transposition->depth >= depth) {
+			switch (transposition->type) {
+			case TableEntry::scoreType::EXACT:
+				DEBUG_COUT(" CAUSES CUTOFF!!\n");
+				if (firstCall) {
+					results->bestMove = transposition->bestMove;
+					results->evaluation = transposition->evaluation;
+				}
+				return transposition->evaluation;
+			case TableEntry::scoreType::LOWER_BOUND:
+				DEBUG_COUT(" sets new lower bound.\n");
+				if (!firstCall && (transposition->evaluation >= beta))
+					// Beta cutoff with lower bound value
+					return beta;
+				break;
+			case TableEntry::scoreType::UPPER_BOUND:
+				DEBUG_COUT(" sets new upper bound.\n");
+				// Great alpha value for current search
+				if (!firstCall)
+					alpha = transposition->evaluation;
+				else if (transposition->bestMove != Move::NULLMOVE) {
+					results->bestMove = transposition->bestMove;
+					results->evaluation = transposition->evaluation;
+					alpha = transposition->evaluation;
+				}
+				break;
+			}
+		}
+	}
+
 	if (timeOut) return 0;
 
 	generateMoves();
@@ -1310,20 +1347,25 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		if (attackData.checkExists) {
 			// Checkmate
 			//std::cout << "Checkmate!\n";
+			TranspositionTable::add(currentZobristKey, Move::NULLMOVE, -10000 - depth, TableEntry::scoreType::EXACT, depth);
 			return -100000 - depth; // Earier checkmates (when depth is still high) are best for the opponent (worse for us)
 		}
 		// Stalemate
 		//std::cout << "Stalemate!\n";
+		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, 0, TableEntry::scoreType::EXACT, depth);
 		return 0;
 	}
 
 	if (depth == 0) {
-		return negaMaxQuiescence(alpha, beta, results);
+		int eval = negaMaxQuiescence(alpha, beta, results);
+		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, eval, TableEntry::scoreType::UPPER_BOUND, 0);
+		return eval;
 	}
 	
 	// Order Moves before iterating to maximize pruning
 	orderMoves();
 	std::vector<Move> moves = possibleMoves;
+	Move bestMove = Move::NULLMOVE;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		results->positionsSearched++;
@@ -1342,8 +1384,10 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 				possibleMoves = moves;
 
 				// PRUNE
-				if (evaluation >= beta)
+				if (evaluation >= beta) {
+					TranspositionTable::add(currentZobristKey, Move::NULLMOVE, evaluation, TableEntry::scoreType::UPPER_BOUND, depth - nullMoveReduction);
 					return beta;
+				}
 			}
 		}
 		//---------------------------------------------------------------------------------
@@ -1371,10 +1415,12 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		//---------------------------------------------------------------------------------
 		
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
+
 		if (firstCall) DEBUG_COUT("Move #" + std::to_string(i) + ' ' + Move::toString(move) + " has evaluation: " + std::to_string(evaluation) + '\n');
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
+
 		if (evaluation > alpha) {
 			if (firstCall) {
 				results->bestMove = move;
@@ -1382,12 +1428,17 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 					" with eval=" + std::to_string(evaluation) + " (Alpha was " + std::to_string(alpha) + ")\n");
 				results->evaluation = evaluation;
 			}
+			bestMove = move;
 			alpha = evaluation;
 		}
 		if (!firstCall && (evaluation >= beta)) {
 			// Prune branch
+			TranspositionTable::add(currentZobristKey, move, evaluation, TableEntry::scoreType::LOWER_BOUND, depth);
 			return beta;
 		}
+	}
+	if (bestMove != Move::NULLMOVE) {
+		TranspositionTable::add(currentZobristKey, bestMove, alpha, TableEntry::scoreType::EXACT, depth);
 	}
 	return alpha;
 }

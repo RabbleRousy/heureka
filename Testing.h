@@ -19,7 +19,7 @@ private:
 
 	const string resultsPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TestResults\\";
 
-	const string VERSION_NAME = "0_2_3 FUTILITY PRUNING";
+	const string VERSION_NAME = "0_2_4 TRANSPOSITION TABLE";
 
 	const TestCase testCases[3] = {
 		TestCase("Seb Lauge Testposition",
