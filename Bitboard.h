@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <assert.h>
 
 typedef unsigned __int64 bitboard;
 #define C64(constantU64) constantU64##ULL
@@ -103,7 +104,7 @@ public:
 	~Bitboard();
 	/// <param name="p">is a Piece consisting of Type | Color, or only a Color.</param>
 	/// <returns>a bitboard containing the current positions of the given piece or all pieces of that color. </returns>
-	bitboard getBitboard(short p);
+	bitboard getBitboard(short p) const;
 	void setPiece(short p, unsigned short index);
 	void removePiece(short p, unsigned short index);
 	bitboard getOccupied();

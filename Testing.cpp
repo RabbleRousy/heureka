@@ -46,6 +46,8 @@ void Testing::runTest() {
 		file << ";;;;\n"; // maybe unnecesary
 		file << ";;;;\n";
 		file << ";;;;\n";
+
+		if (i < 2) board.reset();
 	}
 
 	file.close();  

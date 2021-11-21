@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #include "Profiling.h"
+#include "Zobrist.h"
+#include "TranspositionTable.h"
 
 const std::string Board::squareNames[] = {
 		"a1","b1","c1","d1","e1","f1","g1","h1",
@@ -19,8 +21,8 @@ short Board::castleRights = 0b1111;
 unsigned short Board::enPassantSquare = 64;
 Bitboard Board::bb = Bitboard();
 
-Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(),
-debugLogs(false), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
+	Zobrist::initializeHashes();
 }
 
 
@@ -37,15 +39,23 @@ void Board::reset() {
 	wantsToPromote = false;
 	checkMate = false;
 	staleMate = false;
+	TranspositionTable::clear();
 	readPosFromFEN();
+	generateMoves();
+}
+
+void Board::init(std::string fen) {
+	if (!readPosFromFEN(fen)) {
+		readPosFromFEN();
+	}
+	currentZobristKey = Zobrist::getZobristKey(&bb, castleRights, enPassantSquare, currentPlayer == Piece::WHITE);
+	DEBUG_COUT("Zobrist key for this position: " + std::to_string(currentZobristKey) + '\n');
 	generateMoves();
 }
 
 bool Board::readPosFromFEN(std::string fen) {
 
-	const bool DEBUG = debugLogs;
-
-	if (DEBUG) std::cout << "Trying to parse FEN: " << fen << std::endl;
+	DEBUG_COUT("Trying to parse FEN: " + fen + '\n');
 	clearBoard();
 	// Default values
 	currentPlayer = Piece::WHITE;
@@ -61,7 +71,7 @@ bool Board::readPosFromFEN(std::string fen) {
 		if (row == 0 && column == 8)
 			break;
 
-		if (DEBUG) std::cout << "Parsing " << fen[i] << " ... \n";
+		DEBUG_COUT("Parsing " + std::to_string(fen[i]) + " ... \n");
 
 		// Return false for invalid fens that reach out of bounds
 		if (row < 0 || (column > 7 && fen[i] != '/')) {
@@ -149,7 +159,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	if (!(row == 0 && column == 8))return false;
 	// No additional infos
 	if (i >= fen.size()-1) {
-		if (DEBUG) std::cout << "End of FEN reached.\n";
+		DEBUG_COUT("End of FEN reached.\n");
 		return true;
 	}
 
@@ -162,18 +172,15 @@ bool Board::readPosFromFEN(std::string fen) {
 		currentPlayer = Piece::WHITE;
 		break;
 	}
-	if (DEBUG)
-		std::cout << "Current player read from FEN: " << fen[i] << '\n';
+	DEBUG_COUT("Current player read from FEN: " + fen[i] + '\n');
 
 	// Castling rights
 	castleRights = 0;
 	int j = i+2;
 	for (j; j < (i + 6); j++) {
-		if (DEBUG) std::cout << "j = " << j << ", i = " << i << '\n';
 		if (j == fen.size()) break;
 
 		switch (fen[j]) {
-			if (DEBUG) std::cout << "Parsing " << fen[j] << " ...\n";
 		case '-':
 			return true;
 		case 'K':
@@ -192,12 +199,7 @@ bool Board::readPosFromFEN(std::string fen) {
 			castleRights = 0b1111;
 			return true;
 		}
-		if (DEBUG) std::cout << "Castle right input: " << fen[j] << '\n';
 	}
-	// Something went wrong while parsing castlerights, set all as default
-	if (castleRights == 0)
-		castleRights = 0b1111;
-	if (DEBUG) std::cout << "Castle rights set to: " << std::to_string(castleRights) << '\n';
 
 	// No ep capture left to read
 	if (!(j < fen.size() - 2)) {
@@ -245,12 +247,12 @@ bool Board::readPosFromFEN(std::string fen) {
 		default:
 			return true;
 		}
-		if (DEBUG) std::cout << "EP Capture input: " << fen[i] << '\n';
+		DEBUG_COUT("EP Capture input: " + fen[i] + '\n');
 	}
 
 	// Parsing failed
 	if (column == 8 || !(row == 2 || row == 5)) {
-		std::cerr << "EP capture parsing failed\n";
+		DEBUG_COUT("EP capture parsing failed\n");
 		return true;
 	}
 
@@ -394,7 +396,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 		return false;
 	}
 	
-	if (debugLogs) std::cout << "Handling move input from " << getSquareName(start) << " to " << getSquareName(target) << " ...\n";
+	DEBUG_COUT("Handling move input from " + getSquareName(start) + " to " + getSquareName(target) + " ...\n");
 
 	if (wantsToPromote && promotionChoice != 0) {
 		// Promotion choice was made, we already stored the correct move in promoMoveBuffer
@@ -421,10 +423,8 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		makePlayerMove(&promoMoveBuffer);
 
-		if (debugLogs) {
-			std::cout << "Promotion to " << Piece::name(promotionChoice | currentPlayer) << " performed.\n";
-			std::cout << "New FEN: " << getFENfromPos() << '\n';
-		}
+		DEBUG_COUT("Promotion to " + Piece::name(promotionChoice | currentPlayer) + " performed.\n");
+		DEBUG_COUT("New FEN: " + getFENfromPos() + '\n');
 
 		return true;
 	}
@@ -445,24 +445,22 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		//--------- MOVE FOUND ----------------------
 
-		if (debugLogs) std::cout << "Move found in possibleMoves list. Checking if it's promotion ...";
+		DEBUG_COUT("Move found in possibleMoves list. Checking if it's promotion ...");
 
 		// Promotion
 		if (possibleMoves[i].isPromotion()) {
-			if (debugLogs) std::cout << " YES. Setting wantsToPromote flag.\n";
+			DEBUG_COUT(" YES. Setting wantsToPromote flag.\n");
 			// Promotion needs to be completed by player
 			wantsToPromote = true;
 			promoMoveBuffer = possibleMoves[i];
 			// Correct promotion move will be added afterwards
 			return false;
 		}
-		if (debugLogs) std::cout << " NO. Doing move: " << Move::toString(possibleMoves[i]) << '\n';
+		DEBUG_COUT(" NO. Doing move: " + Move::toString(possibleMoves[i]) + '\n');
 
 		makePlayerMove(&possibleMoves[i]);
 
-		if (debugLogs) {
-			std::cout << "New FEN: " << getFENfromPos() << '\n';
-		}
+		DEBUG_COUT("New FEN: " + getFENfromPos() + '\n');
 
 		return true;
 	}
@@ -496,6 +494,7 @@ void Board::makeAiMove() {
 	futureMovesBuffer = std::stack<Move>();
 
 	swapCurrentPlayer();
+
 	generateMoves();
 
 	if (possibleMoves.size() == 0) {
@@ -510,6 +509,7 @@ void Board::makeAiMove() {
 
 void Board::doMove(const Move* move) {
 	PROFILE_FUNCTION();
+	unsigned short oldEpSquare = enPassantSquare;
 	enPassantSquare = 64;
 	const unsigned short from = move->startSquare;
 	const unsigned short to = move->targetSquare;
@@ -517,8 +517,19 @@ void Board::doMove(const Move* move) {
 	short pieceFrom = move->piece;
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
+
 	setPiece(to, promoResult);
+	if ((Piece::getType(pieceTo) != Piece::NONE) && !move->isEnPassant()) {
+		// Remove captured piece from hash
+		Zobrist::updatePieceHash(currentZobristKey, pieceTo, to);
+	}
+	// Add piece to hash on target square
+	Zobrist::updatePieceHash(currentZobristKey, promoResult, to);
+	
 	removePiece(from);
+
+	// Remove piece from hash at origin position
+	Zobrist::updatePieceHash(currentZobristKey, pieceFrom, from);
 
 	turn++;
 	
@@ -527,23 +538,31 @@ void Board::doMove(const Move* move) {
 	
 	// En passant 
 	if (move->isEnPassant()) {
-		removePiece(currentPlayer == Piece::WHITE ? to - 8 : to + 8);
+		unsigned short square = currentPlayer == Piece::WHITE ? to - 8 : to + 8;
+		removePiece(square);
+		// Remove captured pawn from hash
+		Zobrist::updatePieceHash(currentZobristKey, pieceTo, square);
 	}
 	else if (Piece::getType(pieceFrom) == Piece::PAWN && (abs(to - from) == 16)) {
 		// Double pawn step
 		enPassantSquare = from + ((to - from) / 2);
 	}
+	// Update Zobrist Key w.r.t. ep Square (might have changed or dissapeared)
+	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, enPassantSquare);
 
 	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
 		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
 		unsigned short rookTo = from + (to - from) / 2;
 		// Castle detected, Rook has to be moved
 		removePiece(rookFrom);
+		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | currentPlayer, rookFrom);
 		setPiece(rookTo, Piece::ROOK | currentPlayer);
+		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | currentPlayer, rookTo);
 	}
 
 	//----------- UPDATE CASTLE RIGHTS ---------------------
 	if (castleRights != 0) {
+		short oldCastleRights = castleRights;
 		// If king moved, delete that player's castle rights
 		if (Piece::getType(pieceFrom) == Piece::KING) {
 			castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
@@ -594,6 +613,7 @@ void Board::doMove(const Move* move) {
 				}
 			}
 		}
+		Zobrist::updateZobristKey(currentZobristKey, oldCastleRights, castleRights);
 	}
 
 	//----------- UPDATE KING POS --------------------------
@@ -651,14 +671,24 @@ void Board::undoMove(const Move* move) {
 	// Place captured piece / clear target square
 	if (move->isEnPassant()) {
 		removePiece(target);
-		setPiece(Piece::getColor(move->piece) == Piece::WHITE ? target - 8 : target + 8, move->capturedPiece);
+		Zobrist::updatePieceHash(currentZobristKey, move->piece, target);
+		unsigned short capturedPawnSquare = Piece::getColor(move->piece) == Piece::WHITE ? target - 8 : target + 8;
+		setPiece(capturedPawnSquare, move->capturedPiece);
+		Zobrist::updatePieceHash(currentZobristKey, move->capturedPiece, capturedPawnSquare);
 	}
 	else {
 		setPiece(target, move->capturedPiece);
+		if (Piece::getType(move->capturedPiece) != Piece::NONE) {
+			// Add captured piece back to the hash
+			Zobrist::updatePieceHash(currentZobristKey, move->capturedPiece, target);
+		}
+		// Remove moved piece from the hash at target pos
+		Zobrist::updatePieceHash(currentZobristKey, move->getPromotionResult(), target);
 	}
 
 	// Place piece back at startsquare
 	setPiece(move->startSquare, move->piece);
+	Zobrist::updatePieceHash(currentZobristKey, move->piece, move->startSquare);
 
 	turn--;
 
@@ -674,12 +704,18 @@ void Board::undoMove(const Move* move) {
 		if (abs(move->startSquare - target) == 2) {
 			unsigned short from = move->startSquare + (target - move->startSquare) / 2;
 			unsigned short to = target + (target - move->startSquare) / ((target - move->startSquare == 2) ? 2 : 1);
+			short rook = Piece::ROOK | Piece::getColor(move->piece);
 			// Castle detected, Rook has to be moved
-			setPiece(to, Piece::ROOK | Piece::getColor(move->piece));
+			setPiece(to, rook);
+			Zobrist::updatePieceHash(currentZobristKey, rook, to);
 			removePiece(from);
+			Zobrist::updatePieceHash(currentZobristKey, rook, from);
 		}
 	}
+
 	// Restore the castlerights and epsquare from before that move
+	Zobrist::updateZobristKey(currentZobristKey, castleRights, move->previousCastlerights);
+	Zobrist::updateZobristKey(currentZobristKey, enPassantSquare, move->previousEPsquare);
 	castleRights = move->previousCastlerights;
 	enPassantSquare = move->previousEPsquare;
 }
@@ -692,6 +728,7 @@ bool Board::undoLastMove()
 	moveHistory.pop();
 	undoMove(lastMove);
 	futureMovesBuffer.push(*lastMove);
+
 	return true;
 }
 
@@ -700,6 +737,7 @@ bool Board::redoLastMove() {
 	doMove(&futureMovesBuffer.top());
 	moveHistory.push(futureMovesBuffer.top());
 	futureMovesBuffer.pop();
+
 	return true;
 }
 
@@ -1266,7 +1304,41 @@ int Board::evaluateQueens() {
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false, bool allowNull = true) {
-	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
+	//----------------------- TRANSPOSITION TABLE LOOKUP ------------------------------
+
+	TableEntry* transposition = TranspositionTable::get(currentZobristKey);
+	if (transposition) {
+		DEBUG_COUT("Transposition Hit ... ");
+		if (transposition->depth >= depth) {
+			switch (transposition->type) {
+			case TableEntry::scoreType::EXACT:
+				DEBUG_COUT(" CAUSES CUTOFF!!\n");
+				if (firstCall) {
+					results->bestMove = transposition->bestMove;
+					results->evaluation = transposition->evaluation;
+				}
+				return transposition->evaluation;
+			case TableEntry::scoreType::LOWER_BOUND:
+				DEBUG_COUT(" sets new lower bound.\n");
+				if (!firstCall && (transposition->evaluation >= beta))
+					// Beta cutoff with lower bound value
+					return beta;
+				break;
+			case TableEntry::scoreType::UPPER_BOUND:
+				DEBUG_COUT(" sets new upper bound.\n");
+				// Great alpha value for current search
+				if (!firstCall)
+					alpha = transposition->evaluation;
+				else if (transposition->bestMove != Move::NULLMOVE) {
+					results->bestMove = transposition->bestMove;
+					results->evaluation = transposition->evaluation;
+					alpha = transposition->evaluation;
+				}
+				break;
+			}
+		}
+	}
+
 	if (timeOut) return 0;
 
 	generateMoves();
@@ -1275,62 +1347,98 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		if (attackData.checkExists) {
 			// Checkmate
 			//std::cout << "Checkmate!\n";
-			return -1000000;
+			TranspositionTable::add(currentZobristKey, Move::NULLMOVE, -10000 - depth, TableEntry::scoreType::EXACT, depth);
+			return -100000 - depth; // Earier checkmates (when depth is still high) are best for the opponent (worse for us)
 		}
 		// Stalemate
 		//std::cout << "Stalemate!\n";
+		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, 0, TableEntry::scoreType::EXACT, depth);
 		return 0;
 	}
 
 	if (depth == 0) {
-		return negaMaxQuiescence(alpha, beta, results);
+		int eval = negaMaxQuiescence(alpha, beta, results);
+		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, eval, TableEntry::scoreType::UPPER_BOUND, 0);
+		return eval;
 	}
 	
 	// Order Moves before iterating to maximize pruning
 	orderMoves();
 	std::vector<Move> moves = possibleMoves;
+	Move bestMove = Move::NULLMOVE;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
 		results->positionsSearched++;
 
+		//----------------------- NULL MOVE PRUNING ----------------------------------------
 		if (allowNull && !firstCall && !attackData.checkExists) {
-			// Null Move Pruning
-			const int R = 3;
+			const int nullMoveReduction = 3;
 			// Avoid situations where zugzwang is most likely
-			if (possibleMoves.size() > 5 && depth > R) {
+			if (possibleMoves.size() > 5 && depth > nullMoveReduction) {
 				// Skip our move
 				swapCurrentPlayer();
 				// Do a reduced depth search
-				int evaluation = -negaMax(depth - R, -beta, -beta+1, results, false, false);
+				int evaluation = -negaMax(depth - nullMoveReduction, -beta, -beta+1, results, false, false);
 				// Undo stuff
 				swapCurrentPlayer();
 				possibleMoves = moves;
 
 				// PRUNE
-				if (evaluation >= beta)
+				if (evaluation >= beta) {
+					TranspositionTable::add(currentZobristKey, Move::NULLMOVE, evaluation, TableEntry::scoreType::UPPER_BOUND, depth - nullMoveReduction);
 					return beta;
+				}
 			}
 		}
+		//---------------------------------------------------------------------------------
 
 		Move move = possibleMoves[i];
 		doMove(&move);
 		swapCurrentPlayer();
+
+		//----------------------- FUTILITY PRUNING ----------------------------------------
+		const int futilityReduction = (i < 10) ? 3 : 4;
+		if ((results->bestMove != Move::NULLMOVE) && (i >= 5) && (depth > futilityReduction)) {
+		//	DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
+		//		+ ": " + Move::toString(move) + " Doing reduced depth search... ");
+			int evaluation = -negaMax(depth - futilityReduction, -beta, -alpha, results);
+			// Evaluation was worse than best line yet, as expected. PRUNE!
+			if (evaluation < alpha) {
+				//		DEBUG_COUT("--> Line can be discarded.\n");
+				undoMove(&move);
+				swapCurrentPlayer();
+				possibleMoves = moves;
+				continue;
+			} //else 
+				//DEBUG_COUT("--> Evaluation was better than expected. Doing deeper search.\n");
+		}
+		//---------------------------------------------------------------------------------
+		
 		int evaluation = -negaMax(depth - 1, -beta, -alpha, results);
+
+		if (firstCall) DEBUG_COUT("Move #" + std::to_string(i) + ' ' + Move::toString(move) + " has evaluation: " + std::to_string(evaluation) + '\n');
 		undoMove(&move);
 		swapCurrentPlayer();
 		possibleMoves = moves;
+
 		if (evaluation > alpha) {
-			alpha = evaluation;
 			if (firstCall) {
 				results->bestMove = move;
-				//std::cout << "New best move: #" << i << ' ' << Move::toString(results->bestMove) << " with eval=" << evaluation << '\n';
+				DEBUG_COUT("New best move: #" + std::to_string(i) + ' ' + Move::toString(results->bestMove) +
+					" with eval=" + std::to_string(evaluation) + " (Alpha was " + std::to_string(alpha) + ")\n");
 				results->evaluation = evaluation;
 			}
+			bestMove = move;
+			alpha = evaluation;
 		}
-		if (evaluation >= beta) {
+		if (!firstCall && (evaluation >= beta)) {
 			// Prune branch
+			TranspositionTable::add(currentZobristKey, move, evaluation, TableEntry::scoreType::LOWER_BOUND, depth);
 			return beta;
 		}
+	}
+	if (bestMove != Move::NULLMOVE) {
+		TranspositionTable::add(currentZobristKey, bestMove, alpha, TableEntry::scoreType::EXACT, depth);
 	}
 	return alpha;
 }
@@ -1384,7 +1492,7 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 Board::SearchResults Board::searchBestMove(unsigned int depth) {
 	SearchResults searchResults;
 	searchResults.depth = depth;
-	negaMax(depth, -100000, 100000, &searchResults, true);
+	negaMax(depth, -1000000, 1000000, &searchResults, true);
 	return searchResults;
 }
 
@@ -1418,12 +1526,10 @@ Board::SearchResults Board::iterativeSearch(float time) {
 
 		logResults:
 
-		if (debugLogs) {
-			std::cout << "Depth: " << lastSearchResult.depth << "; Eval: " << lastSearchResult.evaluation
-				<< "; Move: " << Move::toString(lastSearchResult.bestMove) << "; Positions: "
-				<< lastSearchResult.positionsSearched << "; Time searched: "
-				<< duration.count() * 1000.0f << "ms\n";
-		}
+		DEBUG_COUT("Depth: " + std::to_string(lastSearchResult.depth) + "; Eval: " + std::to_string(lastSearchResult.evaluation)
+				+ "; Move: " + Move::toString(lastSearchResult.bestMove) + "; Positions: "
+				+ std::to_string(lastSearchResult.positionsSearched) + "; Time searched: "
+				+ std::to_string(duration.count() * 1000.0f) + "ms\n");
 	}
 
 	processing = false;
@@ -1460,6 +1566,9 @@ void Board::swapCurrentPlayer() {
 		currentPlayer = Piece::BLACK;
 	else
 		currentPlayer = Piece::WHITE;
+
+	Zobrist::swapPlayerHash(currentZobristKey);
+	//DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');
 }
 
 std::string Board::getSquareName(unsigned short index) {

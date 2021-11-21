@@ -432,13 +432,14 @@ int Bitboard::shittyHash(bitboard occupancy, unsigned long long magicNumber, uns
     return int((occupancy * magicNumber) >> (64 - bitCount));
 }
 
-bitboard Bitboard::getBitboard(short p)
+bitboard Bitboard::getBitboard (short p) const
 {
     return allPieces[p];
 }
 
 void Bitboard::setPiece(short p, unsigned short index)
 {
+    assert(index < 64);
     bitboard mask = (bitboard)1 << (index);
     allPieces[p] |= mask;
     allPieces[Piece::getColor(p)] |= mask;

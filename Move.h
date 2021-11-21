@@ -13,6 +13,12 @@
 /// Struct to handle moves on the board
 /// </summary>
 struct Move {
+	enum Promotion {
+		None = 0, ToQueen = 0b001, ToRook = 0b010, ToBishop = 0b011, ToKnight = 0b100
+	};
+
+	static const Move NULLMOVE;
+
 	// The piece that moved
 	short piece;
 
@@ -24,10 +30,6 @@ struct Move {
 
 	// Square where the move ends
 	unsigned short targetSquare;
-
-	enum Promotion {
-		None = 0, ToQueen = 0b001, ToRook = 0b010, ToBishop = 0b011, ToKnight = 0b100
-	};
 
 	// Last 3 bits: Promotion type, 4th bit: en passant flag
 	short flags;
@@ -66,5 +68,19 @@ struct Move {
 
 	/// <returns>the piece that this move promotes to. If move is not a promotion, returns this->piece.</returns>
 	short getPromotionResult() const;
+
+	bool operator==(const Move& other) {
+		return (this->piece == other.piece) && (this->capturedPiece == other.piece)
+			&& (this->startSquare == other.startSquare) && (this->targetSquare == other.targetSquare)
+			&& (this->flags == other.flags) && (this->previousCastlerights == other.previousCastlerights)
+			&& (this->previousEPsquare == other.previousEPsquare) && (this->score == other.score);
+	};
+
+	bool operator!=(const Move& other) {
+		return (this->piece != other.piece) || (this->capturedPiece != other.piece)
+			|| (this->startSquare != other.startSquare) || (this->targetSquare != other.targetSquare)
+			|| (this->flags != other.flags) || (this->previousCastlerights != other.previousCastlerights)
+			|| (this->previousEPsquare != other.previousEPsquare) || (this->score != other.score);
+	};
 };
 

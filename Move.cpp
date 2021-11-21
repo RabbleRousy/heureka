@@ -2,7 +2,7 @@
 #include "Piece.h"
 #include "Board.h"
 
-Move::Move() : piece(0), capturedPiece(0), startSquare(0), targetSquare(0), flags(0), score(0.0f), previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare) {};
+Move::Move() : piece(0), capturedPiece(0), startSquare(0), targetSquare(0), flags(0), score(0.0f), previousCastlerights(0), previousEPsquare(0) {};
 
 Move::Move(short p, short capture, unsigned short start, unsigned short target, short f)
 	: piece(p), capturedPiece(capture), startSquare(start), targetSquare(target), flags(f), score(0.0f), previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare) {
@@ -36,7 +36,7 @@ std::string Move::toString(Move m)
 	name += Board::getSquareName(m.targetSquare);
 
 	if (m.isPromotion()) {
-		switch (m.getPromotionResult()) {
+		switch (m.flags & 0b111) {
 		case (Promotion::ToQueen):
 			name += 'q';
 			break;
@@ -55,6 +55,8 @@ std::string Move::toString(Move m)
 	return name;
 }
 
+const Move Move::NULLMOVE;
+
 bool Move::isEnPassant() const
 {
 	return (flags & 0b1000);
@@ -62,7 +64,7 @@ bool Move::isEnPassant() const
 
 bool Move::isPromotion() const
 {
-	return (flags & 0b0111) != 0;
+	return (Piece::getType(piece) == Piece::PAWN) && (flags & 0b111);
 }
 
 short Move::getPromotionResult() const
@@ -71,12 +73,16 @@ short Move::getPromotionResult() const
 	switch (flags & 0b0111) {
 	case Promotion::ToBishop:
 		return Piece::BISHOP | color;
+		break;
 	case Promotion::ToKnight:
 		return Piece::KNIGHT | color;
+		break;
 	case Promotion::ToQueen:
 		return Piece::QUEEN | color;
+		break;
 	case Promotion::ToRook:
 		return Piece::ROOK | color;
+		break;
 	default:
 		return piece;
 	}

@@ -7,6 +7,14 @@
 #include <thread>
 #include <future>
 
+#ifdef _DEBUG
+#define DEBUG_COUT(x) (std::cout << (x))
+#define DEBUG_CERR(x) (std::cerr << (x))
+#else
+#define DEBUG_COUT(x)
+#define DEBUG_CERR(x)
+#endif
+
 using namespace std::literals::chrono_literals;
 
 // Central class that handles everything that happens on the board.
@@ -19,6 +27,8 @@ private:
 	short whiteKingPos;
 	short blackKingPos;
 	AttackData attackData;
+
+	unsigned long long currentZobristKey;
 
 	bool timeOut;
 
@@ -122,7 +132,7 @@ public:
 		Move bestMove;
 		int evaluation;
 
-		SearchResults() : positionsSearched(0), evaluation(0), depth(0) {}
+		SearchResults() : positionsSearched(0), evaluation(0), depth(0), bestMove(Move::NULLMOVE) {}
 	};
 	float searchTime;
 	bool processing;
@@ -150,9 +160,6 @@ public:
 	// Indicates to the GUI wether the player needs to input a promotion choice
 	bool wantsToPromote;
 
-	// If set, detailed infos on move generation will be logged into the console
-	bool debugLogs;
-
 	std::vector<Move> possibleMoves;
 
 	std::stack<Move> moveHistory;
@@ -166,6 +173,8 @@ public:
 	void clearBoard();
 
 	void reset();
+
+	void init(std::string fen);
 
 	/// <summary>
 	/// 

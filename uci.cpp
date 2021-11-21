@@ -179,9 +179,10 @@ void uci::parseGo(std::string input) {
 	// Calculate time for search w.r.t. collected parameters
 	movetime = (board.currentPlayer == Piece::WHITE) ? wtime : btime;
 	movetime /= movestogo;
-	if (movetime > 550.0f) movetime -= 500.0f;
 
 	search:
+	// Margin time
+	if (movetime > 550.0f) movetime -= 500.0f;
 
 	// Start search thread for ~4s
 	searchResults = std::async(&Board::iterativeSearch, board, movetime);

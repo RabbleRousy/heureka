@@ -49,13 +49,6 @@ void ChessGraphics::initGame()
 {
 
 	std::string input;
-	std::cout << "Do you want to log debug information? Enter Y for yes.\n";
-	std::cin >> input;
-	debugPossibleMoves = (input == "Y" || input == "y");
-	board.debugLogs = debugPossibleMoves;
-
-	// Clear CIN
-	std::cin.ignore(100, '\n');
 
 	std::cout << "Do you want to play versus an AI opponent? Enter Y for yes.\n";
 	std::cin >> input;
@@ -89,11 +82,7 @@ void ChessGraphics::initGame()
 
 	std::cout << fen << std::endl;
 
-	if (!board.readPosFromFEN(fen)) {
-		board.readPosFromFEN();
-	}
-
-	board.generateMoves();
+	board.init(fen);
 }
 
 void ChessGraphics::mainLoop() {
@@ -218,13 +207,13 @@ void ChessGraphics::mainLoop() {
 			}
 			else if (Keyboard::isKeyPressed(Keyboard::Key::S)) {
 				// SEARCH
-				std::cout << "Enter search time in ms: ";
+				std::cout << "Enter search depth: ";
 				int depth;
 				std::cin >> depth;
 				Instrumentor::Get().BeginSession("Search " + std::to_string(depth) + " profile", "search.json");
 				auto startTimePoint = std::chrono::high_resolution_clock::now();
 				
-				Board::SearchResults results = board.iterativeSearch(depth);
+				Board::SearchResults results = board.searchBestMove(depth);
 
 				auto endTimePoint = std::chrono::high_resolution_clock::now();
 				long long start = std::chrono::time_point_cast<std::chrono::milliseconds>(startTimePoint).time_since_epoch().count();
