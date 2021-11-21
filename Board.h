@@ -163,6 +163,7 @@ public:
 	std::vector<Move> possibleMoves;
 
 	std::stack<Move> moveHistory;
+	std::stack<unsigned long long> positionHistory;
 
 	std::stack<Move> futureMovesBuffer;
 

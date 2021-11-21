@@ -133,7 +133,6 @@ void uci::parsePosition(std::string input) {
 		if (wordEnd == -1) wordEnd = input.size();
 		std::string move = input.substr(i, wordEnd - i);
 		board.doMove(move);
-		board.swapCurrentPlayer();
 		i = wordEnd + 1;
 	}
 }

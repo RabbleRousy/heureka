@@ -182,13 +182,11 @@ void ChessGraphics::mainLoop() {
 			}
 			else if (Keyboard::isKeyPressed(Keyboard::Key::Left)) {
 				if (board.undoLastMove()) {
-					board.swapCurrentPlayer();
 					board.generateMoves();
 				}
 			}
 			else if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
 				if (board.redoLastMove()) {
-					board.swapCurrentPlayer();
 					board.generateMoves();
 				}
 			}

@@ -270,8 +270,6 @@ bool Board::readPosFromFEN(std::string fen) {
 	
 	doMove(&epMove);
 
-	swapCurrentPlayer();
-
 	/*
 
 	std::cout << "\nRooks bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::ROOK | currentPlayer) | bb.getBitboard(Piece::ROOK | Piece::getOppositeColor(currentPlayer)));
@@ -473,8 +471,6 @@ void Board::makePlayerMove(const Move* move) {
 	moveHistory.push(*move);
 	futureMovesBuffer = std::stack<Move>();
 
-	swapCurrentPlayer();
-
 	generateMoves();
 	if (possibleMoves.size() == 0) {
 		if (attackData.checkExists) {
@@ -492,8 +488,6 @@ void Board::makeAiMove() {
 
 	moveHistory.push(currentSearch.bestMove);
 	futureMovesBuffer = std::stack<Move>();
-
-	swapCurrentPlayer();
 
 	generateMoves();
 
@@ -625,6 +619,8 @@ void Board::doMove(const Move* move) {
 			blackKingPos = to;
 		}
 	}
+
+	swapCurrentPlayer();
 }
 
 void Board::doMove(std::string move) {
@@ -718,6 +714,8 @@ void Board::undoMove(const Move* move) {
 	Zobrist::updateZobristKey(currentZobristKey, enPassantSquare, move->previousEPsquare);
 	castleRights = move->previousCastlerights;
 	enPassantSquare = move->previousEPsquare;
+
+	swapCurrentPlayer();
 }
 
 bool Board::undoLastMove()
@@ -1394,7 +1392,6 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 
 		Move move = possibleMoves[i];
 		doMove(&move);
-		swapCurrentPlayer();
 
 		//----------------------- FUTILITY PRUNING ----------------------------------------
 		const int futilityReduction = (i < 10) ? 3 : 4;
@@ -1406,7 +1403,6 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 			if (evaluation < alpha) {
 				//		DEBUG_COUT("--> Line can be discarded.\n");
 				undoMove(&move);
-				swapCurrentPlayer();
 				possibleMoves = moves;
 				continue;
 			} //else 
@@ -1418,7 +1414,6 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 
 		if (firstCall) DEBUG_COUT("Move #" + std::to_string(i) + ' ' + Move::toString(move) + " has evaluation: " + std::to_string(evaluation) + '\n');
 		undoMove(&move);
-		swapCurrentPlayer();
 		possibleMoves = moves;
 
 		if (evaluation > alpha) {
@@ -1474,10 +1469,8 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 		results->positionsSearched++;
 		Move move = possibleMoves[i];
 		doMove(&move);
-		swapCurrentPlayer();
 		evaluation = -negaMaxQuiescence(-beta, -alpha, results);
 		undoMove(&move);
-		swapCurrentPlayer();
 		possibleMoves = captures;
 		
 		alpha = std::max(alpha, evaluation);
@@ -1586,7 +1579,6 @@ int Board::testMoveGeneration(unsigned int depth, bool divide) {
 		// COPY!!! IMPORTANT, because possibleMoves will change
 		Move move = possibleMoves[i];
 		doMove(&move);
-		swapCurrentPlayer();
 		//float time;
 		{
 			//Timer timer("Board::generateMoves()", &time);
@@ -1596,7 +1588,6 @@ int Board::testMoveGeneration(unsigned int depth, bool divide) {
 		int positionsAfterMove = testMoveGeneration(depth - 1, false);
 		positionCount += positionsAfterMove;
 		undoMove(&move);
-		swapCurrentPlayer();
 		possibleMoves = moves;
 		if (divide) {
 			std::cout << Move::toString(possibleMoves[i]) << ": " << std::to_string(positionsAfterMove) << '\n';
