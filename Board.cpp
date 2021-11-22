@@ -19,9 +19,11 @@ const std::string Board::squareNames[] = {
 
 short Board::castleRights = 0b1111;
 unsigned short Board::enPassantSquare = 64;
+unsigned short Board::fullMoveCount = 1;
+unsigned short Board::halfMoveCount = 0;
 Bitboard Board::bb = Bitboard();
 
-Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE), turn(0) { 
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE) { 
 	Zobrist::initializeHashes();
 }
 
@@ -326,10 +328,17 @@ std::string Board::getFENfromPos() {
 		if ((castleRights & 0b0001) != 0) fen += 'q';
 	}
 	
+	fen += ' ';
+
 	// En passant captures
 	if (enPassantSquare != 64) {
-		fen += ' ' + getSquareName(enPassantSquare);
+		fen += getSquareName(enPassantSquare);
 	}
+	else {
+		fen +=  '-';
+	}
+
+	fen += ' ' + std::to_string(halfMoveCount) + ' ' + std::to_string(fullMoveCount);
 
 	return fen;
 }
@@ -465,11 +474,12 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 	return false;
 }
 
-void Board::makePlayerMove(const Move* move) {
-	doMove(move);
-	
-	moveHistory.push(*move);
-	futureMovesBuffer = std::stack<Move>();
+bool Board::checkForMateOrRemis() {
+	bool mateOrRemis = false;
+	if (positionHistory.size() >= 3)
+	{
+		// TODO
+	}
 
 	generateMoves();
 	if (possibleMoves.size() == 0) {
@@ -480,6 +490,16 @@ void Board::makePlayerMove(const Move* move) {
 			staleMate = true;
 		}
 	}
+	return mateOrRemis;
+}
+
+void Board::makePlayerMove(const Move* move) {
+	doMove(move);
+	
+	moveHistory.push(*move);
+	futureMovesBuffer = std::stack<Move>();
+
+	checkForMateOrRemis();
 }
 
 void Board::makeAiMove() {
@@ -504,7 +524,7 @@ void Board::makeAiMove() {
 void Board::doMove(const Move* move) {
 	PROFILE_FUNCTION();
 	// Save the old position
-	positionHistory.push(currentZobristKey);
+	positionHistory.push_back(currentZobristKey);
 
 	unsigned short oldEpSquare = enPassantSquare;
 	enPassantSquare = 64;
@@ -514,6 +534,16 @@ void Board::doMove(const Move* move) {
 	short pieceFrom = move->piece;
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
+
+	if (currentPlayer == Piece::BLACK)
+		fullMoveCount++;
+
+	halfMoveCount++;
+	if (Piece::getType(pieceTo) != Piece::NONE ||
+		Piece::getType(pieceFrom) == Piece::PAWN) {
+		// If there was a capture or pawn move, halfmove clock is resetted
+		halfMoveCount = 0;
+	}
 
 	setPiece(to, promoResult);
 	if ((Piece::getType(pieceTo) != Piece::NONE) && !move->isEnPassant()) {
@@ -527,8 +557,6 @@ void Board::doMove(const Move* move) {
 
 	// Remove piece from hash at origin position
 	Zobrist::updatePieceHash(currentZobristKey, pieceFrom, from);
-
-	turn++;
 	
 	//std::cout << "\nBishops bitboard after " << Move::toString(*move) << ":\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
 
@@ -624,6 +652,7 @@ void Board::doMove(const Move* move) {
 	}
 
 	swapCurrentPlayer();
+	//printPositionHistory();
 }
 
 void Board::doMove(std::string move) {
@@ -689,8 +718,6 @@ void Board::undoMove(const Move* move) {
 	setPiece(move->startSquare, move->piece);
 	Zobrist::updatePieceHash(currentZobristKey, move->piece, move->startSquare);
 
-	turn--;
-
 	// Check if the king moved
 	if (Piece::getType(move->piece) == Piece::KING) {
 		if (Piece::getColor(move->piece) == Piece::WHITE) {
@@ -717,10 +744,17 @@ void Board::undoMove(const Move* move) {
 	Zobrist::updateZobristKey(currentZobristKey, enPassantSquare, move->previousEPsquare);
 	castleRights = move->previousCastlerights;
 	enPassantSquare = move->previousEPsquare;
+	halfMoveCount = move->previousHalfMoves;
+
+	if (currentPlayer == Piece::WHITE) {
+		// Black's move was undone
+		fullMoveCount--;
+	}
 
 	swapCurrentPlayer();
 
-	positionHistory.pop();
+	positionHistory.pop_back();
+	//printPositionHistory();
 }
 
 bool Board::undoLastMove()
@@ -1572,6 +1606,15 @@ void Board::swapCurrentPlayer() {
 std::string Board::getSquareName(unsigned short index) {
 	if (index > 63) return "";
 	return squareNames[index];
+}
+
+void Board::printPositionHistory() {
+	std::cout << "\nPosition History:\n";
+	
+	for (auto i = positionHistory.begin(); i != positionHistory.end(); i++) {
+		std::cout << *i << '\n';
+	}
+	std::cout << '\n';
 }
 
 int Board::testMoveGeneration(unsigned int depth, bool divide) {

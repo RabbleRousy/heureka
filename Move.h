@@ -36,6 +36,7 @@ struct Move {
 
 	short previousCastlerights;
 	unsigned short previousEPsquare;
+	unsigned short previousHalfMoves;
 
 	float score;
 

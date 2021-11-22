@@ -143,6 +143,8 @@ public:
 
 	static unsigned short enPassantSquare;
 
+	static unsigned short fullMoveCount, halfMoveCount;
+
 	/// <summary>
 	/// Constructor for the Board.
 	/// </summary>
@@ -153,8 +155,6 @@ public:
 
 	bool checkMate, staleMate;
 
-	unsigned short turn;
-
 	SearchResults currentSearch;
 
 	// Indicates to the GUI wether the player needs to input a promotion choice
@@ -163,7 +163,7 @@ public:
 	std::vector<Move> possibleMoves;
 
 	std::stack<Move> moveHistory;
-	std::stack<unsigned long long> positionHistory;
+	std::vector<unsigned long long> positionHistory;
 
 	std::stack<Move> futureMovesBuffer;
 
@@ -259,6 +259,8 @@ public:
 	/// <returns>wether the move was contained in the possibleMoves vector and could be made. If true, the game is now updated and ready for the next move.</returns>
 	bool handleMoveInput(const unsigned short from[2], const unsigned short to[2], short promotionChoice = 0);
 	
+	bool checkForMateOrRemis();
+
 	void makePlayerMove(const Move* move);
 
 	void makeAiMove();
@@ -334,6 +336,8 @@ public:
 	/// <returns>a string containing the name of the square, e.g. "d4".
 	/// empty string if parameters were invalid.</returns>
 	static std::string getSquareName(unsigned short index);
+
+	void printPositionHistory();
 
 	int testMoveGeneration(unsigned int depth, bool divide);
 
