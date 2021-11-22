@@ -503,6 +503,9 @@ void Board::makeAiMove() {
 
 void Board::doMove(const Move* move) {
 	PROFILE_FUNCTION();
+	// Save the old position
+	positionHistory.push(currentZobristKey);
+
 	unsigned short oldEpSquare = enPassantSquare;
 	enPassantSquare = 64;
 	const unsigned short from = move->startSquare;
@@ -716,6 +719,8 @@ void Board::undoMove(const Move* move) {
 	enPassantSquare = move->previousEPsquare;
 
 	swapCurrentPlayer();
+
+	positionHistory.pop();
 }
 
 bool Board::undoLastMove()
