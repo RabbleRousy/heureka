@@ -3,7 +3,8 @@
 uci::uci() {
 	cout << "id name Heureka Engine" << endl;
 	cout << "id author SimonHetzer" << endl;
-	cout << "id version 0.2" << endl;
+	cout << "id version 0.2.4" << endl;
+	cout << "option name Hash type spin default 128 min 16 max " << TranspositionTable::maxMB << endl;
 	cout << "uciok" << endl;
 
 	srand(time(NULL));
@@ -53,6 +54,9 @@ void uci::handleInputLoop() {
 		if (!input.empty()) {
 			if (input == "ucinewgame") {
 				board.readPosFromFEN();
+			}
+			else if (input.substr(0, 9) == "setoption") {
+				parseOption(input);
 			}
 			else if (input.substr(0, 8) == "position") {
 				parsePosition(input);
@@ -119,7 +123,7 @@ void uci::parsePosition(std::string input) {
 	}
 	else {
 		// Parse a FEN string
-		std::string fen = input.substr(input.find("fen") + 4, input.length());
+		string fen = input.substr(input.find("fen") + 4, input.length());
 		board.readPosFromFEN(fen);
 	}
 	int i = input.find("moves");
@@ -148,7 +152,7 @@ string uci::getWordAfter(const string& sentence, const string& word) {
 }
 
 // go wtime 300000 btime 300000 movestogo 40
-void uci::parseGo(std::string input) {
+void uci::parseGo(string input) {
 	float movetime = 5000.0f;
 	float wtime = 5000.0f;
 	float btime = 5000.0f;
@@ -184,6 +188,24 @@ void uci::parseGo(std::string input) {
 	if (movetime > 550.0f) movetime -= 500.0f;
 
 	// Start search thread for ~4s
-	searchResults = std::async(&Board::iterativeSearch, board, movetime);
+	searchResults = async(&Board::iterativeSearch, board, movetime);
 	waitingForBoard = true;
+}
+
+void uci::parseOption(std::string input) {
+	string optionType = getWordAfter(input, "name");
+	DEBUG_COUT("Option Name: " + optionType + '\n');
+
+	if (optionType == "Hash") {
+		string value = getWordAfter(input, "value");
+		unsigned int size;
+		try {
+			size = stoi(value);
+		}
+		catch (exception e) {
+			return;
+		}
+		TranspositionTable::setSize(size);
+		output += "info transposition table size " + to_string(size) + " mb.\n";
+	}
 }

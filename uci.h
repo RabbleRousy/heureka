@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Board.h"
+#include "TranspositionTable.h"
 #include <iostream>
 #include <string>
 #include <time.h>
@@ -18,7 +19,7 @@ private:
 	string input, output;
 	mutex ioMutex;
 	thread searchThread;
-	std::future<Board::SearchResults> searchResults;
+	future<Board::SearchResults> searchResults;
 
 public:
 	uci();
@@ -26,7 +27,8 @@ public:
 	string getWordAfter(const string& s, const string& w);
 	void handleInputLoop();
 	void inputLoop();
-	void parsePosition(std::string input);
-	void parseGo(std::string input);
+	void parsePosition(string input);
+	void parseGo(string input);
+	void parseOption(string input);
 };
 
