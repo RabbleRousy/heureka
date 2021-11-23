@@ -25,6 +25,7 @@ Bitboard Board::bb = Bitboard();
 
 Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE) { 
 	Zobrist::initializeHashes();
+	TranspositionTable::setSize(128);
 }
 
 

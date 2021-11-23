@@ -24,10 +24,12 @@ struct TableEntry {
 class TranspositionTable {
 private:
 	static std::unordered_map<unsigned long long, TableEntry> hashTable;
+	static unsigned int MAX_BUCKETS;
 
 public:
 	static void add(unsigned long long z, Move m, int e, TableEntry::scoreType t, unsigned int d);
 	static TableEntry* get(unsigned long long zobristKey);
 	static void clear();
+	static void setSize(unsigned int mb);
 };
 

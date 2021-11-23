@@ -1,14 +1,29 @@
 #include "TranspositionTable.h"
 
 std::unordered_map<unsigned long long, TableEntry> TranspositionTable::hashTable;
+unsigned int TranspositionTable::MAX_BUCKETS;
 
 void TranspositionTable::add(unsigned long long z, Move m, int e, TableEntry::scoreType t, unsigned int d) {
 	TableEntry entry(z, m, e, t, d);
 	unsigned long long key = z % hashTable.max_size();
 
+	/*std::cout << "Max table size in byte: "
+		<< std::to_string(hashTable.max_size()) << " * ("
+		<< std::to_string(sizeof(unsigned long long)) << " + "
+		<< std::to_string(sizeof(TableEntry)) << ") = "
+		<< std::to_string(hashTable.max_size() * (sizeof(unsigned long long) + sizeof(TableEntry))) << '\n';
+	*/
+
+	if (hashTable.size() >= MAX_BUCKETS) {
+		hashTable.clear();
+	}
+
 	if (hashTable.insert(std::make_pair(key, entry)).second) {
 		// Insertion worked
-		//DEBUG_COUT("Inserted! Transposition Table size: " + std::to_string(hashTable.size()) + ", Max size: " + std::to_string(hashTable.max_size()) + '\n');
+		/*DEBUG_COUT("Inserted! Transposition Table size: " + std::to_string(hashTable.size()) + ", Max size: " + std::to_string(hashTable.max_size())
+		+ ", Bucket count: " + std::to_string(hashTable.bucket_count()) + ", Max Buckets: " + std::to_string(hashTable.max_bucket_count())
+		+ " (Load factor " + std::to_string(hashTable.max_load_factor()) + ")\n"
+		+ " Table size in MB: " + std::to_string(sizeof(hashTable)) + '\n');*/
 	}
 	else {
 		// Collision, do stuff...
@@ -46,4 +61,9 @@ TableEntry* TranspositionTable::get(unsigned long long zobristKey) {
 
 void TranspositionTable::clear() {
 	hashTable.clear();
+}
+
+void TranspositionTable::setSize(unsigned int mb) {
+	const unsigned int BYTE_PER_ENTRY = 200; // Upper bound, examined by testing
+	MAX_BUCKETS = (1000000 * mb) / 200;
 }
