@@ -478,17 +478,9 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 }
 
 bool Board::checkForMateOrRemis() {
-	if (halfMoveCount > 7) {
-		unsigned int halfMovesPlayed = positionHistory.size();
-		unsigned short repetitions = 0;
-		
-		for (int i = halfMovesPlayed - 4; i >= int(halfMovesPlayed - halfMoveCount); i-=4) {
-			repetitions += (positionHistory[i] == currentZobristKey);
-		}
-		if (repetitions >= 2) {
-			remis = true;
-			return true;
-		}
+	if (checkForRepetition()) {
+		remis = true;
+		return true;
 	}
 
 	generateMoves();
@@ -507,6 +499,21 @@ bool Board::checkForMateOrRemis() {
 	}
 
 	return remis | checkMate;
+}
+
+bool Board::checkForRepetition() {
+	if (halfMoveCount > 7) {
+		unsigned int halfMovesPlayed = positionHistory.size();
+		unsigned short repetitions = 0;
+
+		for (int i = halfMovesPlayed - 4; i >= int(halfMovesPlayed - halfMoveCount); i -= 4) {
+			repetitions += (positionHistory[i] == currentZobristKey);
+		}
+		if (repetitions >= 2) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void Board::makePlayerMove(const Move* move) {
@@ -659,7 +666,7 @@ void Board::doMove(const Move* move) {
 	}
 
 	swapCurrentPlayer();
-	printPositionHistory();
+	//printPositionHistory();
 }
 
 void Board::doMove(std::string move) {
@@ -1348,8 +1355,8 @@ int Board::evaluateQueens() {
 }
 
 int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false, bool allowNull = true) {
-	//----------------------- TRANSPOSITION TABLE LOOKUP ------------------------------
-
+	if (timeOut) return 0;
+	//----------------------- TRANSPOSITION TABLE LOOKUP ---------------------------
 	TableEntry* transposition = TranspositionTable::get(currentZobristKey);
 	if (transposition) {
 		DEBUG_COUT("Transposition Hit ... ");
@@ -1382,24 +1389,30 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 			}
 		}
 	}
+	// ----------------------------------------------------------------------------
 
-	if (timeOut) return 0;
-
-	generateMoves();
-	if (possibleMoves.empty()) {
-		//std::cout << "Moves list is empty... ";
-		if (attackData.checkExists) {
-			// Checkmate
-			//std::cout << "Checkmate!\n";
-			TranspositionTable::add(currentZobristKey, Move::NULLMOVE, -10000 - depth, TableEntry::scoreType::EXACT, depth);
-			return -100000 - depth; // Earier checkmates (when depth is still high) are best for the opponent (worse for us)
-		}
-		// Stalemate
-		//std::cout << "Stalemate!\n";
+	// Remis by repetition
+	if (checkForRepetition()) {
 		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, 0, TableEntry::scoreType::EXACT, depth);
 		return 0;
 	}
 
+	generateMoves();
+
+	// Check- or stalemate
+	if (possibleMoves.empty()) {
+		int score = (attackData.checkExists ? -100000 - depth : 0);
+		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, score, TableEntry::scoreType::EXACT, depth);
+		return score;
+	}
+
+	// Remis by 50 Move rule (Mate has precedence)
+	if (halfMoveCount >= 100) {
+		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, 0, TableEntry::scoreType::EXACT, depth);
+		return 0;
+	}
+
+	// If desired depth is reached, return result of a reduced quiet search
 	if (depth == 0) {
 		int eval = negaMaxQuiescence(alpha, beta, results);
 		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, eval, TableEntry::scoreType::UPPER_BOUND, 0);
@@ -1489,15 +1502,16 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	if (timeOut) return 0;
+	int evaluation = 0;
 
-	int evaluation = staticEvaluation();
-	if (evaluation >= beta)
-		return beta;
-	alpha = std::max(alpha, evaluation);
-
-	generateMoves(true);
+	if (!attackData.checkExists) {
+		evaluation = staticEvaluation();
+		if (evaluation >= beta)
+			return beta;
+		alpha = std::max(alpha, evaluation);
+	}
 	// Check is not quiet
-	if (attackData.checkExists) {
+	else {
 		generateMoves();
 		if (possibleMoves.empty()) {
 			//std::cout << "Moves list is empty... ";
@@ -1505,6 +1519,15 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 			//std::cout << "Checkmate!\n";
 			return -1000000;
 		}
+	}
+
+	if (checkForRepetition()) {
+		// Remis by repetition
+		return 0;
+	}
+	if (halfMoveCount >= 100) {
+		// Remis by 50 Move Rule
+		return 0;
 	}
 
 	// Order Moves before iterating to maximize pruning
@@ -1515,6 +1538,7 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 		results->positionsSearched++;
 		Move move = possibleMoves[i];
 		doMove(&move);
+		generateMoves(true);
 		evaluation = -negaMaxQuiescence(-beta, -alpha, results);
 		undoMove(&move);
 		possibleMoves = captures;

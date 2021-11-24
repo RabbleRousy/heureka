@@ -261,6 +261,8 @@ public:
 	
 	bool checkForMateOrRemis();
 
+	bool checkForRepetition();
+
 	void makePlayerMove(const Move* move);
 
 	void makeAiMove();
