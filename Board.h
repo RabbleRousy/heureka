@@ -153,7 +153,7 @@ public:
 	// Whose turn it is, either Piece::WHITE or Piece::BLACK
 	short currentPlayer;
 
-	bool checkMate, staleMate;
+	bool checkMate, remis;
 
 	SearchResults currentSearch;
 

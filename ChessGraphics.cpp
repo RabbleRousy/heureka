@@ -98,8 +98,8 @@ void ChessGraphics::mainLoop() {
 			else window->close();
 		}
 
-		if (board.staleMate) {
-			std::cout << "Stalemate. New game? (Y/N)";
+		if (board.remis) {
+			std::cout << "Remis. New game? (Y/N)";
 			std::string input;
 			std::cin >> input;
 			if (input == "Y" || input == "y")
@@ -134,7 +134,7 @@ void ChessGraphics::mainLoop() {
 					if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
 						draw();
-						if (aiPlayer && !(board.checkMate || board.staleMate))
+						if (aiPlayer && !(board.checkMate || board.remis))
 							board.makeAiMove();
 					}
 					// Try to select a hovered piece
@@ -165,7 +165,7 @@ void ChessGraphics::mainLoop() {
 
 						if (promotionSuccess) {
 							draw();
-							if (aiPlayer && !(board.checkMate || board.staleMate))
+							if (aiPlayer && !(board.checkMate || board.remis))
 								board.makeAiMove();
 						}
 					}
@@ -175,7 +175,7 @@ void ChessGraphics::mainLoop() {
 						// Move could be made
 						pieceSelected = false;
 						draw();
-						if (aiPlayer && !(board.checkMate || board.staleMate))
+						if (aiPlayer && !(board.checkMate || board.remis))
 							board.makeAiMove();
 					}
 				}

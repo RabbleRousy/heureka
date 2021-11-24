@@ -39,9 +39,11 @@ void Board::reset() {
 	possibleMoves = std::vector<Move>();
 	moveHistory = std::stack<Move>();
 	futureMovesBuffer = std::stack<Move>();
+	halfMoveCount = 0;
+	fullMoveCount = 1;
 	wantsToPromote = false;
 	checkMate = false;
-	staleMate = false;
+	remis = false;
 	TranspositionTable::clear();
 	readPosFromFEN();
 	generateMoves();
@@ -476,10 +478,17 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 }
 
 bool Board::checkForMateOrRemis() {
-	bool mateOrRemis = false;
-	if (positionHistory.size() >= 3)
-	{
-		// TODO
+	if (halfMoveCount > 7) {
+		unsigned int halfMovesPlayed = positionHistory.size();
+		unsigned short repetitions = 0;
+		
+		for (int i = halfMovesPlayed - 4; i >= int(halfMovesPlayed - halfMoveCount); i-=4) {
+			repetitions += (positionHistory[i] == currentZobristKey);
+		}
+		if (repetitions >= 2) {
+			remis = true;
+			return true;
+		}
 	}
 
 	generateMoves();
@@ -488,10 +497,16 @@ bool Board::checkForMateOrRemis() {
 			checkMate = true;
 		}
 		else {
-			staleMate = true;
+			remis = true;
 		}
+		return true;
 	}
-	return mateOrRemis;
+
+	if (halfMoveCount >= 100) {
+		remis = true;
+	}
+
+	return remis | checkMate;
 }
 
 void Board::makePlayerMove(const Move* move) {
@@ -510,16 +525,7 @@ void Board::makeAiMove() {
 	moveHistory.push(currentSearch.bestMove);
 	futureMovesBuffer = std::stack<Move>();
 
-	generateMoves();
-
-	if (possibleMoves.size() == 0) {
-		if (attackData.checkExists) {
-			checkMate = true;
-		}
-		else {
-			staleMate = true;
-		}
-	}
+	checkForMateOrRemis();
 }
 
 void Board::doMove(const Move* move) {
@@ -653,7 +659,7 @@ void Board::doMove(const Move* move) {
 	}
 
 	swapCurrentPlayer();
-	//printPositionHistory();
+	printPositionHistory();
 }
 
 void Board::doMove(std::string move) {
