@@ -61,6 +61,11 @@ float NNUE::evaluate(bool whiteToMove) {
 	return input[0];
 }
 
+void NNUE::train() {
+	arma::mat dataset;
+	mlpack::data::Load("trainingData.csv", dataset, true);
+}
+
 template<int inputSize, int outputSize>
 inline void NNUE::linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output) {
 	// "Add" Biases
