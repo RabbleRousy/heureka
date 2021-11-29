@@ -794,7 +794,7 @@ bool Board::redoLastMove() {
 
 bool Board::inCheckAfter(const Move* move) {
 	doMove(move);
-	bool check = bb.getAttackData(currentPlayer).checkExists;
+	bool check = bb.getAttackData(Piece::getOppositeColor(currentPlayer)).checkExists;
 	undoMove(move);
 	return check;
 }
@@ -850,7 +850,7 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 		// If not moving along existing pinray, skip Move
 		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
-		short promotionFlag = (white && (targetIndex > 54)) ||
+		short promotionFlag = (white && (targetIndex > 55)) ||
 							 (!white && (targetIndex < 8));
 		
 		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, promotionFlag);
@@ -1648,10 +1648,10 @@ void Board::printPositionHistory() {
 	std::cout << '\n';
 }
 
-int Board::testMoveGeneration(unsigned int depth, bool divide) {
+unsigned long long Board::testMoveGeneration(unsigned int depth, bool divide) {
 	PROFILE_FUNCTION();
 	if (depth == 1) return possibleMoves.size();
-	int positionCount = 0;
+	unsigned long positionCount = 0;
 	std::vector<Move> moves = possibleMoves;
 
 	for (int i = 0; i < possibleMoves.size(); i++) {
@@ -1664,7 +1664,7 @@ int Board::testMoveGeneration(unsigned int depth, bool divide) {
 			generateMoves();
 		}
 		//accumulatedGenerationTime += time;
-		int positionsAfterMove = testMoveGeneration(depth - 1, false);
+		unsigned long long positionsAfterMove = testMoveGeneration(depth - 1, false);
 		positionCount += positionsAfterMove;
 		undoMove(&move);
 		possibleMoves = moves;

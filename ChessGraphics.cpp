@@ -196,11 +196,11 @@ void ChessGraphics::mainLoop() {
 				std::cin >> depth;
 				Instrumentor::Get().BeginSession("Perft " + std::to_string(depth) + " profile", "perft.json");
 				auto startTimePoint = std::chrono::high_resolution_clock::now();
-				int positions = board.testMoveGeneration(depth, true);
+				unsigned long long positions = board.testMoveGeneration(depth, true);
 				auto endTimePoint = std::chrono::high_resolution_clock::now();
 				long long start = std::chrono::time_point_cast<std::chrono::milliseconds>(startTimePoint).time_since_epoch().count();
 				long long end = std::chrono::time_point_cast<std::chrono::milliseconds>(endTimePoint).time_since_epoch().count();
-				std::cout << "Perft " << depth << "; Positions: " << positions << "; Time: " << (end - start) << " ms\n";
+				std::cout << "Perft " << depth << "; Positions: " << std::to_string(positions) << "; Time: " << (end - start) << " ms\n";
 				Instrumentor::Get().EndSession();
 			}
 			else if (Keyboard::isKeyPressed(Keyboard::Key::S)) {
