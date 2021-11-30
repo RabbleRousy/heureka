@@ -315,7 +315,7 @@ public:
 
 	int negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall, bool allowNull);
 
-	int negaMaxQuiescence(int alpha, int beta, SearchResults* results);
+	int negaMaxQuiescence(int alpha, int beta, SearchResults* results, int depth);
 
 	SearchResults searchBestMove(unsigned int depth);
 

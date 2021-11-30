@@ -1412,9 +1412,9 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		return 0;
 	}
 
-	// If desired depth is reached, return result of a reduced quiet search
+	// If desired depth is reached, return result of a reduced quiet search (allow search depth to double at most)
 	if (depth == 0) {
-		int eval = negaMaxQuiescence(alpha, beta, results);
+		int eval = negaMaxQuiescence(alpha, beta, results, results->depth);
 		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, eval, TableEntry::scoreType::UPPER_BOUND, 0);
 		return eval;
 	}
@@ -1502,13 +1502,14 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 
 // Search until a quiet position (no check, no captures) is reached
 // TODO: Consider stalemate
-int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
+int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results, int depth) {
 	//std::cout << "negaMax(" << depth << ',' << alpha << ',' << beta << ")\n";
 	if (timeOut) return 0;
-	int evaluation = 0;
+	int evaluation = staticEvaluation();
+
+	if (depth == 0) return evaluation;
 
 	if (!attackData.checkExists) {
-		evaluation = staticEvaluation();
 		if (evaluation >= beta)
 			return beta;
 		alpha = std::max(alpha, evaluation);
@@ -1542,7 +1543,7 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results) {
 		Move move = possibleMoves[i];
 		doMove(&move);
 		generateMoves(true);
-		evaluation = -negaMaxQuiescence(-beta, -alpha, results);
+		evaluation = -negaMaxQuiescence(-beta, -alpha, results, depth-1);
 		undoMove(&move);
 		possibleMoves = captures;
 		
