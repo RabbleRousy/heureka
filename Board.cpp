@@ -1359,24 +1359,24 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 	//----------------------- TRANSPOSITION TABLE LOOKUP ---------------------------
 	TableEntry* transposition = TranspositionTable::get(currentZobristKey);
 	if (transposition) {
-		DEBUG_COUT("Transposition Hit ... ");
+		//DEBUG_COUT("Transposition Hit ... ");
 		if (transposition->depth >= depth) {
 			switch (transposition->type) {
 			case TableEntry::scoreType::EXACT:
-				DEBUG_COUT(" CAUSES CUTOFF!!\n");
+				//DEBUG_COUT(" CAUSES CUTOFF!!\n");
 				if (firstCall) {
 					results->bestMove = transposition->bestMove;
 					results->evaluation = transposition->evaluation;
 				}
 				return transposition->evaluation;
 			case TableEntry::scoreType::LOWER_BOUND:
-				DEBUG_COUT(" sets new lower bound.\n");
+				//DEBUG_COUT(" sets new lower bound.\n");
 				if (!firstCall && (transposition->evaluation >= beta))
 					// Beta cutoff with lower bound value
 					return beta;
 				break;
 			case TableEntry::scoreType::UPPER_BOUND:
-				DEBUG_COUT(" sets new upper bound.\n");
+				//DEBUG_COUT(" sets new upper bound.\n");
 				// Great alpha value for current search
 				if (!firstCall)
 					alpha = transposition->evaluation;
@@ -1452,20 +1452,23 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		Move move = possibleMoves[i];
 		doMove(&move);
 
-		//----------------------- FUTILITY PRUNING ----------------------------------------
-		const int futilityReduction = (i < 10) ? 3 : 4;
-		if ((results->bestMove != Move::NULLMOVE) && (i >= 5) && (depth > futilityReduction)) {
-		//	DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
-		//		+ ": " + Move::toString(move) + " Doing reduced depth search... ");
-			int evaluation = -negaMax(depth - futilityReduction, -beta, -alpha, results);
-			// Evaluation was worse than best line yet, as expected. PRUNE!
-			if (evaluation < alpha) {
-				//		DEBUG_COUT("--> Line can be discarded.\n");
+		//----------------------- LATE MOVE REDUCTION ----------------------------------------
+		const int reduction = (i < 10) ? 1 : 2;
+		bool tryReduction = (i >= 5) && (depth > reduction);
+		// Don't apply late move reduction when: in check; capturing; promoting; giving check;
+		tryReduction &= (!attackData.checkExists && (move.capturedPiece == Piece::NONE) && !move.isPromotion() && !bb.getAttackData(currentPlayer).checkExists);
+		if (tryReduction) {
+			DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
+				+ ": " + Move::toString(move) + ", alpha: " + std::to_string(alpha) + ". Doing reduced depth search... ");
+			int evaluation = -negaMax(depth - reduction, -beta, -alpha, results);
+			// Evaluation was not better than best line yet, as expected. PRUNE!
+			if (evaluation <= alpha) {
+						DEBUG_COUT("--> Line can be discarded.\n");
 				undoMove(&move);
 				possibleMoves = moves;
 				continue;
-			} //else 
-				//DEBUG_COUT("--> Evaluation was better than expected. Doing deeper search.\n");
+			} else 
+				DEBUG_COUT("--> Evaluation was better than expected. Doing deeper search.\n");
 		}
 		//---------------------------------------------------------------------------------
 		

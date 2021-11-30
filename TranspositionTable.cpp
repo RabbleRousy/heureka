@@ -21,19 +21,19 @@ void TranspositionTable::add(unsigned long long z, Move m, int e, TableEntry::sc
 
 	if (hashTable.insert(std::make_pair(key, entry)).second) {
 		// Insertion worked
-		DEBUG_COUT("Inserted! Transposition Table size: " + std::to_string(hashTable.size()) + ", Max size: " + std::to_string(hashTable.max_size())
-		+ ", Bucket count: " + std::to_string(hashTable.bucket_count()) + ", Max Buckets: " + std::to_string(hashTable.max_bucket_count())
-		+ " (Load factor " + std::to_string(hashTable.max_load_factor()) + ")\n"
-		+ " Table size in MB: " + std::to_string(sizeof(hashTable)) + '\n');
+		//DEBUG_COUT("Inserted! Transposition Table size: " + std::to_string(hashTable.size()) + ", Max size: " + std::to_string(hashTable.max_size())
+		//+ ", Bucket count: " + std::to_string(hashTable.bucket_count()) + ", Max Buckets: " + std::to_string(hashTable.max_bucket_count())
+		//+ " (Load factor " + std::to_string(hashTable.max_load_factor()) + ")\n"
+		//+ " Table size in MB: " + std::to_string(sizeof(hashTable)) + '\n');
 	}
 	else {
 		// Collision, do stuff...
-		DEBUG_COUT("Insertion failed...");
+		//DEBUG_COUT("Insertion failed...");
 		TableEntry* currentEntry = &hashTable[key];
 
 		if (currentEntry->zobristKey != entry.zobristKey) {
 			// Different zobrist keys map to same value
-			DEBUG_CERR("Collision!");
+			//DEBUG_CERR("Collision!");
 			if ((t == TableEntry::scoreType::EXACT) && d >= currentEntry->depth) {
 				// Replace old entry if new one is exact and has atleast same depth
 				hashTable[key] = entry;
@@ -44,9 +44,9 @@ void TranspositionTable::add(unsigned long long z, Move m, int e, TableEntry::sc
 			((entry.type == TableEntry::scoreType::EXACT) && (currentEntry->type != TableEntry::scoreType::EXACT))) {
 			// Replace current entry
 			*currentEntry = entry;
-			DEBUG_COUT("Replaced!");
+			//DEBUG_COUT("Replaced!");
 		}
-		DEBUG_COUT('\n');
+		//DEBUG_COUT('\n');
 	}
 }
 
