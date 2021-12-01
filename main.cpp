@@ -1,6 +1,7 @@
 #include "ChessGraphics.h"
 #include "uci.h"
 #include "Testing.h"
+#include "NNUE.h"
 
 int main() {
 	std::cout << "Welcome to Heureka Engine (Version 0.2.4), developed by Simon Hetzer.\n";
@@ -19,6 +20,10 @@ int main() {
 	else if (line == "test") {
 		// Run Testsuite
 		Testing test;
+	}
+	else if (line == "format") {
+		NNUE nnue;
+		nnue.formatDataset("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessData.csv");
 	}
 	else {
 		// Constructs the gui which enters the main loop

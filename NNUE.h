@@ -2,6 +2,7 @@
 #include <vector>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
+#include "Board.h"
 
 // FeatureSet[N]->M*2->K->1
 // HalfKP[40960]->256x2->32->32->1
@@ -73,5 +74,6 @@ private:
 public:
 	float evaluate(bool whiteToMove);
 	void train();
+	void formatDataset(std::string path);
 };
 

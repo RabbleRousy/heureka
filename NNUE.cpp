@@ -64,6 +64,31 @@ float NNUE::evaluate(bool whiteToMove) {
 void NNUE::train() {
 	arma::mat dataset;
 	mlpack::data::Load("trainingData.csv", dataset, true);
+
+	// TODO
+
+
+}
+
+void NNUE::formatDataset(std::string path) {
+	std::string line;
+	std::string fen;
+	std::ifstream file(path);
+
+	// Create a board to help with fen reading
+	Board board;
+	// First line is header
+	std::getline(file, line);
+
+	while (std::getline(file, line)) {
+		// label and value are comma-separated
+		fen = line.substr(0, line.find(','));
+		board.readPosFromFEN(fen);
+		//board.print();
+		std::string e = line.substr(line.find(',')+1);
+		int eval = std::stoi(e);
+		eval = eval + 1 - 1;
+	}
 }
 
 template<int inputSize, int outputSize>
