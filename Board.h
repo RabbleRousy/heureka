@@ -341,6 +341,8 @@ public:
 
 	void printPositionHistory();
 
+	void print();
+
 	unsigned long long testMoveGeneration(unsigned int depth, bool divide);
 
 	std::thread launchSearchThread(float time);

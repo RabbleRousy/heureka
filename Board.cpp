@@ -76,8 +76,6 @@ bool Board::readPosFromFEN(std::string fen) {
 		if (row == 0 && column == 8)
 			break;
 
-		DEBUG_COUT("Parsing " + std::to_string(fen[i]) + " ... \n");
-
 		// Return false for invalid fens that reach out of bounds
 		if (row < 0 || (column > 7 && fen[i] != '/')) {
 			std::cerr << "FEN parsing failed." << std::endl;
@@ -177,14 +175,12 @@ bool Board::readPosFromFEN(std::string fen) {
 		currentPlayer = Piece::WHITE;
 		break;
 	}
-	DEBUG_COUT("Current player read from FEN: " + fen[i] + '\n');
+	//DEBUG_COUT("Current player read from FEN: " + fen[i] + '\n');
 
 	// Castling rights
 	castleRights = 0;
 	int j = i+2;
-	for (j; j < (i + 6); j++) {
-		if (j == fen.size()) break;
-
+	for (j; j < fen.size() && fen[j] != ' '; j++) {
 		switch (fen[j]) {
 		case '-':
 			return true;
@@ -206,15 +202,15 @@ bool Board::readPosFromFEN(std::string fen) {
 		}
 	}
 
-	// No ep capture left to read
-	if (!(j < fen.size() - 2)) {
-		return true;
-	}
+	// Read EP capture field
 
 	column = 8;
 	row = 8;
-	for (i = (j + 1); i < (j + 3); i++) {
+	for (i = (j + 1); i < fen.size() && fen[i] != ' '; i++) {
 		switch (fen[i]) {
+		case '-':
+			i++;
+			goto parseMoveCount;
 		case 'a':
 			column = 0;
 			break;
@@ -252,7 +248,7 @@ bool Board::readPosFromFEN(std::string fen) {
 		default:
 			return true;
 		}
-		DEBUG_COUT("EP Capture input: " + fen[i] + '\n');
+		//DEBUG_COUT("EP Capture input: " + fen[i] + '\n');
 	}
 
 	// Parsing failed
@@ -261,20 +257,33 @@ bool Board::readPosFromFEN(std::string fen) {
 		return true;
 	}
 
-	// Remove the pawn and make the move manually
-	swapCurrentPlayer();
+	{
+		// Remove the pawn and make the move manually
+		swapCurrentPlayer();
 
-	unsigned short from = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1);
-	unsigned short to = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1);
+		unsigned short from = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1);
+		unsigned short to = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1);
 
-	// Undo the move
-	removePiece(to);
-	setPiece(from, Piece::PAWN | currentPlayer);
+		// Undo the move
+		removePiece(to);
+		setPiece(from, Piece::PAWN | currentPlayer);
 
-	Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from, (currentPlayer == Piece::WHITE) ? from + 16 : from - 16);
+		Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from, (currentPlayer == Piece::WHITE) ? from + 16 : from - 16);
 	
-	doMove(&epMove);
+		doMove(&epMove);
+	}
 
+	parseMoveCount:
+
+	// Halfmove Clock
+	if (++i < fen.size()) {
+		halfMoveCount = std::atoi(&fen[i]);
+	}
+
+	// Fullmoves
+	if (++i < fen.size() - 1) {
+		fullMoveCount = std::atoi(&fen[++i]);
+	}
 	/*
 
 	std::cout << "\nRooks bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::ROOK | currentPlayer) | bb.getBitboard(Piece::ROOK | Piece::getOppositeColor(currentPlayer)));
@@ -1685,4 +1694,55 @@ unsigned long long Board::testMoveGeneration(unsigned int depth, bool divide) {
 std::thread Board::launchSearchThread(float time) {
 	processing = true;
 	return std::thread(&Board::iterativeSearch, this, time);
+}
+
+void Board::print() {
+	for (int row = 7; row >= 0; row--) {
+		for (int column = 0; column < 8; column++) {
+			char c;
+			switch (getPiece(row * 8 + column)) {
+			case Piece::NONE:
+				c = '.';
+				break;
+			case (Piece::WHITE | Piece::PAWN):
+				c = 'P';
+				break;
+			case (Piece::WHITE | Piece::KNIGHT):
+				c = 'N';
+				break;
+			case (Piece::WHITE | Piece::BISHOP):
+				c = 'B';
+				break;
+			case (Piece::WHITE | Piece::ROOK):
+				c = 'R';
+				break;
+			case (Piece::WHITE | Piece::QUEEN):
+				c = 'Q';
+				break;
+			case (Piece::WHITE | Piece::KING):
+				c = 'K';
+				break;
+			case (Piece::BLACK | Piece::PAWN):
+				c = 'p';
+				break;
+			case (Piece::BLACK | Piece::KNIGHT):
+				c = 'n';
+				break;
+			case (Piece::BLACK | Piece::BISHOP):
+				c = 'b';
+				break;
+			case (Piece::BLACK | Piece::ROOK):
+				c = 'r';
+				break;
+			case (Piece::BLACK | Piece::QUEEN):
+				c = 'q';
+				break;
+			case (Piece::BLACK | Piece::KING):
+				c = 'k';
+				break;
+			}
+			std::cout << c << ' ';
+		}
+		std::cout << '\n';
+	}
 }
