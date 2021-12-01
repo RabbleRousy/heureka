@@ -1,11 +1,6 @@
 #pragma once
 #include <string>
 
-#define UP 0b0001
-#define DOWN 0b0100
-#define RIGHT 0b0010
-#define LEFT 0b1000
-
 
 // Represents a move on the board
 
@@ -45,18 +40,6 @@ struct Move {
 
 	// Standard constructor
 	Move(short piece, short capture, unsigned short start, unsigned short target, short flags = 0);
-
-	// All the directions a knight may go
-	// Each direction is a combination of 2 4bit steps
-	static short knightMoves[8];
-
-	// All the directions a bishop may go
-	// Each direction is a diagonal step
-	static short bishopDirections[4];
-
-	// All the directions a rook may go
-	// Each direction is a horizontal or vertical step
-	static short rookDirections[4];
 
 	// Converts move to string
 	static std::string toString(Move m);

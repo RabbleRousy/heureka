@@ -89,25 +89,3 @@ short Move::getPromotionResult() const
 		return piece;
 	}
 }
-
-short Move::knightMoves[8] = {
-		(UP << 4) | UP | RIGHT ,
-		(UP << 4) | UP | LEFT,
-		(RIGHT << 4) | UP | RIGHT,
-		(RIGHT << 4) | DOWN | RIGHT,
-		(DOWN << 4) | DOWN | RIGHT,
-		(DOWN << 4) | DOWN | LEFT,
-		(LEFT << 4) | UP | LEFT,
-		(LEFT << 4) | DOWN | LEFT
-};
-
-short Move::bishopDirections[4] = {
-	UP | RIGHT,
-	UP | LEFT,
-	DOWN | RIGHT,
-	DOWN | LEFT
-};
-
-short Move::rookDirections[4] = {
-	UP, DOWN, LEFT, RIGHT
-};
