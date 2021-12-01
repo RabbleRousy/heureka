@@ -1357,7 +1357,7 @@ int Board::evaluateQueens() {
 int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* results, bool firstCall = false, bool allowNull = true) {
 	if (timeOut) return 0;
 	//----------------------- TRANSPOSITION TABLE LOOKUP ---------------------------
-	TableEntry* transposition = TranspositionTable::get(currentZobristKey);
+	/*TableEntry* transposition = TranspositionTable::get(currentZobristKey);
 	if (transposition) {
 		//DEBUG_COUT("Transposition Hit ... ");
 		if (transposition->depth >= depth) {
@@ -1388,7 +1388,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 				break;
 			}
 		}
-	}
+	}*/
 	// ----------------------------------------------------------------------------
 
 	// Remis by repetition

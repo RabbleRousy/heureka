@@ -5,6 +5,7 @@ unsigned long long TranspositionTable::MAX_BUCKETS;
 const unsigned int TranspositionTable::maxMB = 16000;
 
 void TranspositionTable::add(unsigned long long z, Move m, int e, TableEntry::scoreType t, unsigned int d) {
+	return;
 	TableEntry entry(z, m, e, t, d);
 	unsigned long long key = z % hashTable.max_size();
 
