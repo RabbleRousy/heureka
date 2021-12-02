@@ -1,18 +1,10 @@
 #pragma once
 #include <vector>
-#include <mlpack/core.hpp>
-#include <mlpack/methods/ann/ffn.hpp>
+#include "NNUEnet.h"
 #include "Board.h"
-
-// FeatureSet[N]->M*2->K->1
-// HalfKP[40960]->256x2->32->32->1
 
 class NNUE {
 private:
-	static const int N = 40960;
-	static const int M = 256;
-	static const int K = 32;
-
 	// Linear network layers
 	template <int inputSize, int outputSize>
 	struct Linear {
@@ -70,6 +62,8 @@ private:
 	template <int inputSize, int outputSize>
 	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
 	void clippedReLu(int size, const float* input, float* output);
+
+	void constructHalfKPvector(char* features, Board* board);
 
 public:
 	float evaluate(bool whiteToMove);

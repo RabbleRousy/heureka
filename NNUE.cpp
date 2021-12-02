@@ -65,9 +65,7 @@ void NNUE::train() {
 	arma::mat dataset;
 	mlpack::data::Load("trainingData.csv", dataset, true);
 
-	// TODO
-
-
+	mlpack::ann::NNUEnet network;
 }
 
 void NNUE::formatDataset(std::string path) {
@@ -80,6 +78,9 @@ void NNUE::formatDataset(std::string path) {
 	// First line is header
 	std::getline(file, line);
 
+	// Feature vector, N byte chararray
+	char* features = new char[2*N];
+
 	while (std::getline(file, line)) {
 		// label and value are comma-separated
 		fen = line.substr(0, line.find(','));
@@ -87,8 +88,14 @@ void NNUE::formatDataset(std::string path) {
 		//board.print();
 		std::string e = line.substr(line.find(',')+1);
 		int eval = std::stoi(e);
-		eval = eval + 1 - 1;
+		
+		constructHalfKPvector(features, &board);
 	}
+}
+
+void NNUE::constructHalfKPvector(char* features, Board* board) {
+	// Clear feature vector
+	memset(features, '0', sizeof(features));
 }
 
 template<int inputSize, int outputSize>
