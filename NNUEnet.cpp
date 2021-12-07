@@ -2,17 +2,17 @@
 
 mlpack::ann::NNUEnet::NNUEnet() {
 	// L0
-	Add<Linear<> >(N, M);
-	Add<CReLU<>>();
+	Add<Linear<> >(2 * N, 2 * M);
+	Add<ReLULayer<>>();
 	// L1
 	Add<Linear<> >(2 * M, K);
-	Add<CReLU<> >();
+	Add<ReLULayer<> >();
 	// L2
 	Add<Linear<> >(K, K);
-	Add<CReLU<> >();
+	Add<ReLULayer<> >();
 	// L3
 	Add<Linear<> >(K, 1);
-	Add<CReLU<> >();
+	Add<ReLULayer<> >();
 }
 
 // Custom forward pass through the network

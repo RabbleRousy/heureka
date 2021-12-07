@@ -62,38 +62,111 @@ float NNUE::evaluate(bool whiteToMove) {
 }
 
 void NNUE::train() {
-	arma::mat dataset;
-	mlpack::data::Load("trainingData.csv", dataset, true);
+	arma::sp_mat sparseMatrix;
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted.csv", arma::coord_ascii);
+	sparseMatrix = sparseMatrix.t();
+	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+
+	// Cut the labels from the last row of the trainingData
+	arma::mat labels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
 
 	mlpack::ann::NNUEnet network;
+
+	network.Train(data, labels);
 }
 
 void NNUE::formatDataset(std::string path) {
 	std::string line;
 	std::string fen;
-	std::ifstream file(path);
+	std::ifstream input(path);
+	std::ofstream output(path.substr(0, path.find('.')) + "Formatted.csv");
 
 	// Create a board to help with fen reading
 	Board board;
 	// First line is header
-	std::getline(file, line);
+	std::getline(input, line);
 
-	// Feature vector, N byte chararray
-	char* features = new char[2*N];
+	unsigned long long row = 0;
 
-	while (std::getline(file, line)) {
+	while (std::getline(input, line) && row < 50) {
 		// label and value are comma-separated
 		fen = line.substr(0, line.find(','));
 		board.readPosFromFEN(fen);
 		//board.print();
 		std::string e = line.substr(line.find(',')+1);
-		int eval = std::stoi(e);
 		
-		constructHalfKPvector(features, &board);
+		// Coordinate list format for sparse matrices:
+		// <row> <column> <nonzero-value>
+		std::string coordinateList = getHalfKPcoordinateList(row, &board);
+		// Append value
+		coordinateList += std::to_string(row) + " 81920 " + e + '\n';
+
+		output << coordinateList;
+
+
+		row++;
 	}
+
+	input.close();
+	output.close();
 }
 
-void NNUE::constructHalfKPvector(char* features, Board* board) {
+std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
+	std::string cl;
+	bool whiteToMove = board->currentPlayer == Piece::WHITE;
+
+	// Perspective of side to move (first HalfKP)
+	unsigned short kingSquare = whiteToMove ? board->whiteKingPos : board->blackKingPos;
+	if (!whiteToMove) {
+		// Flip position for black
+		kingSquare ^= 56;
+	}
+	unsigned short pieceSquare;
+
+	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
+		for (short ourColor = 0; ourColor <= 1; ourColor++) {
+			short pieceColor = ourColor ? board->currentPlayer : Piece::getOppositeColor(board->currentPlayer);
+
+			bitboard pieces = board->bb.getBitboard(piece | pieceColor);
+			Bitloop(pieces) {
+				pieceSquare = getSquare(pieces);
+				if (!whiteToMove) {
+					// Calculating black's perspective, flip
+					pieceSquare ^= 56;
+				}
+				unsigned int halfKPindex = 640 * kingSquare + 10 * pieceSquare + 5 * ourColor + (piece - 2);
+				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+			}
+		}
+	}
+
+	// Perspective of the other side (second HalfKP)
+	kingSquare = whiteToMove ?  board->blackKingPos : board->whiteKingPos;
+	if (whiteToMove) {
+		// Flip position for black
+		kingSquare ^= 56;
+	}
+
+	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
+		for (short ourColor = 0; ourColor <= 1; ourColor++) {
+			short color = ourColor ? board->currentPlayer : Piece::getOppositeColor(board->currentPlayer);
+			bitboard pieces = board->bb.getBitboard(piece | color);
+			Bitloop(pieces) {
+				pieceSquare = getSquare(pieces);
+				if (whiteToMove) {
+					// Calculating black's perspective, flip
+					pieceSquare ^= 56;
+				}
+				unsigned int halfKPindex = 40960 + 640 * kingSquare + 10 * pieceSquare + 5 * ourColor + (piece - 2);
+				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+			}
+		}
+	}
+
+	return cl;
+}
+
+void NNUE::getHalfKPvector(bool white, char* features, Board* board) {
 	// Clear feature vector
 	memset(features, '0', sizeof(features));
 }

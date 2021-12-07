@@ -24,8 +24,6 @@ private:
 	static const std::string squareNames[64];
 
 	short squares[64];
-	short whiteKingPos;
-	short blackKingPos;
 	AttackData attackData;
 
 	unsigned long long currentZobristKey;
@@ -137,6 +135,9 @@ public:
 	float searchTime;
 	bool processing;
 	bool stopDemanded;
+
+	short whiteKingPos;
+	short blackKingPos;
 	
 	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
 	static short castleRights;

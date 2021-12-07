@@ -25,6 +25,10 @@ int main() {
 		NNUE nnue;
 		nnue.formatDataset("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessData.csv");
 	}
+	else if (line == "train") {
+		NNUE nnue;
+		nnue.train();
+	}
 	else {
 		// Constructs the gui which enters the main loop
 		ChessGraphics gui;

@@ -63,7 +63,8 @@ private:
 	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
 	void clippedReLu(int size, const float* input, float* output);
 
-	void constructHalfKPvector(char* features, Board* board);
+	std::string getHalfKPcoordinateList(unsigned long long row, Board* board);
+	void getHalfKPvector(bool white, char* features, Board* board);
 
 public:
 	float evaluate(bool whiteToMove);
