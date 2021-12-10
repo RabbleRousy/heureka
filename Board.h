@@ -2,6 +2,7 @@
 #include "Piece.h"
 #include "Move.h"
 #include "Bitboard.h"
+#include "util.h"
 #include <vector>
 #include <stack>
 #include <thread>

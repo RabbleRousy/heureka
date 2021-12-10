@@ -1249,11 +1249,6 @@ int Board::evaluateMaterial() {
 	return result;
 }
 
-
-float sigmoid(int x, int offset = 0, float stretch = 1.0f) {
-	return 1.0f / (1.0f + expf(-stretch * (x - offset)));
-}
-
 template<short color>
 int Board::countMaterial() {
 	int sum = 0;
@@ -1298,7 +1293,7 @@ int Board::evaluateKing() {
 		
 	int materialCount = countMaterial<Piece::WHITE>() + countMaterial<Piece::BLACK>();
 
-	float earlyGameFactor = sigmoid(materialCount, 4000, 0.003f);
+	float earlyGameFactor = utils::math::sigmoid(materialCount, 4000, 0.003f);
 	float endGameFactor = 1.0f - earlyGameFactor;
 
 	//if (debugLogs) std::cout << "Game Progress: " << endGameFactor << '\n';
