@@ -72,22 +72,9 @@ void NNUE::train() {
 
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
 
-	mlpack::ann::Sequential<> firstHalf(2 * N, M);
-	//firstHalf.Add<mlpack::ann::Subview<>>(1, 0, N - 1, 0, 0);
-	firstHalf.Add<mlpack::ann::Linear<>>(2 * N, M);
-	firstHalf.Add<mlpack::ann::ReLULayer<>>();
-
-	mlpack::ann::Sequential<> secondHalf(2 * N, M);
-	//secondHalf.Add<mlpack::ann::Subview<>>(1, N, 2 * N - 1, 0, 0);
-	secondHalf.Add<mlpack::ann::Linear<>>(2 * N, M);
-	secondHalf.Add<mlpack::ann::ReLULayer<>>();
-
-	mlpack::ann::Concat<> concat(2 * N, 2 * M);
-	concat.Add<mlpack::ann::Sequential<>>(firstHalf);
-	concat.Add<mlpack::ann::Sequential<>>(secondHalf);
-
-	// Add the concatenation to the network
-	network.Add<mlpack::ann::Concat<>>(concat);
+	// L0
+	network.Add<mlpack::ann::Linear<>>(2 * N, 2 * M);
+	network.Add<mlpack::ann::ReLULayer<> >();
 	// L1
 	network.Add<mlpack::ann::Linear<> >(2 * M, K);
 	network.Add<mlpack::ann::ReLULayer<> >();
@@ -96,7 +83,6 @@ void NNUE::train() {
 	network.Add<mlpack::ann::ReLULayer<> >();
 	// L3
 	network.Add<mlpack::ann::Linear<> >(K, 1);
-	network.Add<mlpack::ann::ReLULayer<> >();
 
 	network.Train(data, labels);
 }
@@ -105,7 +91,7 @@ void NNUE::formatDataset(std::string path) {
 	std::string line;
 	std::string fen;
 	std::ifstream input(path);
-	std::ofstream output(path.substr(0, path.find('.')) + "Formatted.csv");
+	std::ofstream output(path.substr(0, path.find('.')) + "Formatted1k.csv");
 
 	// Create a board to help with fen reading
 	Board board;
@@ -114,12 +100,13 @@ void NNUE::formatDataset(std::string path) {
 
 	unsigned long long row = 0;
 
-	while (std::getline(input, line) && row < 50) {
+	while (std::getline(input, line) && row < 1000) {
 		// label and value are comma-separated
 		fen = line.substr(0, line.find(','));
 		board.readPosFromFEN(fen);
 		//board.print();
 		std::string e = line.substr(line.find(',')+1);
+		
 		
 		// Coordinate list format for sparse matrices:
 		// <row> <column> <nonzero-value>
