@@ -159,7 +159,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\..\libraries\x64\c++14\SFML-2.5.1\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-s.lib;sfml-window-s.lib;sfml-system-s.lib;winmm.lib;opengl32.lib;freetype.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;C:\mlpack\boost\lib64-msvc-14.2\libboost_serialization-vc142-mt-x64-1_71.lib;C:\mlpack\mlpack\build\Release\mlpack.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-graphics-s.lib;sfml-window-s.lib;sfml-system-s.lib;winmm.lib;opengl32.lib;freetype.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;C:\mlpack\mlpack\build\Release\mlpack.lib;C:\mlpack\boost\lib64-msvc-14.2\libboost_serialization-vc142-mt-x64-1_71.lib;C:\mlpack\armadillo\build\Release\armadillo.lib;C:\mlpack\mlpack\packages\OpenBLAS.0.2.14.1\lib\native\lib\x64\libopenblas.dll.a;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

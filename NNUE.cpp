@@ -98,7 +98,7 @@ void NNUE::train() {
 	network.Add<mlpack::ann::Linear<> >(K, 1);
 	network.Add<mlpack::ann::ReLULayer<> >();
 
-	network.Train(data, labels);
+	network.Train(data, labels, ens::GradientDescent::GradientDescent());
 }
 
 void NNUE::formatDataset(std::string path) {

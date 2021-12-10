@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
-#include "NNUEnet.h"
+#include <mlpack/core.hpp>
+#include <mlpack/methods/ann/ffn.hpp>
+#include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
+#include <ensmallen_bits/gradient_descent/gradient_descent.hpp>
 #include "Board.h"
 
 class NNUE {
