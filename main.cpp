@@ -1,37 +1,49 @@
-#include "ChessGraphics.h"
-#include "uci.h"
-#include "Testing.h"
-#include "NNUE.h"
+#include <mlpack/core.hpp>
+#include <mlpack/methods/ann/ffn.hpp>
+#include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
 
 int main() {
-	std::cout << "Welcome to Heureka Engine (Version 0.2.4), developed by Simon Hetzer.\n";
-	std::cout << "Enter \"uci\" to start UCI communication (for debugging or Chess GUIs only).\n";
-	std::cout << "Enter \"test\" to run the current test suite.\n";
-	std::cout << "Press any other key to launch integrated GUI.\n";
+	const int N = 40960;
+	const int M = 256;
+	const int K = 32;
 
-	string line;
+	arma::sp_mat sparseMatrix;
+	// Only 50 training examples, as I haven't converted more to the correct format
+	sparseMatrix.load("trainData.csv", arma::coord_ascii);
+	sparseMatrix = sparseMatrix.t();
+	// Not sure if I could continue to use sp_mat, would be great
+	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
-	getline(cin, line);
+	// Cut the labels from the last row of the trainingData
+	arma::mat labels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
 
-	if (line == "uci" || line == "xboard") {
-		// Creates UCI object that handles coming uci communication
-		uci interface;
-	}
-	else if (line == "test") {
-		// Run Testsuite
-		Testing test;
-	}
-	else if (line == "format") {
-		NNUE nnue;
-		nnue.formatDataset("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessData.csv");
-	}
-	else if (line == "train") {
-		NNUE nnue;
-		nnue.train();
-	}
-	else {
-		// Constructs the gui which enters the main loop
-		ChessGraphics gui;
-	}
+	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
+
+	mlpack::ann::Sequential<> firstHalf(2 * N, M);
+	firstHalf.Add<mlpack::ann::Subview<>>(1, 0, N - 1, 0, 0);
+	firstHalf.Add<mlpack::ann::Linear<>>(2 * N, M);
+	firstHalf.Add<mlpack::ann::ReLULayer<>>();
+
+	mlpack::ann::Sequential<> secondHalf(2 * N, M);
+	secondHalf.Add<mlpack::ann::Subview<>>(1, N, 2 * N - 1, 0, 0);
+	secondHalf.Add<mlpack::ann::Linear<>>(2 * N, M);
+	secondHalf.Add<mlpack::ann::ReLULayer<>>();
+
+	mlpack::ann::Concat<> concat(2 * N, 2 * M);
+	concat.Add<mlpack::ann::Sequential<>>(firstHalf);
+	concat.Add<mlpack::ann::Sequential<>>(secondHalf);
+
+	// Add the concatenation to the network
+	network.Add<mlpack::ann::Concat<>>(concat);
+	// L1
+	network.Add<mlpack::ann::Linear<> >(2 * M, K);
+	network.Add<mlpack::ann::ReLULayer<> >();
+	// L2
+	network.Add<mlpack::ann::Linear<> >(K, K);
+	network.Add<mlpack::ann::ReLULayer<> >();
+	// L3
+	network.Add<mlpack::ann::Linear<> >(K, 1);
+
+	network.Train(data, labels);
 	return 0;
 }
