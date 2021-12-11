@@ -1,5 +1,6 @@
 #include "NNUE.h"
 
+
 void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool white) {
 	// Copy L0's bias
 	for (int i = 0; i < M; i++) {
@@ -63,7 +64,7 @@ float NNUE::evaluate(bool whiteToMove) {
 
 void NNUE::train() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1kWDL.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
@@ -99,6 +100,8 @@ void NNUE::train() {
 	network.Add<mlpack::ann::ReLULayer<> >();
 
 	network.Train(data, labels, ens::GradientDescent::GradientDescent());
+
+	mlpack::data::Save("FullyConnected1k.xml", "FullyConnected1k", network, false);
 }
 
 void NNUE::formatDataset(std::string path) {
@@ -153,6 +156,21 @@ void NNUE::formatDataset(std::string path) {
 
 	input.close();
 	output.close();
+}
+
+void NNUE::predictTest() {
+	arma::sp_mat sparseMatrix;
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1kWDL.csv", arma::coord_ascii);
+	sparseMatrix = sparseMatrix.t();
+
+	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+
+	arma::mat predictions;
+	mlpack::ann::FFN<> network;
+	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FullyConnected1k.xml", "FullyConnected1k", network);
+	network.Predict(data, predictions);
+
+	predictions.print();
 }
 
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {

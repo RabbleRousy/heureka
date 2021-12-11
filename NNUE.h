@@ -6,8 +6,15 @@
 #include <ensmallen_bits/gradient_descent/gradient_descent.hpp>
 #include "Board.h"
 
+// 2*FeatureSet[N]->M*2->K->K->1
+// 2*HalfKP[40960]->256x2->32->32->1
+const int N = 40960;
+const int M = 256;
+const int K = 32;
+
 class NNUE {
 private:
+
 	// Linear network layers
 	template <int inputSize, int outputSize>
 	struct Linear {
@@ -73,5 +80,6 @@ public:
 	float evaluate(bool whiteToMove);
 	void train();
 	void formatDataset(std::string path);
+	void predictTest();
 };
 
