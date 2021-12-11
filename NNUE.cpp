@@ -109,21 +109,24 @@ void NNUE::formatDataset(std::string path) {
 		board.readPosFromFEN(fen);
 		//board.print();
 		std::string e = line.substr(line.find(',')+1); 
-		int eval;
+		float eval;
 
 		if (e.find('#') != std::string::npos) {
 			// Forced mate
 			if (e.find('-') != std::string::npos) {
 				// Black wins
-				eval = (board.currentPlayer == Piece::BLACK) ? 1 : 0;
+				eval = (board.currentPlayer == Piece::BLACK) ? 1.0f : 0.0f;
 			}
 			else {
 				// White wins
-				eval = (board.currentPlayer == Piece::WHITE) ? 1 : 0;
+				eval = (board.currentPlayer == Piece::WHITE) ? 1.0f : 0.0f;
 			}
 		}
 		else {
-			eval = std::stoi(e);
+			eval = std::stof(e);
+			if (board.currentPlayer == Piece::BLACK) {
+				eval = -eval;
+			}
 			// Transform evaluation from centipawns to win/draw/loss (0/0.5/1.0)
 			eval = utils::math::sigmoid(eval, 0, 1.0f / 410.0f);
 		}

@@ -23,7 +23,7 @@ int main() {
 	}
 	else if (line == "format") {
 		NNUE nnue;
-		nnue.formatDataset("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv");
+		nnue.formatDataset("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessData.csv");
 	}
 	else if (line == "train") {
 		NNUE nnue;
