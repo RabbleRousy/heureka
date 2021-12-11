@@ -64,15 +64,16 @@ float NNUE::evaluate(bool whiteToMove) {
 
 void NNUE::train() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1kWDL.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\tactic_evalsFormatted50k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
 	// Cut the labels from the last row of the trainingData
 	arma::mat labels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
 
+	
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
-
+	/*
 	// L0
 	network.Add<mlpack::ann::Linear<>>(2 * N, 2 * M);
 	network.Add<mlpack::ann::ReLULayer<> >();
@@ -85,16 +86,20 @@ void NNUE::train() {
 	// L3
 	network.Add<mlpack::ann::Linear<> >(K, 1);
 
-	network.Train(data, labels, ens::GradientDescent::GradientDescent());
+	*/
+	
+	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv2.bin", "network", network);
 
-	mlpack::data::Save("FullyConnected1k.xml", "FullyConnected1k", network, false);
+	network.Train(data, labels, ens::GradientDescent::GradientDescent(), ens::PrintLoss(), ens::ProgressBar());
+
+	mlpack::data::Save("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv3.bin", "added_tactic50k", network, false);
 }
 
 void NNUE::formatDataset(std::string path) {
 	std::string line;
 	std::string fen;
 	std::ifstream input(path);
-	std::ofstream output(path.substr(0, path.find('.')) + "Formatted1k.csv");
+	std::ofstream output(path.substr(0, path.find('.')) + "Formatted50k.csv");
 
 	// Create a board to help with fen reading
 	Board board;
@@ -103,12 +108,16 @@ void NNUE::formatDataset(std::string path) {
 
 	unsigned long long row = 0;
 
-	while (std::getline(input, line) && row < 1000) {
+	while (std::getline(input, line) && row < 50000) {
 		// label and value are comma-separated
-		fen = line.substr(0, line.find(','));
+		fen = line.substr(0, line.find_first_of(','));
 		board.readPosFromFEN(fen);
 		//board.print();
-		std::string e = line.substr(line.find(',')+1); 
+		std::string e = line.substr(line.find_first_of(',')+1);
+		size_t i = e.find(',');
+		if (i != std::string::npos) {
+			e = e.substr(0, i);
+		}
 		float eval;
 
 		if (e.find('#') != std::string::npos) {
@@ -150,17 +159,23 @@ void NNUE::formatDataset(std::string path) {
 
 void NNUE::predictTest() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1kWDL.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
-	arma::mat predictions;
+	arma::mat prediction;
 	mlpack::ann::FFN<> network;
-	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FullyConnected1k.xml", "FullyConnected1k", network);
-	network.Predict(data, predictions);
+	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv3.bin", "FullyConnected_v3", network);
 
-	predictions.print();
+
+	for (int i = 0; i < data.n_cols; i++) {
+		auto column = data.col(i);
+		network.Predict(column, prediction);
+		std::cout << "Prediction for #" << i << " : ";
+		prediction.print();
+		std::cout << '\n';
+	}
 }
 
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
