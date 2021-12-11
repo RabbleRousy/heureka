@@ -29,6 +29,10 @@ int main() {
 		NNUE nnue;
 		nnue.train();
 	}
+	else if (line == "predict") {
+		NNUE nnue;
+		nnue.predictTest();
+	}
 	else {
 		// Constructs the gui which enters the main loop
 		ChessGraphics gui;
