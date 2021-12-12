@@ -169,8 +169,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Move.cpp" />
     <ClCompile Include="NNUE.cpp" />
-    <ClCompile Include="NNUEnet.cpp" />
     <ClCompile Include="Piece.cpp" />
+    <ClCompile Include="LinearSplit.cpp" />
     <ClCompile Include="Testing.cpp" />
     <ClCompile Include="TranspositionTable.cpp" />
     <ClCompile Include="uci.cpp" />
@@ -184,10 +184,10 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="Move.h" />
     <ClInclude Include="NNUE.h" />
-    <ClInclude Include="NNUEnet.h" />
     <ClInclude Include="Piece.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Profiling.h" />
+    <ClInclude Include="LinearSplit.h" />
     <ClInclude Include="Testing.h" />
     <ClInclude Include="TranspositionTable.h" />
     <ClInclude Include="uci.h" />

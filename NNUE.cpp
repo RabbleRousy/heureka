@@ -1,6 +1,10 @@
 #include "NNUE.h"
 
-NNUE::NNUE(std::string modelPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv3.bin") {
+NNUE::NNUE() {
+	loadModel("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv3.bin");
+}
+
+NNUE::NNUE(std::string modelPath) {
 	loadModel(modelPath);
 }
 
