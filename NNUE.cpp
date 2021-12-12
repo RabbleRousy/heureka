@@ -1,5 +1,10 @@
 #include "NNUE.h"
 
+NNUE::NNUE()  {}
+
+NNUE::NNUE(std::string modelPath) {
+	loadModel(modelPath);
+}
 
 void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool white) {
 	// Copy L0's bias
@@ -236,6 +241,58 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 void NNUE::getHalfKPvector(bool white, char* features, Board* board) {
 	// Clear feature vector
 	memset(features, '0', sizeof(features));
+}
+
+void NNUE::loadModel(std::string path) {
+	mlpack::ann::FFN<> model;
+	mlpack::data::Load(path, "model", model);
+
+	auto layer = model.Model()[0];
+	
+	// L0
+	arma::mat parameters;
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[0]);
+	// Get the weights (first part of parameters)
+	for (int i = 0; i < L0.in_size; i++) {
+		for (int j = 0; j < L0.out_size; j++) {
+			L0.weights[i][j] = parameters[L0.out_size * i + j];
+		}
+
+	}
+	// Get the biases (stored last in parameters)
+	for (int i = 0; i < L0.out_size; i++) {
+		L0.biases[i] = parameters[L0.in_size * L0.out_size + i];
+	}
+
+	// L1
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[1]);
+	for (int i = 0; i < L1.in_size; i++) {
+		for (int j = 0; j < L1.out_size; j++) {
+			L1.weights[i][j] = parameters[L1.out_size * i + j];
+		}
+	}
+	// Get the biases (stored last in parameters)
+	for (int i = 0; i < L1.out_size; i++) {
+		L1.biases[i] = parameters[L1.in_size * L1.out_size + i];
+	}
+
+	// L2
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[2]);
+	for (int i = 0; i < L2.in_size; i++) {
+		for (int j = 0; j < L2.out_size; j++) {
+			L2.weights[i][j] = parameters[L2.out_size * i + j];
+		}
+	}// Get the biases (stored last in parameters)
+	for (int i = 0; i < L2.out_size; i++) {
+		L2.biases[i] = parameters[L2.in_size * L2.out_size + i];
+	}
+
+	// L3
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[3]);
+	for (int i = 0; i < L3.in_size; i++) {
+		L3.weights[i][0] = parameters[i];
+	}
+	L3.biases[0] = parameters[L3.in_size];
 }
 
 template<int inputSize, int outputSize>
