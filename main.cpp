@@ -30,7 +30,7 @@ int main() {
 		nnue.train();
 	}
 	else if (line == "predict") {
-		NNUE nnue("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv3.bin");
+		NNUE nnue;
 		nnue.predictTest();
 	}
 	else {

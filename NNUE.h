@@ -69,12 +69,9 @@ private:
 	Linear<K, K> L2;
 	Linear<K, 1> L3;
 
-	void recalculateAccumulator(const std::vector<int> &activeFeatures, bool white);
-	void updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white);
-
 	template <int inputSize, int outputSize>
 	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
-	void clippedReLu(int size, const float* input, float* output);
+	void relu(int size, const float* input, float* output);
 
 	std::string getHalfKPcoordinateList(unsigned long long row, Board* board);
 	void getHalfKPvector(bool white, char* features, Board* board);
@@ -88,5 +85,8 @@ public:
 	void train();
 	void formatDataset(std::string path);
 	void predictTest();
+
+	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);
+	void updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white);
 };
 

@@ -1,8 +1,6 @@
 #include "NNUE.h"
 
-NNUE::NNUE()  {}
-
-NNUE::NNUE(std::string modelPath) {
+NNUE::NNUE(std::string modelPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FC1\\FCv3.bin") {
 	loadModel(modelPath);
 }
 
@@ -34,10 +32,10 @@ void NNUE::updateAccumulator(const std::vector<int>& removedFeatures, const std:
 	}
 }
 
-void NNUE::clippedReLu(int size, const float* input, float* output) {
+void NNUE::relu(int size, const float* input, float* output) {
 	for (int i = 0; i < size; i++) {
 		// Clip value between 0 and 1
-		output[i] = std::max(std::min(input[i], 1.0f), 0.0f);
+		output[i] = std::max(0.0f, input[i]);
 	}
 }
 
@@ -51,15 +49,15 @@ float NNUE::evaluate(bool whiteToMove) {
 
 	float output[2 * M];
 	// Activation function for accumulator results
-	clippedReLu(2 * M, input, output);
+	relu(2 * M, input, output);
 
 	// First hidden layer (write output into old input buffer)
 	linear<M * 2, K>(L1, output, input);
-	clippedReLu(K, input, output);
+	relu(K, input, output);
 
 	// Second hidden layer
 	linear<K, K>(L2, output, input);
-	clippedReLu(K, input, output);
+	relu(K, input, output);
 
 	// Output layer
 	linear<K, 1>(L3, output, input);
