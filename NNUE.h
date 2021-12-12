@@ -18,10 +18,13 @@ private:
 	// Linear network layers
 	template <int inputSize, int outputSize>
 	struct Linear {
+		int in_size, out_size;
 		float** weights;
 		float* biases;
 
 		Linear() {
+			in_size = inputSize;
+			out_size = outputSize;
 			// Construct the input x output Weights matrix
 			weights = new float* [inputSize];
 			for (int i = 0; i < inputSize; i++) {
@@ -76,7 +79,11 @@ private:
 	std::string getHalfKPcoordinateList(unsigned long long row, Board* board);
 	void getHalfKPvector(bool white, char* features, Board* board);
 
+	void loadModel(std::string path);
+
 public:
+	NNUE();
+	NNUE(std::string modelPath);
 	float evaluate(bool whiteToMove);
 	void train();
 	void formatDataset(std::string path);
