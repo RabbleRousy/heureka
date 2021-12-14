@@ -180,4 +180,7 @@ namespace mlpack {
     } // namespace ann
 } // namespace mlpack
 
+// Include implementation.
+#include "LinearSplit_impl.hpp"
+
 #endif

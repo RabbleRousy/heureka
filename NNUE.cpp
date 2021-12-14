@@ -71,7 +71,7 @@ float NNUE::evaluate(bool whiteToMove) {
 
 void NNUE::train() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1kWDL.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
@@ -80,22 +80,9 @@ void NNUE::train() {
 
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
 
-	mlpack::ann::Sequential<> firstHalf(2 * N, M);
-	//firstHalf.Add<mlpack::ann::Subview<>>(1, 0, N - 1, 0, 0);
-	firstHalf.Add<mlpack::ann::Linear<>>(2 * N, M);
-	firstHalf.Add<mlpack::ann::ReLULayer<>>();
-
-	mlpack::ann::Sequential<> secondHalf(2 * N, M);
-	//secondHalf.Add<mlpack::ann::Subview<>>(1, N, 2 * N - 1, 0, 0);
-	secondHalf.Add<mlpack::ann::Linear<>>(2 * N, M);
-	secondHalf.Add<mlpack::ann::ReLULayer<>>();
-
-	mlpack::ann::Concat<> concat(2 * N, 2 * M);
-	concat.Add<mlpack::ann::Sequential<>>(firstHalf);
-	concat.Add<mlpack::ann::Sequential<>>(secondHalf);
-
-	// Add the concatenation to the network
-	network.Add<mlpack::ann::Concat<>>(concat);
+	// L0
+	network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
+	network.Add<mlpack::ann::ReLULayer<> >();
 	// L1
 	network.Add<mlpack::ann::Linear<> >(2 * M, K);
 	network.Add<mlpack::ann::ReLULayer<> >();
@@ -106,9 +93,9 @@ void NNUE::train() {
 	network.Add<mlpack::ann::Linear<> >(K, 1);
 	network.Add<mlpack::ann::ReLULayer<> >();
 
-	network.Train(data, labels, ens::GradientDescent::GradientDescent());
+	network.Train(data, labels, ens::GradientDescent::GradientDescent(), ens::ProgressBar(), ens::PrintLoss());
 
-	mlpack::data::Save("FullyConnected1k.xml", "FullyConnected1k", network, false);
+	mlpack::data::Save("CustomLayer1k.txt", "net", network, false);
 }
 
 void NNUE::formatDataset(std::string path) {
@@ -170,14 +157,14 @@ void NNUE::formatDataset(std::string path) {
 
 void NNUE::predictTest() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1kWDL.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessDataFormatted1k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
 	arma::mat predictions;
 	mlpack::ann::FFN<> network;
-	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\FullyConnected1k.xml", "FullyConnected1k", network);
+	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer1k.txt", "net", network);
 	network.Predict(data, predictions);
 
 	predictions.print();

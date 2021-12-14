@@ -5,7 +5,7 @@
 #include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
 #include <ensmallen_bits/gradient_descent/gradient_descent.hpp>
 #include "Board.h"
-#include "splitLayer.h"
+#include "LinearSplit.hpp"
 
 // 2*FeatureSet[N]->M*2->K->K->1
 // 2*HalfKP[40960]->256x2->32->32->1
