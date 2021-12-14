@@ -162,12 +162,17 @@ void NNUE::predictTest() {
 
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
-	arma::mat predictions;
-	mlpack::ann::FFN<> network;
-	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer1k.txt", "net", network);
-	network.Predict(data, predictions);
-
-	predictions.print();
+	arma::mat prediction;
+	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
+	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer.xml", "net", network);
+	
+	for (int i = 0; i < data.n_cols; i++) {
+		auto column = data.col(i);
+		network.Predict(column, prediction);
+		std::cout << "Prediction for #" << i << " : ";
+		prediction.print();
+		std::cout << '\n';
+	}
 }
 
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
