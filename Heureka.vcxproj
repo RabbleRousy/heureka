@@ -181,6 +181,7 @@
     <ClInclude Include="Bitboard.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="ChessGraphics.h" />
+    <ClInclude Include="ClippedReLU.hpp" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Move.h" />
     <ClInclude Include="NNUE.h" />
