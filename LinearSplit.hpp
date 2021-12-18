@@ -1,9 +1,8 @@
-#ifndef MLPACK_METHODS_ANN_LAYER_LINEAR_SPLIT_HPP
-#define MLPACK_METHODS_ANN_LAYER_LINEAR_SPLIT_HPP
+#ifndef MLPACK_METHODS_ANN_LAYER_LINEARSPLIT_HPP
+#define MLPACK_METHODS_ANN_LAYER_LINEARSPLIT_HPP
 
 #include <mlpack/prereqs.hpp>
 #include <mlpack/methods/ann/regularizer/no_regularizer.hpp>
-#include <mlpack/methods/ann/layer/layer_types.hpp>
 
 namespace mlpack {
     namespace ann /** Artificial Neural Network. */ {
@@ -180,7 +179,6 @@ namespace mlpack {
     } // namespace ann
 } // namespace mlpack
 
-// Include implementation.
 #include "LinearSplit_impl.hpp"
 
 #endif

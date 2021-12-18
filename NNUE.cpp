@@ -71,31 +71,47 @@ float NNUE::evaluate(bool whiteToMove) {
 
 void NNUE::train() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted50k.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted1k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
-	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+	arma::mat trainData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
-	// Cut the labels from the last row of the trainingData
-	arma::mat labels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
+	// Cut the trainLabels from the last row of the trainingData
+	arma::mat trainLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
+
+	/*sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted10k.csv", arma::coord_ascii);
+	sparseMatrix = sparseMatrix.t();
+	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);*/
 
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
 
 	// L0
 	network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
-	network.Add<mlpack::ann::ClippedReLULayer<> >();
-	// L1
+	network.Add<mlpack::ann::ClippedReLULayer<>>();
+	// L1									 
 	network.Add<mlpack::ann::Linear<> >(2 * M, K);
-	network.Add<mlpack::ann::ClippedReLULayer<> >();
-	// L2
+	network.Add<mlpack::ann::ClippedReLULayer<>>();
+	// L2									 
 	network.Add<mlpack::ann::Linear<> >(K, K);
-	network.Add<mlpack::ann::ClippedReLULayer<> >();
+	network.Add<mlpack::ann::ClippedReLULayer<>>();
 	// L3
 	network.Add<mlpack::ann::Linear<> >(K, 1);
 
+	/*for (int i = 0; i < 100; i++) {
+		network.Train(trainData.submat(0, i * 32, trainData.n_rows - 1, (i+1) * 32 - 1),
+					trainLabels.submat(0, i * 32, trainLabels.n_rows - 1, (i + 1) * 32 - 1),
+					ens::GradientDescent::GradientDescent(),
+					ens::ProgressBar(), ens::PrintLoss());
 
-	network.Train(data, labels, ens::GradientDescent::GradientDescent(0.1, 50, 0.1), ens::ProgressBar(), ens::PrintLoss(), ens::EarlyStopAtMinLossType<>());
+		arma::mat prediction;
+		network.Predict(validationData, prediction);
+		
+		double meanSquaredError = arma::accu(arma::square(prediction - validationLabels)) / prediction.n_cols;
+		std::cout << "MSE with validation set after epoch #" << i << " is " << meanSquaredError << ".\n\n";
+	}*/
+	network.Train(trainData, trainLabels, ens::GradientDescent(0.1, 128, 0.1), ens::ProgressBar(), ens::PrintLoss());
 
-	mlpack::data::Save("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer.bin", "net", network, false);
+	mlpack::data::Save("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayers\\CustomLayers.bin", "net", network, false);
 }
 
 void NNUE::formatDataset(std::string path) {
@@ -110,6 +126,10 @@ void NNUE::formatDataset(std::string path) {
 	std::getline(input, line);
 
 	unsigned long long row = 0;
+
+	/*for (int i = 0; i < 50000; i++) {
+		std::getline(input, line);
+	}*/
 
 	while (std::getline(input, line) && row < 1000) {
 		// label and value are comma-separated
@@ -157,14 +177,14 @@ void NNUE::formatDataset(std::string path) {
 
 void NNUE::predictTest() {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted10k.csv", arma::coord_ascii);
+	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted1k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
 	arma::mat prediction;
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
-	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer.bin", "net", network);
+	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayers\\CustomLayers.bin", "net", network);
 	
 	for (int i = 0; i < data.n_cols; i++) {
 		auto column = data.col(i);
