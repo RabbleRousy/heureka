@@ -69,9 +69,9 @@ float NNUE::evaluate(bool whiteToMove) {
 	return input[0];
 }
 
-void NNUE::train() {
+void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, double stepSize, int batchSize, double tolerance, int maxIterations) {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted1k.csv", arma::coord_ascii);
+	sparseMatrix.load(dataPath, arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 	arma::mat trainData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
@@ -85,17 +85,23 @@ void NNUE::train() {
 
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
 
-	// L0
-	network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
-	network.Add<mlpack::ann::ClippedReLULayer<>>();
-	// L1									 
-	network.Add<mlpack::ann::Linear<> >(2 * M, K);
-	network.Add<mlpack::ann::ClippedReLULayer<>>();
-	// L2									 
-	network.Add<mlpack::ann::Linear<> >(K, K);
-	network.Add<mlpack::ann::ClippedReLULayer<>>();
-	// L3
-	network.Add<mlpack::ann::Linear<> >(K, 1);
+	if (newNet) {
+		// L0
+		network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
+		network.Add<mlpack::ann::ClippedReLULayer<>>();
+		// L1									 
+		network.Add<mlpack::ann::Linear<> >(2 * M, K);
+		network.Add<mlpack::ann::ClippedReLULayer<>>();
+		// L2									 
+		network.Add<mlpack::ann::Linear<> >(K, K);
+		network.Add<mlpack::ann::ClippedReLULayer<>>();
+		// L3
+		network.Add<mlpack::ann::Linear<> >(K, 1);
+	}
+	else {
+		mlpack::data::Load(modelPath, "network", network);
+	}
+	
 
 	/*for (int i = 0; i < 100; i++) {
 		network.Train(trainData.submat(0, i * 32, trainData.n_rows - 1, (i+1) * 32 - 1),
@@ -109,9 +115,18 @@ void NNUE::train() {
 		double meanSquaredError = arma::accu(arma::square(prediction - validationLabels)) / prediction.n_cols;
 		std::cout << "MSE with validation set after epoch #" << i << " is " << meanSquaredError << ".\n\n";
 	}*/
-	network.Train(trainData, trainLabels, ens::GradientDescent(0.1, 128, 0.1), ens::ProgressBar(), ens::PrintLoss());
+	
+	// zoq's example
+	ens::AMSGrad optimizer(stepSize, batchSize, 0.9, 0.999, 1e-8, 500000, tolerance);
+	optimizer.MaxIterations() = maxIterations;
 
-	mlpack::data::Save("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayers\\CustomLayers.bin", "net", network, false);
+	// What I want (somehow not supported / compatible with ProgressBar() because of 'missing' batchsize)
+	//ens::GradientDescent myOptimizer(0.01, 100000, 1e-3);
+	//myOptimizer.MaxIterations() = 0;
+
+	network.Train(trainData, trainLabels, optimizer, ens::ProgressBar(), ens::PrintLoss());
+
+	mlpack::data::Save(modelPath, "network", network, false);
 }
 
 void NNUE::formatDataset(std::string path) {
@@ -175,16 +190,16 @@ void NNUE::formatDataset(std::string path) {
 	output.close();
 }
 
-void NNUE::predictTest() {
+void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 	arma::sp_mat sparseMatrix;
-	sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted1k.csv", arma::coord_ascii);
+	sparseMatrix.load(testdataPath, arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
 
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
 	arma::mat prediction;
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
-	mlpack::data::Load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayers\\CustomLayers.bin", "net", network);
+	mlpack::data::Load(modelPath, "net", network);
 	
 	for (int i = 0; i < data.n_cols; i++) {
 		auto column = data.col(i);
