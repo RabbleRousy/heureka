@@ -196,18 +196,25 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 	sparseMatrix = sparseMatrix.t();
 
 	arma::mat data = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+	// Get the labels from the last row of the data
+	arma::mat labels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
 
 	arma::mat prediction;
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
 	mlpack::data::Load(modelPath, "net", network);
 	
+	double errorSum = 0;
+
 	for (int i = 0; i < data.n_cols; i++) {
 		auto column = data.col(i);
 		network.Predict(column, prediction);
-		std::cout << "Prediction for #" << i << " : ";
-		prediction.print();
-		std::cout << '\n';
+		double pred = prediction[0];
+		double label = labels[i];
+		double error = std::abs(pred - label);
+		errorSum += error;
+		std::cout << "Prediction for #" << i << " : " << pred << " (Label: " << labels[i] << ", off by " << std::abs(pred - labels[i]) << ")\n";
 	}
+	std::cout << "AVERAGE ERROR: " << errorSum / data.n_cols;
 }
 
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
