@@ -21,9 +21,9 @@ void ChessGraphics::initGraphics()
 	window = new RenderWindow(VideoMode(1160, 1160), "Heureka");
 	windowRes = window->getSize().x;
 	// Board texture is 1160 x 1160 px
-	boardTexture.loadFromFile("Sprites/board.png");
+	boardTexture.loadFromFile("resources/sprites/board.png");
 	// Pieces texture is 2000 x 667 px
-	pieces.loadFromFile("Sprites/pieces.png");
+	pieces.loadFromFile("resources/sprites/pieces.png");
 	// One piece sprite is 333 x 333 px
 	pieceRes = pieces.getSize().y / 2;
 	std::cout << "Piece resolution: " << pieceRes << std::endl;

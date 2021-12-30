@@ -378,7 +378,7 @@ void Bitboard::initMagicNumbers() {
 }
 
 void Bitboard::writeMagicNumbers() {
-    std::ofstream file("MagicNumbers.txt");
+    std::ofstream file("resources/MagicNumbers.txt");
     for (int i = 0; i < 64; i++) {
         file << rookMagics[i] << '\n';
     }
@@ -391,7 +391,7 @@ void Bitboard::writeMagicNumbers() {
 
 void Bitboard::readMagicNumbers() {
     std::string line;
-    std::ifstream file("MagicNumbers.txt");
+    std::ifstream file("resources/MagicNumbers.txt");
 
     int count = 0;
     while (std::getline(file, line)) {
@@ -407,6 +407,10 @@ void Bitboard::readMagicNumbers() {
         count++;
     }
     file.close();
+
+    if (count == 0) {
+        std::cerr << "error: Magic Numbers could not be read!\n";
+    }
 }
 
 void Bitboard::fillAttackTables() {
