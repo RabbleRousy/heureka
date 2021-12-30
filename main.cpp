@@ -28,9 +28,15 @@ int main() {
 	}
 	else if (line == "format") {
 		NNUE nnue;
+		cout << "Start index: ";
+		cin >> line;
+		int from = stoi(line);
+		cout << "End index: ";
+		cin >> line;
+		int to = stoi(line);
 		cout << "Data path: ";
 		cin >> line;
-		nnue.formatDataset(line);
+		nnue.formatDataset(line, from, to);
 	}
 	else if (line == "train") {
 		NNUE nnue;

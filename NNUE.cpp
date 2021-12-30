@@ -129,11 +129,11 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, doubl
 	mlpack::data::Save(modelPath, "network", network, false);
 }
 
-void NNUE::formatDataset(std::string path) {
+void NNUE::formatDataset(std::string path, int from, int to) {
 	std::string line;
 	std::string fen;
 	std::ifstream input(path);
-	std::ofstream output(path.substr(0, path.find('.')) + "Formatted1k.csv");
+	std::ofstream output(path.substr(0, path.find('.')) + "Formatted" + std::to_string(from / 1000) + "k_" + std::to_string(to/1000) + "k.csv");
 
 	// Create a board to help with fen reading
 	Board board;
@@ -142,11 +142,11 @@ void NNUE::formatDataset(std::string path) {
 
 	unsigned long long row = 0;
 
-	/*for (int i = 0; i < 50000; i++) {
+	for (int i = 0; i < from; i++) {
 		std::getline(input, line);
-	}*/
+	}
 
-	while (std::getline(input, line) && row < 1000) {
+	while (std::getline(input, line) && row < (to - from)) {
 		// label and value are comma-separated
 		fen = line.substr(0, line.find(','));
 		board.readPosFromFEN(fen);
