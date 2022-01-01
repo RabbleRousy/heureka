@@ -73,6 +73,15 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, doubl
 	arma::sp_mat sparseMatrix;
 	sparseMatrix.load(dataPath, arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
+	
+	// Shuffle data
+	srand(time(NULL));
+	for (int i = 0; i < sparseMatrix.n_cols; i++) {
+		// Swap 2 random columns
+		sparseMatrix.swap_cols(rand() % sparseMatrix.n_cols, rand() % sparseMatrix.n_cols);
+	}
+
+
 	arma::mat trainData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 
 	// Cut the trainLabels from the last row of the trainingData
