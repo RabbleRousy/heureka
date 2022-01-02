@@ -163,36 +163,25 @@ void NNUE::formatDataset(std::string path, int from, int to) {
 		std::string e = line.substr(line.find(',')+1); 
 		float eval;
 
-		if (e.find('#') != std::string::npos) {
-			// Forced mate
-			if (e.find('-') != std::string::npos) {
-				// Black wins
-				eval = (board.currentPlayer == Piece::BLACK) ? 1.0f : 0.0f;
-			}
-			else {
-				// White wins
-				eval = (board.currentPlayer == Piece::WHITE) ? 1.0f : 0.0f;
-			}
-		}
-		else {
+		// Ignore samples were there is a forced mate
+		if (e.find('#') == std::string::npos) {
 			eval = std::stof(e);
 			if (board.currentPlayer == Piece::BLACK) {
 				eval = -eval;
 			}
 			// Transform evaluation from centipawns to win/draw/loss (0/0.5/1.0)
 			eval = utils::math::sigmoid(eval, 0, 1.0f / 410.0f);
+
+
+			// Coordinate list format for sparse matrices:
+			// <row> <column> <nonzero-value>
+			std::string coordinateList = getHalfKPcoordinateList(row, &board);
+			// Append value
+			coordinateList += std::to_string(row) + " 81920 " + std::to_string(eval) + '\n';
+
+			output << coordinateList;
+			row++;
 		}
-		
-		// Coordinate list format for sparse matrices:
-		// <row> <column> <nonzero-value>
-		std::string coordinateList = getHalfKPcoordinateList(row, &board);
-		// Append value
-		coordinateList += std::to_string(row) + " 81920 " + std::to_string(eval) + '\n';
-
-		output << coordinateList;
-
-
-		row++;
 	}
 
 	input.close();
