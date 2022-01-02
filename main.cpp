@@ -62,11 +62,6 @@ int main() {
 		cin >> buf;
 		batchSize = stoi(buf);
 
-		double tolerance;
-		cout << "Tolerance: ";
-		cin >> buf;
-		tolerance = stod(buf);
-
 		int maxIterations;
 		cout << "Max iterations: ";
 		cin >> buf;
@@ -75,9 +70,9 @@ int main() {
 		cout << "Starting training with parameters:\n"
 			<< "Model: " << modelPath << '\n' << "Data: " << dataPath << '\n'
 			<< "Step size: " << to_string(stepSize) << ", batch size: " << to_string(batchSize) << '\n'
-			<< "tolerance: " << to_string(tolerance) << ", max iterations: " << to_string(maxIterations) << '\n';
+			<< "Max iterations: " << to_string(maxIterations) << '\n';
 
-		nnue.train(line == "Y", modelPath, dataPath, stepSize, batchSize, tolerance, maxIterations);
+		nnue.train(line == "Y", modelPath, dataPath, stepSize, batchSize, maxIterations);
 	}
 	else if (line == "predict") {
 		NNUE nnue;

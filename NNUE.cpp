@@ -69,7 +69,7 @@ float NNUE::evaluate(bool whiteToMove) {
 	return input[0];
 }
 
-void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, double stepSize, int batchSize, double tolerance, int maxIterations) {
+void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, double stepSize, int batchSize, int maxIterations) {
 	arma::sp_mat sparseMatrix;
 	sparseMatrix.load(dataPath, arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
@@ -108,7 +108,9 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, doubl
 		network.Add<mlpack::ann::Linear<> >(K, 1);
 	}
 	else {
-		mlpack::data::Load(modelPath, "network", network);
+		mlpack::data::Load(modelPath + "\\net.bin", "network", network);
+		// Create backup
+		mlpack::data::Save(modelPath + "\\net_backup.bin", "network", network, false);
 	}
 	
 
@@ -125,17 +127,26 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, doubl
 		std::cout << "MSE with validation set after epoch #" << i << " is " << meanSquaredError << ".\n\n";
 	}*/
 	
-	// zoq's example
-	ens::AMSGrad optimizer(stepSize, batchSize, 0.9, 0.999, 1e-8, 500000, tolerance);
+	// Stochastic Gradient Descent using Adam Optimizer
+	ens::AMSGrad optimizer(stepSize, batchSize, 0.9, 0.999, 1e-8, 500000, -1);
 	optimizer.MaxIterations() = maxIterations;
 
 	// What I want (somehow not supported / compatible with ProgressBar() because of 'missing' batchsize)
 	//ens::GradientDescent myOptimizer(0.01, 100000, 1e-3);
 	//myOptimizer.MaxIterations() = 0;
 
-	network.Train(trainData, trainLabels, optimizer, ens::ProgressBar(), ens::PrintLoss());
+	std::ofstream lossOutput;
+	std::ofstream reportOutput;
+	lossOutput.open(modelPath + "\\loss.txt", std::ios_base::app);
+	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app);
 
-	mlpack::data::Save(modelPath, "network", network, false);
+
+	network.Train(trainData, trainLabels, optimizer, ens::ProgressBar(), ens::PrintLoss(lossOutput), ens::Report(0.1, reportOutput, 1));
+
+	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
+
+	lossOutput.close();
+	reportOutput.close();
 }
 
 void NNUE::formatDataset(std::string path, int from, int to) {
