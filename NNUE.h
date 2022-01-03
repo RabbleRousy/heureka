@@ -7,6 +7,7 @@
 #include "Board.h"
 #include "LinearSplit.hpp"
 #include "ClippedReLU.h"
+#include "PrintValidationLoss.hpp"
 
 // 2*FeatureSet[N]->M*2->K->K->1
 // 2*HalfKP[40960]->256x2->32->32->1
@@ -84,7 +85,7 @@ public:
 	NNUE();
 	NNUE(std::string modelPath);
 	float evaluate(bool whiteToMove);
-	void train(bool newNet, std::string modelPath, std::string dataPath, double stepSize, int batchSize, int maxIterations);
+	void train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations);
 	void formatDataset(std::string path, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath);
 

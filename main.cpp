@@ -44,12 +44,15 @@ int main() {
 		cout << "Train a NEW network? (Y for yes) ";
 		cin >> line;
 
-		string modelPath, dataPath;
+		string modelPath, dataPath, validationPath;
 		cout << "Model path: ";
 		cin >> modelPath;
 
 		cout << "Data path: ";
 		cin >> dataPath;
+
+		cout << "Validation Data path: ";
+		cin >> validationPath;
 
 		string buf;
 		double stepSize;
@@ -72,7 +75,7 @@ int main() {
 			<< "Step size: " << to_string(stepSize) << ", batch size: " << to_string(batchSize) << '\n'
 			<< "Max iterations: " << to_string(maxIterations) << '\n';
 
-		nnue.train(line == "Y", modelPath, dataPath, stepSize, batchSize, maxIterations);
+		nnue.train(line == "Y", modelPath, dataPath, validationPath, stepSize, batchSize, maxIterations);
 	}
 	else if (line == "predict") {
 		NNUE nnue;

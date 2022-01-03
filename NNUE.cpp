@@ -69,7 +69,7 @@ float NNUE::evaluate(bool whiteToMove) {
 	return input[0];
 }
 
-void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, double stepSize, int batchSize, int maxIterations) {
+void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations) {
 	arma::sp_mat sparseMatrix;
 	sparseMatrix.load(dataPath, arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
@@ -86,6 +86,13 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, doubl
 
 	// Cut the trainLabels from the last row of the trainingData
 	arma::mat trainLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
+
+	// Load validation data
+	sparseMatrix.load(valPath, arma::coord_ascii);
+	sparseMatrix = sparseMatrix.t();
+	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
+
 
 	/*sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted10k.csv", arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
@@ -135,13 +142,15 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, doubl
 	//ens::GradientDescent myOptimizer(0.01, 100000, 1e-3);
 	//myOptimizer.MaxIterations() = 0;
 
-	std::ofstream lossOutput;
-	std::ofstream reportOutput;
+	std::ofstream lossOutput, valLossOutput, reportOutput;
 	lossOutput.open(modelPath + "\\loss.txt", std::ios_base::app);
+	valLossOutput.open(modelPath + "\\validationLoss.txt", std::ios_base::app);
 	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app);
 
 
-	network.Train(trainData, trainLabels, optimizer, ens::ProgressBar(), ens::PrintLoss(lossOutput), ens::Report(0.1, reportOutput, 1));
+	network.Train(trainData, trainLabels, optimizer,
+	/*Callbacks*/ens::ProgressBar(),
+		ens::PrintLoss(lossOutput), ens::PrintValidationLoss(network, validationData, validationLabels, valLossOutput) );
 
 	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
 
