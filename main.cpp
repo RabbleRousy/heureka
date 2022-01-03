@@ -28,6 +28,15 @@ int main() {
 	}
 	else if (line == "format") {
 		NNUE nnue;
+		/*string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
+
+		for (int tens = 0; tens < 10; tens++) {
+			for (int k = 0; k < 10; k++) {
+				string outputPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\" + to_string(tens + 1) + '_' + to_string(k + 1) + ".csv";
+				nnue.formatDataset(path, outputPath, 10000 * tens + 1000 * k, 10000 * tens + 1000 * (k + 1));
+			}
+		}*/
+
 		cout << "Start index: ";
 		cin >> line;
 		int from = stoi(line);
@@ -36,20 +45,33 @@ int main() {
 		int to = stoi(line);
 		cout << "Data path: ";
 		cin >> line;
-		nnue.formatDataset(line, from, to);
+		nnue.formatDataset(line, line.substr(0, line.find_last_of('.'))
+			+ "Formatted" + to_string(from) + '_' + to_string(to) + ".csv", from, to);
 	}
 	else if (line == "train") {
 		NNUE nnue;
 
 		cout << "Train a NEW network? (Y for yes) ";
 		cin >> line;
+		bool newNet = line == 'Y';
 
 		string modelPath, dataPath, validationPath;
 		cout << "Model path: ";
 		cin >> modelPath;
 
-		cout << "Data path: ";
-		cin >> dataPath;
+		array<int, 10> batchCounts;
+		batchCounts.fill(0);
+
+		for (int i = 0; i < 10; i++) {
+			cout << "How many k of the " << (i + 1) << ". 10k do you want to use? ";
+			cin >> line;
+			try {
+				batchCounts[i] = stoi(line);
+			}
+			catch (...) {
+				break;
+			}
+		}
 
 		cout << "Validation Data path: ";
 		cin >> validationPath;
@@ -75,7 +97,7 @@ int main() {
 			<< "Step size: " << to_string(stepSize) << ", batch size: " << to_string(batchSize) << '\n'
 			<< "Max iterations: " << to_string(maxIterations) << '\n';
 
-		nnue.train(line == "Y", modelPath, dataPath, validationPath, stepSize, batchSize, maxIterations);
+		nnue.train(newNet, modelPath, batchCounts, validationPath, stepSize, batchSize, maxIterations);
 	}
 	else if (line == "predict") {
 		NNUE nnue;

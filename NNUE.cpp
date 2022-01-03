@@ -158,11 +158,99 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 	reportOutput.close();
 }
 
-void NNUE::formatDataset(std::string path, int from, int to) {
+void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts, std::string valPath, double stepSize, int batchSize, int maxIterations) {
+	arma::sp_mat sparseMatrix;
+	arma::mat trainData;
+
+	for (int i = 0; i < 10; i++) {
+		if (batchCounts[i] == 0) continue;
+
+		for (int j = 0; j < batchCounts[i]; j++) {
+			std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\"
+				+ std::to_string(i + 1) + '_' + std::to_string(j+1) + ".csv";
+			sparseMatrix.load(path, arma::coord_ascii);
+			sparseMatrix = sparseMatrix.t();
+
+			trainData = arma::join_rows(trainData, (arma::mat)sparseMatrix);
+		}
+	}
+
+	// Shuffle data
+	srand(time(NULL));
+	for (int i = 0; i < trainData.n_cols; i++) {
+		// Swap 2 random columns
+		trainData.swap_cols(rand() % trainData.n_cols, rand() % trainData.n_cols);
+	}
+
+	// Cut the trainLabels from the last row of the trainingData
+	arma::mat trainLabels = (arma::mat)trainData.submat(trainData.n_rows - 1, 0, trainData.n_rows - 1, trainData.n_cols - 1);
+	trainData = (arma::mat)trainData.submat(0, 0, trainData.n_rows - 2, trainData.n_cols - 1);
+
+	// Load validation data
+	sparseMatrix.load(valPath, arma::coord_ascii);
+	sparseMatrix = sparseMatrix.t();
+	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
+
+	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
+
+	if (newNet) {
+		// L0
+		network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
+		network.Add<mlpack::ann::ClippedReLULayer<>>();
+		// L1									 
+		network.Add<mlpack::ann::Linear<> >(2 * M, K);
+		network.Add<mlpack::ann::ClippedReLULayer<>>();
+		// L2									 
+		network.Add<mlpack::ann::Linear<> >(K, K);
+		network.Add<mlpack::ann::ClippedReLULayer<>>();
+		// L3
+		network.Add<mlpack::ann::Linear<> >(K, 1);
+	}
+	else {
+		mlpack::data::Load(modelPath + "\\net.bin", "network", network);
+		// Create backup
+		mlpack::data::Save(modelPath + "\\net_backup.bin", "network", network, false);
+	}
+
+	// Stochastic Gradient Descent using Adam Optimizer
+	ens::AMSGrad optimizer(stepSize, batchSize, 0.9, 0.999, 1e-8, 500000, -1);
+	optimizer.MaxIterations() = maxIterations;
+
+	// Open log streams
+	std::ofstream lossOutput, valLossOutput, reportOutput, dataOutput;
+	lossOutput.open(modelPath + "\\loss.txt", std::ios_base::app);
+	valLossOutput.open(modelPath + "\\validationLoss.txt", std::ios_base::app);
+	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app);
+	dataOutput.open(modelPath + "\\usedData.csv", std::ios_base::app);
+
+	// TRAIN THE MODEL
+	network.Train(trainData, trainLabels, optimizer,
+		/*Callbacks*/ens::ProgressBar(),
+		ens::PrintLoss(lossOutput), ens::PrintValidationLoss(network, validationData, validationLabels, valLossOutput));
+
+	// Save the model
+	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
+
+	// Save information on the data that was used
+	dataOutput << int(maxIterations / trainData.n_cols);
+	for (int i = 0; i < 10; i++) {
+		dataOutput << ',' << batchCounts[i];
+	}
+	dataOutput << std::endl;
+
+	// Close all streams
+	dataOutput.close();
+	valLossOutput.close();
+	lossOutput.close();
+	reportOutput.close();
+}
+
+void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int to) {
 	std::string line;
 	std::string fen;
-	std::ifstream input(path);
-	std::ofstream output(path.substr(0, path.find('.')) + "Formatted" + std::to_string(from / 1000) + "k_" + std::to_string(to/1000) + "k.csv");
+	std::ifstream input(inPath);
+	std::ofstream output(outPath);
 
 	// Create a board to help with fen reading
 	Board board;

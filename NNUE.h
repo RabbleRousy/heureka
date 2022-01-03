@@ -86,7 +86,8 @@ public:
 	NNUE(std::string modelPath);
 	float evaluate(bool whiteToMove);
 	void train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations);
-	void formatDataset(std::string path, int from, int to);
+	void train(bool newNet, std::string modelPath, std::array<int,10> batchCounts, std::string valPath, double stepSize, int batchSize, int maxIterations);
+	void formatDataset(std::string inPath, std::string outPath, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath);
 
 	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);
