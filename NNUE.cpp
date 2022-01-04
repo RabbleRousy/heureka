@@ -158,7 +158,8 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 	reportOutput.close();
 }
 
-void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts, std::string valPath, double stepSize, int batchSize, int maxIterations) {
+void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts,
+	double stepSize, int batchSize, int maxIterations, std::string valPath) {
 	arma::sp_mat sparseMatrix;
 	arma::mat trainData;
 
@@ -226,7 +227,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 
 	// TRAIN THE MODEL
 	network.Train(trainData, trainLabels, optimizer,
-		/*Callbacks*/ens::ProgressBar(),
+		/*Callbacks*/ens::ProgressBar(), ens::Report(0.1, reportOutput, 1),
 		ens::PrintLoss(lossOutput), ens::PrintValidationLoss(network, validationData, validationLabels, valLossOutput));
 
 	// Save the model
@@ -307,7 +308,7 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 
 	arma::mat prediction;
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
-	mlpack::data::Load(modelPath, "net", network);
+	mlpack::data::Load(modelPath + "\\net.bin", "net", network);
 	
 	double errorSum = 0;
 

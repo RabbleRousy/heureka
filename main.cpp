@@ -97,7 +97,10 @@ int main() {
 			<< "Step size: " << to_string(stepSize) << ", batch size: " << to_string(batchSize) << '\n'
 			<< "Max iterations: " << to_string(maxIterations) << '\n';
 
-		nnue.train(newNet, modelPath, batchCounts, validationPath, stepSize, batchSize, maxIterations);
+		if (validationPath != "n")
+			nnue.train(newNet, modelPath, batchCounts, stepSize, batchSize, maxIterations, validationPath);
+		else
+			nnue.train(newNet, modelPath, batchCounts, stepSize, batchSize, maxIterations);
 	}
 	else if (line == "predict") {
 		NNUE nnue;

@@ -86,7 +86,8 @@ public:
 	NNUE(std::string modelPath);
 	float evaluate(bool whiteToMove);
 	void train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations);
-	void train(bool newNet, std::string modelPath, std::array<int,10> batchCounts, std::string valPath, double stepSize, int batchSize, int maxIterations);
+	void train(bool newNet, std::string modelPath, std::array<int,10> batchCounts, double stepSize, int batchSize, int maxIterations,
+				std::string valPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_data_500.csv");
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath);
 
