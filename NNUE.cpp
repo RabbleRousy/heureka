@@ -309,6 +309,9 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 	arma::mat prediction;
 	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
 	mlpack::data::Load(modelPath + "\\net.bin", "net", network);
+
+	// Output log
+	std::ofstream predictOut(modelPath + "\\predictions.csv");
 	
 	double errorSum = 0;
 
@@ -320,6 +323,8 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 		double error = std::abs(pred - label);
 		errorSum += error;
 		std::cout << "Prediction for #" << i << " : " << pred << " (Label: " << labels[i] << ", off by " << std::abs(pred - labels[i]) << ")\n";
+		// Write it all to the log file
+		predictOut << pred << ',' << label << ',' << error << '\n';
 	}
 	std::cout << "AVERAGE ERROR: " << errorSum / data.n_cols;
 }

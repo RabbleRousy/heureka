@@ -112,7 +112,10 @@ int main() {
 		cout << "Test data path: ";
 		cin >> dataPath;
 
-		nnue.predictTest(modelPath, dataPath);
+		if (dataPath != "n")
+			nnue.predictTest(modelPath, dataPath);
+		else
+			nnue.predictTest(modelPath);
 	}
 	else {
 		// Constructs the gui which enters the main loop
