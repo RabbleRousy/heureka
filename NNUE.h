@@ -87,10 +87,9 @@ public:
 	float evaluate(bool whiteToMove);
 	void train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations);
 	void train(bool newNet, std::string modelPath, std::array<int,10> batchCounts, double stepSize, int batchSize, int maxIterations,
-				std::string valPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_data_500.csv");
+				std::string valPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv");
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
-	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_data_500.csv");
-
+	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv");
 	unsigned int getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare);
 	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);
 	void updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white);

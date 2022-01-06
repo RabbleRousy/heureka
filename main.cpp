@@ -28,15 +28,18 @@ int main() {
 	}
 	else if (line == "format") {
 		NNUE nnue;
-		/*string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
+		/*
+		* FORMAT DATA BATCHES
+		* 
+		string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
 
-		for (int tens = 0; tens < 10; tens++) {
-			for (int k = 0; k < 10; k++) {
-				string outputPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\" + to_string(tens + 1) + '_' + to_string(k + 1) + ".csv";
-				nnue.formatDataset(path, outputPath, 10000 * tens + 1000 * k, 10000 * tens + 1000 * (k + 1));
+		for (int fifties = 0; fifties < 10; fifties++) {
+			for (int k = 0; k < 50; k++) {
+				string outputPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\" + to_string(fifties + 1) + '_' + to_string(k + 1) + ".csv";
+				nnue.formatDataset(path, outputPath, 50000 * fifties + 1000 * k, 50000 * fifties + 1000 * (k + 1));
 			}
 		}*/
-
+		
 		cout << "Start index: ";
 		cin >> line;
 		int from = stoi(line);
@@ -63,7 +66,7 @@ int main() {
 		batchCounts.fill(0);
 
 		for (int i = 0; i < 10; i++) {
-			cout << "How many k of the " << (i + 1) << ". 10k do you want to use? ";
+			cout << "How many k of the " << (i + 1) << ". 50k do you want to use? ";
 			cin >> line;
 			try {
 				batchCounts[i] = stoi(line);

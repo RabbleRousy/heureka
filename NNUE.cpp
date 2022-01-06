@@ -161,20 +161,22 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts,
 	double stepSize, int batchSize, int maxIterations, std::string valPath) {
 	arma::sp_mat sparseMatrix;
-	arma::mat trainData;
+	arma::sp_mat sp_trainData;
 
 	for (int i = 0; i < 10; i++) {
 		if (batchCounts[i] == 0) continue;
 
 		for (int j = 0; j < batchCounts[i]; j++) {
 			std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\"
-				+ std::to_string(i + 1) + '_' + std::to_string(j+1) + ".csv";
+				+ std::to_string(i + 1) + '_' + std::to_string(j + 1) + ".csv";
+			std::cout << "Loading traindata \"" << path << "\"...\n";
 			sparseMatrix.load(path, arma::coord_ascii);
-			sparseMatrix = sparseMatrix.t();
 
-			trainData = arma::join_rows(trainData, (arma::mat)sparseMatrix);
+			sp_trainData = arma::join_cols(sp_trainData, sparseMatrix);
 		}
 	}
+
+	arma::mat trainData = (arma::mat)sp_trainData.t();
 
 	// Shuffle data
 	srand(time(NULL));
@@ -265,6 +267,20 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 	}
 
 	while (std::getline(input, line) && row < (to - from)) {
+		/*
+		* FOR SKIPPING RANDOM SAMPLES
+		* 
+		float limit = RAND_MAX / 10.0f;
+		std::cout << "Limit is " << limit << '\n';
+		int x = rand();
+		std::cout << "Rolled: " << x << " >> ";
+		if (x > limit) {
+			std::cout << "Skipped.\n";
+			continue;
+		}
+		std::cout << "Accepted.\n";
+		*/
+
 		// label and value are comma-separated
 		fen = line.substr(0, line.find(','));
 		board.readPosFromFEN(fen);
