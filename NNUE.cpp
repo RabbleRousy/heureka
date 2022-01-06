@@ -329,30 +329,30 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 	std::cout << "AVERAGE ERROR: " << errorSum / data.n_cols;
 }
 
+unsigned int NNUE::getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare) {
+	if (perspective == Piece::BLACK) {
+		// If it's black's perspective, flip board
+		kingSquare ^= 56;
+		square ^= 56;
+	}
+	return 640 * kingSquare + 10 * square + 5 * (pieceColor == perspective) + Piece::getType(pieceType) - 2;
+}
+
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
 	std::string cl;
 	bool whiteToMove = board->currentPlayer == Piece::WHITE;
 
 	// Perspective of side to move (first HalfKP)
 	unsigned short kingSquare = whiteToMove ? board->whiteKingPos : board->blackKingPos;
-	if (!whiteToMove) {
-		// Flip position for black
-		kingSquare ^= 56;
-	}
 	unsigned short pieceSquare;
 
 	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
-		for (short ourColor = 0; ourColor <= 1; ourColor++) {
-			short pieceColor = ourColor ? board->currentPlayer : Piece::getOppositeColor(board->currentPlayer);
+		for (short color = Piece::WHITE; color <= Piece::BLACK; color+=8) {
 
-			bitboard pieces = board->bb.getBitboard(piece | pieceColor);
+			bitboard pieces = board->bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
-				if (!whiteToMove) {
-					// Calculating black's perspective, flip
-					pieceSquare ^= 56;
-				}
-				unsigned int halfKPindex = 640 * kingSquare + 10 * pieceSquare + 5 * ourColor + (piece - 2);
+				unsigned int halfKPindex = getHalfKPindex(board->currentPlayer, piece, color, pieceSquare, kingSquare);
 				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
 			}
 		}
@@ -360,23 +360,14 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 
 	// Perspective of the other side (second HalfKP)
 	kingSquare = whiteToMove ?  board->blackKingPos : board->whiteKingPos;
-	if (whiteToMove) {
-		// Flip position for black
-		kingSquare ^= 56;
-	}
 
 	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
-		for (short ourColor = 0; ourColor <= 1; ourColor++) {
-			short color = ourColor ? board->currentPlayer : Piece::getOppositeColor(board->currentPlayer);
+		for (short color = Piece::WHITE; color <= Piece::BLACK; color+=8) {
 			bitboard pieces = board->bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
-				if (whiteToMove) {
-					// Calculating black's perspective, flip
-					pieceSquare ^= 56;
-				}
-				unsigned int halfKPindex = 40960 + 640 * kingSquare + 10 * pieceSquare + 5 * ourColor + (piece - 2);
-				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+				unsigned int index = 40960 + getHalfKPindex(Piece::getOppositeColor(board->currentPlayer), piece, color, pieceSquare, kingSquare);
+				cl += std::to_string(row) + ' ' + std::to_string(index) + " 1.0\n";
 			}
 		}
 	}

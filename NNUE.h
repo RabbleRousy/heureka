@@ -91,6 +91,7 @@ public:
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_data_500.csv");
 
+	unsigned int getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare);
 	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);
 	void updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white);
 };
