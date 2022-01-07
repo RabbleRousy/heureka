@@ -1,4 +1,5 @@
 #include "NNUE.h"
+#include "Board.h"
 
 NNUE::NNUE() {
 	//loadModel("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer1k.txt");
@@ -343,6 +344,10 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 		predictOut << pred << ',' << label << ',' << error << '\n';
 	}
 	std::cout << "AVERAGE ERROR: " << errorSum / data.n_cols;
+}
+
+void NNUE::recalculateAccumulators(const Board* board) {
+
 }
 
 unsigned int NNUE::getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare) {

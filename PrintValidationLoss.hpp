@@ -42,6 +42,7 @@ namespace ens {
             arma::mat predictions;
             network.Predict(validationData, predictions);
 
+            // TODO: ABS statt SQUARE
             // Calculate the mean squared error
             double loss = arma::accu(arma::square(predictions - validationLabels)) / predictions.n_cols;
 

@@ -4,10 +4,12 @@
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
 #include <ensmallen_bits/gradient_descent/gradient_descent.hpp>
-#include "Board.h"
 #include "LinearSplit.hpp"
 #include "ClippedReLU.h"
 #include "PrintValidationLoss.hpp"
+
+// Forward declaration for Board dependency
+class Board;
 
 // 2*FeatureSet[N]->M*2->K->K->1
 // 2*HalfKP[40960]->256x2->32->32->1
@@ -91,6 +93,7 @@ public:
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv");
 	unsigned int getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare);
+	void recalculateAccumulators(const Board* board);
 	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);
 	void updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white);
 };

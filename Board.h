@@ -3,6 +3,7 @@
 #include "Move.h"
 #include "Bitboard.h"
 #include "util.h"
+#include "NNUE.h"
 #include <vector>
 #include <stack>
 #include <thread>
@@ -22,6 +23,7 @@ using namespace std::literals::chrono_literals;
 class Board
 {
 private:
+	NNUE nnue;
 	static const std::string squareNames[64];
 
 	short squares[64];

@@ -676,6 +676,20 @@ void Board::doMove(const Move* move) {
 
 	swapCurrentPlayer();
 	//printPositionHistory();
+
+	if (Piece::getType(pieceFrom) == Piece::KING) {
+		nnue.recalculateAccumulators(this);
+	}
+	else {
+		// Update white accumulator
+		std::vector<int> removedFeatures, addedFeatures;
+		// ...
+		nnue.updateAccumulator(removedFeatures, addedFeatures, true);
+
+		// Update black accumulator
+		// ...
+		nnue.updateAccumulator(removedFeatures, addedFeatures, false);
+	}
 }
 
 void Board::doMove(std::string move) {
