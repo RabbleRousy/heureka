@@ -1,4 +1,5 @@
 #include "NNUE.h"
+#include "PrintValidationLoss.hpp"
 #include "Board.h"
 
 NNUE::NNUE() {
@@ -100,7 +101,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);*/
 
-	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
+	mlpack::ann::FFN<lossFunction> network;
 
 	if (newNet) {
 		// L0
@@ -196,7 +197,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
 	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
 
-	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
+	mlpack::ann::FFN<lossFunction> network;
 
 	if (newNet) {
 		// L0
@@ -324,7 +325,7 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 	arma::mat labels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
 
 	arma::mat prediction;
-	mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>> network;
+	mlpack::ann::FFN<lossFunction> network;
 	mlpack::data::Load(modelPath + "\\net.bin", "net", network);
 
 	// Output log

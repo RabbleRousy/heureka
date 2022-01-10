@@ -1,6 +1,7 @@
 #ifndef ENSMALLEN_CALLBACKS_PRINT_VAL_LOSS_HPP
 #define ENSMALLEN_CALLBACKS_PRINT_VAL_LOSS_HPP
 
+#include "NNUE.h"
 #include <iostream>
 #include <mlpack/methods/ann/ffn.hpp>
 
@@ -11,13 +12,21 @@ namespace ens {
      */
     class PrintValidationLoss
     {
+    private:
+        //! The output stream that all data is to be sent to; example: std::cout.
+        std::ostream& output;
+
+        mlpack::ann::FFN<NNUE::lossFunction>& network;
+
+        arma::mat& validationData, validationLabels;
+
     public:
         /**
          * Set up the print loss callback class with the width and output stream.
          *
          * @param ostream Ostream which receives output from this object.
          */
-        PrintValidationLoss(mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>>& net, arma::mat& valData, arma::mat& valLabels, std::ostream& output = arma::get_cout_stream())
+        PrintValidationLoss(mlpack::ann::FFN<NNUE::lossFunction>& net, arma::mat& valData, arma::mat& valLabels, std::ostream& output = arma::get_cout_stream())
             : network(net), output(output), validationData(valData), validationLabels(valLabels)
         { /* Nothing to do here. */
         }
@@ -48,14 +57,6 @@ namespace ens {
 
             output << loss << std::endl;
         }
-
-    private:
-        //! The output stream that all data is to be sent to; example: std::cout.
-        std::ostream& output;
-
-        mlpack::ann::FFN<mlpack::ann::MeanSquaredError<>>& network;
-
-        arma::mat& validationData, validationLabels;
     };
 
 } // namespace ens

@@ -2,14 +2,14 @@
 #include <vector>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
-#include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
+#include <mlpack/methods/ann/loss_functions/cross_entropy_error.hpp>
 #include <ensmallen_bits/gradient_descent/gradient_descent.hpp>
 #include "LinearSplit.hpp"
 #include "ClippedReLU.h"
-#include "PrintValidationLoss.hpp"
 
-// Forward declaration for Board dependency
+// Forward declaration for circular dependencies
 class Board;
+class PrintValidationLoss;
 
 // 2*FeatureSet[N]->M*2->K->K->1
 // 2*HalfKP[40960]->256x2->32->32->1
@@ -84,6 +84,8 @@ private:
 	void loadModel(std::string path);
 
 public:
+	using lossFunction = mlpack::ann::CrossEntropyError<>;
+
 	NNUE();
 	NNUE(std::string modelPath);
 	float evaluate(bool whiteToMove);
