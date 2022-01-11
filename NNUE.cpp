@@ -74,20 +74,20 @@ float NNUE::evaluate(bool whiteToMove) {
 void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations) {
 	arma::sp_mat sparseMatrix;
 	sparseMatrix.load(dataPath, arma::coord_ascii);
-	sparseMatrix = sparseMatrix.t();
+	arma::mat trainData = (arma::mat) sparseMatrix.t();
 	
 	// Shuffle data
 	srand(time(NULL));
-	for (int i = 0; i < sparseMatrix.n_cols; i++) {
+	for (int i = 0; i < trainData.n_cols; i++) {
 		// Swap 2 random columns
-		sparseMatrix.swap_cols(rand() % sparseMatrix.n_cols, rand() % sparseMatrix.n_cols);
+		trainData.swap_cols(rand() % trainData.n_cols, rand() % trainData.n_cols);
 	}
 
 
-	arma::mat trainData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
+	trainData = trainData.submat(0, 0, trainData.n_rows - 2, trainData.n_cols - 1);
 
 	// Cut the trainLabels from the last row of the trainingData
-	arma::mat trainLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
+	arma::mat trainLabels = trainData.submat(trainData.n_rows - 1, 0, trainData.n_rows - 1, trainData.n_cols - 1);
 
 	// Load validation data
 	sparseMatrix.load(valPath, arma::coord_ascii);
@@ -161,7 +161,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 }
 
 void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts,
-	double stepSize, int batchSize, int maxIterations, std::string valPath) {
+	double stepSize, int batchSize, int maxIterations, std::string valPath, std::string batchesPath) {
 	arma::sp_mat sparseMatrix;
 	arma::sp_mat sp_trainData;
 
@@ -169,8 +169,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 		if (batchCounts[i] == 0) continue;
 
 		for (int j = 0; j < batchCounts[i]; j++) {
-			std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\"
-				+ std::to_string(i + 1) + '_' + std::to_string(j + 1) + ".csv";
+			std::string path = batchesPath + std::to_string(i + 1) + '_' + std::to_string(j + 1) + ".csv";
 			std::cout << "Loading traindata \"" << path << "\"...\n";
 			sparseMatrix.load(path, arma::coord_ascii);
 
@@ -251,6 +250,59 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 	reportOutput.close();
 }
 
+void NNUE::autoTrain() {
+	const int offset = 110000;
+	const int dataPerTraining = 20000;
+	const int dataChunks = 10;
+	const int chunkSize = dataPerTraining * 0.55;
+	const int epochsPerTraining = 10;
+	const int shift = dataPerTraining / dataChunks * 0.5;
+	const int trainings = 10;
+
+	std::cout << "Starting automized training with:\n"
+		<< '\t' << dataPerTraining << " samples per training\n"
+		<< '\t' << epochsPerTraining << " epochs per training\n"
+		<< '\t' << shift << " sample shift after each training\n"
+		<< '\t' << trainings << " total trainings.\n\n";
+
+	const std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\AutoTrain3";
+	bool check = _mkdir((path + "\\trainData").c_str());
+	if (!check) {
+		std::cout << "Output directory for formatted training data created.\n";
+	}
+	else {
+		std::cout << "Failed to create directory. Aborting...\n";
+		return;
+	}
+
+	const std::string validationDataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv";
+
+	for (int i = 0; i < trainings; i++) {
+		// Get and format the training data
+		std::string inPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
+
+		for (int j = 0; j < dataChunks; j++) {
+			int from = offset + j * chunkSize + i * shift;
+			int to = offset + j * chunkSize + i * shift + dataPerTraining / dataChunks;
+			std::string outPath = path + "\\trainData\\" + std::to_string(j+1) + "_1.csv";
+			std::cout << "\n\nFormatting data for training #" << i + 1 << "......... ";
+			formatDataset(inPath, outPath, from, to);
+			std::cout << "Formatting finished.\n";
+		}
+
+		// Train
+		std::cout << "Starting training #" << i + 1 << "...\n";
+		std::array<int, 10> arr;
+		arr.fill(1);
+		train(i == 0, path, arr, 0.00001, 256, dataPerTraining * epochsPerTraining, validationDataPath, path + "\\trainData\\");
+		std::cout << "\nTraining finished.\nExecuting prediction test.....\n";
+
+		// Predict
+		predictTest(path, "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
+			"\\predictions" + std::to_string((i+1) * epochsPerTraining));
+	}
+}
+
 void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int to) {
 	std::string line;
 	std::string fen;
@@ -315,7 +367,7 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 	output.close();
 }
 
-void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
+void NNUE::predictTest(std::string modelPath, std::string testdataPath, std::string outputName) {
 	arma::sp_mat sparseMatrix;
 	sparseMatrix.load(testdataPath, arma::coord_ascii);
 	sparseMatrix = sparseMatrix.t();
@@ -329,7 +381,7 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath) {
 	mlpack::data::Load(modelPath + "\\net.bin", "net", network);
 
 	// Output log
-	std::ofstream predictOut(modelPath + "\\predictions.csv");
+	std::ofstream predictOut(modelPath + outputName);
 	
 	double errorSum = 0;
 

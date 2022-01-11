@@ -1,8 +1,9 @@
 #pragma once
+#include <direct.h>
 #include <vector>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
-#include <mlpack/methods/ann/loss_functions/cross_entropy_error.hpp>
+#include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
 #include <ensmallen_bits/gradient_descent/gradient_descent.hpp>
 #include "LinearSplit.hpp"
 #include "ClippedReLU.h"
@@ -84,16 +85,19 @@ private:
 	void loadModel(std::string path);
 
 public:
-	using lossFunction = mlpack::ann::CrossEntropyError<>;
+	using lossFunction = mlpack::ann::MeanSquaredError<>;
 
 	NNUE();
 	NNUE(std::string modelPath);
 	float evaluate(bool whiteToMove);
 	void train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations);
 	void train(bool newNet, std::string modelPath, std::array<int,10> batchCounts, double stepSize, int batchSize, int maxIterations,
-				std::string valPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv");
+				std::string valPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
+				std::string batchesPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\");
+	void autoTrain();
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
-	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv");
+	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
+		std::string outName = "\\predictions.csv");
 	unsigned int getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare);
 	void recalculateAccumulators(const Board* board);
 	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);

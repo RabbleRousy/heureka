@@ -54,6 +54,9 @@ int main() {
 	else if (line == "train") {
 		NNUE nnue;
 
+		nnue.autoTrain();
+		return 0;
+
 		cout << "Train a NEW network? (Y for yes) ";
 		cin >> line;
 		bool newNet = line == 'Y';
