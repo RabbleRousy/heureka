@@ -188,6 +188,8 @@
     <ClInclude Include="ChessGraphics.h" />
     <ClInclude Include="ClippedReLU.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="MeanAbsError.hpp" />
+    <ClInclude Include="MeanAbsError_impl.hpp" />
     <ClInclude Include="Move.h" />
     <ClInclude Include="NNUE.h" />
     <ClInclude Include="Piece.h" />
