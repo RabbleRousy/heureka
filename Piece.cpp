@@ -20,7 +20,15 @@ short Piece::getOppositeColor(short piece) {
 }
 
 std::string Piece::name(short piece) {
-	std::string color = (getColor(piece) == WHITE) ? "White" : "Black";
+	std::string color;
+	switch (getColor(piece)) {
+	case WHITE: color = "White";
+		break;
+	case BLACK: color = "Black";
+		break;
+	default: color = "";
+	}
+
 	std::string type;
 	switch (getType(piece))
 	{

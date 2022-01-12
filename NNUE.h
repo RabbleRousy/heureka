@@ -14,7 +14,7 @@ class PrintValidationLoss;
 
 // 2*FeatureSet[N]->M*2->K->K->1
 // 2*HalfKP[40960]->256x2->32->32->1
-const int N = 40960;
+const int N = 41600;
 const int M = 256;
 const int K = 32;
 
@@ -98,9 +98,14 @@ public:
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
 		std::string outName = "\\predictions.csv");
+	/// <param name="square">the piece is on</param>
+	/// <param name="pieceType">from Pawn (2) to Queen (6)</param>
+	/// <param name="our"> piece (1) or theirs (0)</param>
+	/// <returns>the HalfPiece Index between 0 and 41.535, calculated by: 65 * (10 * square + 5 * our + pieceType - 2)</returns>
+	unsigned int getHalfPieceIndex(short square, short pieceType, short our);
 	unsigned int getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare);
 	void recalculateAccumulators(const Board* board);
 	void recalculateAccumulator(const std::vector<int>& activeFeatures, bool white);
 	void updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white);
+	void printHalfKPindeces();
 };
-

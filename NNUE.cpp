@@ -356,7 +356,7 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 			// <row> <column> <nonzero-value>
 			std::string coordinateList = getHalfKPcoordinateList(row, &board);
 			// Append value
-			coordinateList += std::to_string(row) + " 81920 " + std::to_string(eval) + '\n';
+			coordinateList += std::to_string(row) + " 83200 " + std::to_string(eval) + '\n';
 
 			output << coordinateList;
 			row++;
@@ -403,13 +403,19 @@ void NNUE::recalculateAccumulators(const Board* board) {
 
 }
 
+unsigned int NNUE::getHalfPieceIndex(short square, short pieceType, short our) {
+	return 65 * (10 * square + 5 * our + pieceType - 2);
+}
+
 unsigned int NNUE::getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare) {
 	if (perspective == Piece::BLACK) {
 		// If it's black's perspective, flip board
 		kingSquare ^= 56;
 		square ^= 56;
 	}
-	return 640 * kingSquare + 10 * square + 5 * (pieceColor == perspective) + Piece::getType(pieceType) - 2;
+	// Half P feature from 0 to 65 * 639
+	unsigned int p = getHalfPieceIndex(square, pieceType, pieceColor == perspective);
+	return p + kingSquare + 1;
 }
 
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
@@ -428,6 +434,12 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 				pieceSquare = getSquare(pieces);
 				unsigned int halfKPindex = getHalfKPindex(board->currentPlayer, piece, color, pieceSquare, kingSquare);
 				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+				if (!whiteToMove) {
+					// First perspective is black, flip board
+					pieceSquare ^= 56;
+				}
+				unsigned int halfPieceIndex = getHalfPieceIndex(pieceSquare, piece, color == board->currentPlayer);
+				cl += std::to_string(row) + ' ' + std::to_string(halfPieceIndex) + " 1.0\n";
 			}
 		}
 	}
@@ -440,8 +452,14 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 			bitboard pieces = board->bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
-				unsigned int index = 40960 + getHalfKPindex(Piece::getOppositeColor(board->currentPlayer), piece, color, pieceSquare, kingSquare);
-				cl += std::to_string(row) + ' ' + std::to_string(index) + " 1.0\n";
+				unsigned int halfKPindex = 41600 + getHalfKPindex(Piece::getOppositeColor(board->currentPlayer), piece, color, pieceSquare, kingSquare);
+				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+				if (whiteToMove) {
+					// Second perspective is black, flip board
+					pieceSquare ^= 56;
+				}
+				unsigned int halfPieceIndex = 41600 + getHalfPieceIndex(pieceSquare, piece, color == board->currentPlayer);
+				cl += std::to_string(row) + ' ' + std::to_string(halfPieceIndex) + " 1.0\n";
 			}
 		}
 	}
@@ -504,6 +522,28 @@ void NNUE::loadModel(std::string path) {
 		L3.weights[i][0] = parameters[i];
 	}
 	L3.biases[0] = parameters[L3.in_size];
+}
+
+void NNUE::printHalfKPindeces() {
+	using namespace std;
+	ofstream file("virtual features indices list.txt");
+
+	for (int pieceSquare = 0; pieceSquare < 64; pieceSquare++) {
+		for (int our = 0; our < 2; our++) {
+			for (short pieceType = Piece::PAWN; pieceType <= Piece::QUEEN; pieceType++) {
+				for (short kingSquare = 0; kingSquare < 64; kingSquare++) {
+					if (kingSquare == 0)
+						file << "\n\nP Index of (piece on " << Board::getSquareName(pieceSquare) << (our ? ", our, " : ", their, ") << Piece::name(pieceType) << "): "
+						<< getHalfPieceIndex(pieceSquare, pieceType, our);
+
+					file << "\nHalfKP Index of (king on " << Board::getSquareName(kingSquare) << ", piece on " << Board::getSquareName(pieceSquare)
+						<< (our ? ", our, " : ", their, ") << Piece::name(pieceType) << "): "
+						<< getHalfKPindex(Piece::WHITE, pieceType, our ? Piece::WHITE : Piece::BLACK, pieceSquare, kingSquare);
+				}
+			}
+		}
+	}
+	file.close();
 }
 
 template<int inputSize, int outputSize>
