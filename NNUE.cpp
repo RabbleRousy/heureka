@@ -251,21 +251,25 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 }
 
 void NNUE::autoTrain() {
-	const int offset = 110000;
+	const int offset = 200000;
 	const int dataPerTraining = 20000;
 	const int dataChunks = 10;
-	const int chunkSize = dataPerTraining * 0.55;
-	const int epochsPerTraining = 10;
 	const int shift = dataPerTraining / dataChunks * 0.5;
+	const int chunkSize = shift * 9 + (dataPerTraining / dataChunks);
+	const int epochsPerTraining = 10;
 	const int trainings = 10;
 
 	std::cout << "Starting automized training with:\n"
 		<< '\t' << dataPerTraining << " samples per training\n"
-		<< '\t' << epochsPerTraining << " epochs per training\n"
+		<< "\tSplit into " << dataChunks << " chunks in ranges of size " << chunkSize << '\n'
 		<< '\t' << shift << " sample shift after each training\n"
+		<< '\t' << epochsPerTraining << " epochs per training\n"
 		<< '\t' << trainings << " total trainings.\n\n";
 
-	const std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\AutoTrain3";
+	const std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\VirtualFeatures1";
+
+	/*
+	* Uncomment this if folder needs to be created
 	bool check = _mkdir((path + "\\trainData").c_str());
 	if (!check) {
 		std::cout << "Output directory for formatted training data created.\n";
@@ -274,18 +278,20 @@ void NNUE::autoTrain() {
 		std::cout << "Failed to create directory. Aborting...\n";
 		return;
 	}
+	*/
 
-	const std::string validationDataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv";
+	const std::string validationDataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv";
 
 	for (int i = 0; i < trainings; i++) {
 		// Get and format the training data
 		std::string inPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
 
+		std::cout << "\n\nFormatting data for training #" << i + 1 << " ......... ";
 		for (int j = 0; j < dataChunks; j++) {
 			int from = offset + j * chunkSize + i * shift;
 			int to = offset + j * chunkSize + i * shift + dataPerTraining / dataChunks;
 			std::string outPath = path + "\\trainData\\" + std::to_string(j+1) + "_1.csv";
-			std::cout << "\n\nFormatting data for training #" << i + 1 << "......... ";
+			std::cout << "\nData indices: " << from << " - " << to << '\n';
 			formatDataset(inPath, outPath, from, to);
 			std::cout << "Formatting finished.\n";
 		}
@@ -294,11 +300,11 @@ void NNUE::autoTrain() {
 		std::cout << "Starting training #" << i + 1 << "...\n";
 		std::array<int, 10> arr;
 		arr.fill(1);
-		train(i == 0, path, arr, 0.00001, 256, dataPerTraining * epochsPerTraining, validationDataPath, path + "\\trainData\\");
+		train(/*i == 0*/false, path, arr, 0.0001, 256, dataPerTraining * epochsPerTraining, validationDataPath, path + "\\trainData\\");
 		std::cout << "\nTraining finished.\nExecuting prediction test.....\n";
 
 		// Predict
-		predictTest(path, "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
+		predictTest(path, "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv",
 			"\\predictions" + std::to_string((i+1) * epochsPerTraining));
 	}
 }
