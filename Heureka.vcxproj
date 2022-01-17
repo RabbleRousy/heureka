@@ -193,7 +193,7 @@
     <ClInclude Include="Move.h" />
     <ClInclude Include="NNUE.h" />
     <ClInclude Include="Piece.h" />
-    <ClInclude Include="PrintValidationLoss.hpp" />
+    <ClInclude Include="ValidationLoss.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Profiling.h" />
     <ClInclude Include="LinearSplit.hpp" />

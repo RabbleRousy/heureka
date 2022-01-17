@@ -1,5 +1,5 @@
 #include "NNUE.h"
-#include "PrintValidationLoss.hpp"
+#include "ValidationLoss.hpp"
 #include "Board.h"
 
 NNUE::NNUE() {
@@ -152,7 +152,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 
 	network.Train(trainData, trainLabels, optimizer,
 	/*Callbacks*/ens::ProgressBar(),
-		ens::PrintLoss(lossOutput), ens::PrintValidationLoss(network, validationData, validationLabels, valLossOutput) );
+		ens::PrintLoss(lossOutput), ens::ValidationLoss(network, validationData, validationLabels, modelPath, 10, valLossOutput) );
 
 	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
 
