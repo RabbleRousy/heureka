@@ -161,7 +161,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 }
 
 void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts,
-	double stepSize, int batchSize, int maxIterations, std::string valPath, std::string batchesPath) {
+	double stepSize, int batchSize, int maxIterations, std::string valPath, std::string batchesPath, std::string predPath) {
 	arma::sp_mat sparseMatrix;
 	arma::sp_mat sp_trainData;
 
@@ -218,8 +218,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 	}
 
 	// Stochastic Gradient Descent using Adam Optimizer
-	ens::AMSGrad optimizer(stepSize, batchSize, 0.9, 0.999, 1e-8, 500000, -1);
-	optimizer.MaxIterations() = maxIterations;
+	ens::Adam optimizer(stepSize, batchSize, 0.9, 0.99, 1e-8, maxIterations, -1);
 
 	// Open log streams
 	std::ofstream lossOutput, valLossOutput, reportOutput, dataOutput;
@@ -228,10 +227,13 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app);
 	dataOutput.open(modelPath + "\\usedData.csv", std::ios_base::app);
 
+	// If there is no path specified for the predicition results, just put them in the model folder
+	if (predPath == "") predPath = modelPath;
+
 	// TRAIN THE MODEL
 	network.Train(trainData, trainLabels, optimizer,
-		/*Callbacks*/ens::ProgressBar(), ens::Report(0.1, reportOutput, 1),
-		ens::PrintLoss(lossOutput), ens::PrintValidationLoss(network, validationData, validationLabels, valLossOutput));
+		/*Callbacks*/ens::ProgressBar(), ens::Report(0.1, reportOutput, 1), ens::EarlyStopAtMinLoss(),
+		ens::PrintLoss(lossOutput), ens::ValidationLoss(network, validationData, validationLabels, predPath, 10, valLossOutput));
 
 	// Save the model
 	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
@@ -251,13 +253,14 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 }
 
 void NNUE::autoTrain() {
-	const int offset = 200000;
-	const int dataPerTraining = 20000;
+	const int offset = 40000;
+	const int epochsOffset = 1000;
+	const int trainings = 1;
+	const int dataPerTraining = 10000;
 	const int dataChunks = 10;
-	const int shift = dataPerTraining / dataChunks * 0.5;
-	const int chunkSize = shift * 9 + (dataPerTraining / dataChunks);
-	const int epochsPerTraining = 10;
-	const int trainings = 10;
+	const int shift = dataPerTraining / dataChunks;
+	const int chunkSize = shift * (trainings - 1) + (dataPerTraining / dataChunks);
+	const int epochsPerTraining = 250;
 
 	std::cout << "Starting automized training with:\n"
 		<< '\t' << dataPerTraining << " samples per training\n"
@@ -266,10 +269,10 @@ void NNUE::autoTrain() {
 		<< '\t' << epochsPerTraining << " epochs per training\n"
 		<< '\t' << trainings << " total trainings.\n\n";
 
-	const std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\VirtualFeatures1";
+	const std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\MoreEpochs2";
 
 	/*
-	* Uncomment this if folder needs to be created
+	* Uncomment this if folder needs to be created 
 	bool check = _mkdir((path + "\\trainData").c_str());
 	if (!check) {
 		std::cout << "Output directory for formatted training data created.\n";
@@ -278,35 +281,50 @@ void NNUE::autoTrain() {
 		std::cout << "Failed to create directory. Aborting...\n";
 		return;
 	}
-	*/
+	*/ 
 
 	const std::string validationDataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv";
+	// File for saving the data boundaries
+	std::ofstream dataFile(path + "\\trainData\\usedData.csv", std::ios_base::app);
 
 	for (int i = 0; i < trainings; i++) {
 		// Get and format the training data
 		std::string inPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
 
+		int dataMinIndex, dataMaxIndex;
+
 		std::cout << "\n\nFormatting data for training #" << i + 1 << " ......... ";
 		for (int j = 0; j < dataChunks; j++) {
 			int from = offset + j * chunkSize + i * shift;
+			if (!j) dataMinIndex = from;
 			int to = offset + j * chunkSize + i * shift + dataPerTraining / dataChunks;
+			if (j == dataChunks - 1) dataMaxIndex = to;
+
 			std::string outPath = path + "\\trainData\\" + std::to_string(j+1) + "_1.csv";
 			std::cout << "\nData indices: " << from << " - " << to << '\n';
 			formatDataset(inPath, outPath, from, to);
 			std::cout << "Formatting finished.\n";
 		}
 
+		// Save the data boundaries
+		dataFile << dataMinIndex << "," << dataMaxIndex << "\n";
+
+		// Create a new folder for the predictions to be saved into
+		std::string predictionsPath = path + "\\predictionsFrom" + std::to_string(epochsOffset + epochsPerTraining * i);
+		_mkdir(predictionsPath.c_str());
+
 		// Train
 		std::cout << "Starting training #" << i + 1 << "...\n";
 		std::array<int, 10> arr;
 		arr.fill(1);
-		train(/*i == 0*/false, path, arr, 0.0001, 256, dataPerTraining * epochsPerTraining, validationDataPath, path + "\\trainData\\");
+		train(/*i == 0*/false, path, arr, 0.0001, 1000, dataPerTraining * epochsPerTraining, validationDataPath, path + "\\trainData\\", predictionsPath);
 		std::cout << "\nTraining finished.\nExecuting prediction test.....\n";
 
 		// Predict
-		predictTest(path, "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv",
-			"\\predictions" + std::to_string((i+1) * epochsPerTraining));
+		//predictTest(path, "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv",
+		//	"\\predictions" + std::to_string((i+1) * epochsPerTraining));
 	}
+	dataFile.close();
 }
 
 void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int to) {

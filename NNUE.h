@@ -93,7 +93,8 @@ public:
 	void train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations);
 	void train(bool newNet, std::string modelPath, std::array<int,10> batchCounts, double stepSize, int batchSize, int maxIterations,
 				std::string valPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
-				std::string batchesPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\");
+				std::string batchesPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals\\",
+				std::string predictPath = "");
 	void autoTrain();
 	void formatDataset(std::string inPath, std::string outPath, int from, int to);
 	void predictTest(std::string modelPath, std::string testdataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation_rdm_upper500k.csv",
