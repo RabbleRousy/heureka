@@ -71,7 +71,7 @@ float NNUE::evaluate(bool whiteToMove) {
 	return input[0];
 }
 
-void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations) {
+void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::string valPath, double stepSize, int batchSize, int maxIterations, std::string predPath) {
 	arma::sp_mat sparseMatrix;
 	sparseMatrix.load(dataPath, arma::coord_ascii);
 	arma::mat trainData = (arma::mat) sparseMatrix.t();
@@ -83,112 +83,9 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 		trainData.swap_cols(rand() % trainData.n_cols, rand() % trainData.n_cols);
 	}
 
-
-	trainData = trainData.submat(0, 0, trainData.n_rows - 2, trainData.n_cols - 1);
-
 	// Cut the trainLabels from the last row of the trainingData
 	arma::mat trainLabels = trainData.submat(trainData.n_rows - 1, 0, trainData.n_rows - 1, trainData.n_cols - 1);
-
-	// Load validation data
-	sparseMatrix.load(valPath, arma::coord_ascii);
-	sparseMatrix = sparseMatrix.t();
-	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
-	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);
-
-
-	/*sparseMatrix.load("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evalsFormatted10k.csv", arma::coord_ascii);
-	sparseMatrix = sparseMatrix.t();
-	arma::mat validationData = (arma::mat)sparseMatrix.submat(0, 0, sparseMatrix.n_rows - 2, sparseMatrix.n_cols - 1);
-	arma::mat validationLabels = (arma::mat)sparseMatrix.submat(sparseMatrix.n_rows - 1, 0, sparseMatrix.n_rows - 1, sparseMatrix.n_cols - 1);*/
-
-	mlpack::ann::FFN<lossFunction> network;
-
-	if (newNet) {
-		// L0
-		network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
-		network.Add<mlpack::ann::ClippedReLULayer<>>();
-		// L1									 
-		network.Add<mlpack::ann::Linear<> >(2 * M, K);
-		network.Add<mlpack::ann::ClippedReLULayer<>>();
-		// L2									 
-		network.Add<mlpack::ann::Linear<> >(K, K);
-		network.Add<mlpack::ann::ClippedReLULayer<>>();
-		// L3
-		network.Add<mlpack::ann::Linear<> >(K, 1);
-	}
-	else {
-		mlpack::data::Load(modelPath + "\\net.bin", "network", network);
-		// Create backup
-		mlpack::data::Save(modelPath + "\\net_backup.bin", "network", network, false);
-	}
-	
-
-	/*for (int i = 0; i < 100; i++) {
-		network.Train(trainData.submat(0, i * 32, trainData.n_rows - 1, (i+1) * 32 - 1),
-					trainLabels.submat(0, i * 32, trainLabels.n_rows - 1, (i + 1) * 32 - 1),
-					ens::GradientDescent::GradientDescent(),
-					ens::ProgressBar(), ens::PrintLoss());
-
-		arma::mat prediction;
-		network.Predict(validationData, prediction);
-		
-		double meanSquaredError = arma::accu(arma::square(prediction - validationLabels)) / prediction.n_cols;
-		std::cout << "MSE with validation set after epoch #" << i << " is " << meanSquaredError << ".\n\n";
-	}*/
-	
-	// Stochastic Gradient Descent using Adam Optimizer
-	ens::AMSGrad optimizer(stepSize, batchSize, 0.9, 0.999, 1e-8, 500000, -1);
-	optimizer.MaxIterations() = maxIterations;
-
-	// What I want (somehow not supported / compatible with ProgressBar() because of 'missing' batchsize)
-	//ens::GradientDescent myOptimizer(0.01, 100000, 1e-3);
-	//myOptimizer.MaxIterations() = 0;
-
-	std::ofstream lossOutput, valLossOutput, reportOutput;
-	lossOutput.open(modelPath + "\\loss.txt", std::ios_base::app);
-	valLossOutput.open(modelPath + "\\validationLoss.txt", std::ios_base::app);
-	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app);
-
-
-	network.Train(trainData, trainLabels, optimizer,
-	/*Callbacks*/ens::ProgressBar(),
-		ens::PrintLoss(lossOutput), ens::ValidationLoss(network, validationData, validationLabels, modelPath, 10, valLossOutput) );
-
-	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
-
-	lossOutput.close();
-	reportOutput.close();
-}
-
-void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCounts,
-	double stepSize, int batchSize, int maxIterations, std::string valPath, std::string batchesPath, std::string predPath) {
-	arma::sp_mat sparseMatrix;
-	arma::sp_mat sp_trainData;
-
-	for (int i = 0; i < 10; i++) {
-		if (batchCounts[i] == 0) continue;
-
-		for (int j = 0; j < batchCounts[i]; j++) {
-			std::string path = batchesPath + std::to_string(i + 1) + '_' + std::to_string(j + 1) + ".csv";
-			std::cout << "Loading traindata \"" << path << "\"...\n";
-			sparseMatrix.load(path, arma::coord_ascii);
-
-			sp_trainData = arma::join_cols(sp_trainData, sparseMatrix);
-		}
-	}
-
-	arma::mat trainData = (arma::mat)sp_trainData.t();
-
-	// Shuffle data
-	srand(time(NULL));
-	for (int i = 0; i < trainData.n_cols; i++) {
-		// Swap 2 random columns
-		trainData.swap_cols(rand() % trainData.n_cols, rand() % trainData.n_cols);
-	}
-
-	// Cut the trainLabels from the last row of the trainingData
-	arma::mat trainLabels = (arma::mat)trainData.submat(trainData.n_rows - 1, 0, trainData.n_rows - 1, trainData.n_cols - 1);
-	trainData = (arma::mat)trainData.submat(0, 0, trainData.n_rows - 2, trainData.n_cols - 1);
+	trainData = trainData.submat(0, 0, trainData.n_rows - 2, trainData.n_cols - 1);
 
 	// Load validation data
 	sparseMatrix.load(valPath, arma::coord_ascii);
@@ -216,113 +113,90 @@ void NNUE::train(bool newNet, std::string modelPath, std::array<int, 10> batchCo
 		// Create backup
 		mlpack::data::Save(modelPath + "\\net_backup.bin", "network", network, false);
 	}
-
-	// Stochastic Gradient Descent using Adam Optimizer
-	ens::Adam optimizer(stepSize, batchSize, 0.9, 0.99, 1e-8, maxIterations, -1);
+	
+	// Stochastic Gradient Descent
+	ens::StandardSGD optimizer(stepSize, batchSize, maxIterations, -1);
 
 	// Open log streams
 	std::ofstream lossOutput, valLossOutput, reportOutput, dataOutput;
 	lossOutput.open(modelPath + "\\loss.txt", std::ios_base::app);
 	valLossOutput.open(modelPath + "\\validationLoss.txt", std::ios_base::app);
-	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app);
-	dataOutput.open(modelPath + "\\usedData.csv", std::ios_base::app);
+	reportOutput.open(modelPath + "\\report.txt", std::ios_base::app); 
 
 	// If there is no path specified for the predicition results, just put them in the model folder
 	if (predPath == "") predPath = modelPath;
 
 	// TRAIN THE MODEL
 	network.Train(trainData, trainLabels, optimizer,
-		/*Callbacks*/ens::ProgressBar(), ens::Report(0.1, reportOutput, 1), ens::EarlyStopAtMinLoss(),
-		ens::PrintLoss(lossOutput), ens::ValidationLoss(network, validationData, validationLabels, predPath, 10, valLossOutput));
+		/*Callbacks*/ens::ProgressBar(), ens::Report(0.1, reportOutput, 1), ens::PrintLoss(lossOutput),
+		ens::ValidationLoss(network, validationData, validationLabels, predPath, 50, valLossOutput, true, 10));
 
-	// Save the model
 	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
 
-	// Save information on the data that was used
-	dataOutput << int(maxIterations / trainData.n_cols);
-	for (int i = 0; i < 10; i++) {
-		dataOutput << ',' << batchCounts[i];
-	}
-	dataOutput << std::endl;
-
-	// Close all streams
-	dataOutput.close();
-	valLossOutput.close();
 	lossOutput.close();
+	valLossOutput.close();
 	reportOutput.close();
 }
 
-void NNUE::autoTrain() {
-	const int offset = 40000;
-	const int epochsOffset = 1000;
-	const int trainings = 1;
-	const int dataPerTraining = 10000;
-	const int dataChunks = 10;
-	const int shift = dataPerTraining / dataChunks;
-	const int chunkSize = shift * (trainings - 1) + (dataPerTraining / dataChunks);
-	const int epochsPerTraining = 250;
+void NNUE::train(bool newNet, std::string modelPath, double stepSize, int batchSize, const TrainSession& session) {
 
-	std::cout << "Starting automized training with:\n"
-		<< '\t' << dataPerTraining << " samples per training\n"
-		<< "\tSplit into " << dataChunks << " chunks in ranges of size " << chunkSize << '\n'
-		<< '\t' << shift << " sample shift after each training\n"
-		<< '\t' << epochsPerTraining << " epochs per training\n"
-		<< '\t' << trainings << " total trainings.\n\n";
+	std::cout << "Starting automized training session with:\n"
+		<< '\t' << session.dataPerTraining << " samples per training\n"
+		<< "\tSplit into " << session.dataChunks << " chunks in ranges of size " << session.chunkSize << '\n'
+		<< '\t' << session.shift << " sample shift after each training\n"
+		<< '\t' << session.epochsPerTraining << " epochs per training\n"
+		<< '\t' << session.trainings << " total trainings.\n\n";
 
-	const std::string path = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\MoreEpochs2";
-
-	/*
-	* Uncomment this if folder needs to be created 
-	bool check = _mkdir((path + "\\trainData").c_str());
-	if (!check) {
-		std::cout << "Output directory for formatted training data created.\n";
+	if (newNet) {
+		// Create the required subfolders for training
+		bool check = _mkdir((modelPath + "\\trainData").c_str());
+		if (!check) {
+			std::cout << "Output directory for formatted training data created.\n";
+		}
+		else {
+			std::cout << "Failed to create directory. Aborting...\n";
+			return;
+		}
 	}
-	else {
-		std::cout << "Failed to create directory. Aborting...\n";
-		return;
-	}
-	*/ 
 
-	const std::string validationDataPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv";
 	// File for saving the data boundaries
-	std::ofstream dataFile(path + "\\trainData\\usedData.csv", std::ios_base::app);
+	std::ofstream dataFile(modelPath + "\\trainData\\usedData.csv", std::ios_base::app);
 
-	for (int i = 0; i < trainings; i++) {
+	for (int i = 0; i < session.trainings; i++) {
 		// Get and format the training data
-		std::string inPath = "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv";
-
 		int dataMinIndex, dataMaxIndex;
+		arma::sp_mat matrixLoader, trainData;
 
 		std::cout << "\n\nFormatting data for training #" << i + 1 << " ......... ";
-		for (int j = 0; j < dataChunks; j++) {
-			int from = offset + j * chunkSize + i * shift;
+		for (int j = 0; j < session.dataChunks; j++) {
+			int from = session.offset + j * session.chunkSize + i * session.shift;
 			if (!j) dataMinIndex = from;
-			int to = offset + j * chunkSize + i * shift + dataPerTraining / dataChunks;
-			if (j == dataChunks - 1) dataMaxIndex = to;
+			int to = session.offset + j * session.chunkSize + i * session.shift + session.dataPerTraining / session.dataChunks;
+			if (j == session.dataChunks - 1) dataMaxIndex = to;
 
-			std::string outPath = path + "\\trainData\\" + std::to_string(j+1) + "_1.csv";
+			std::string outPath = modelPath + "\\trainData\\" + std::to_string(j+1) + "_1.csv";
 			std::cout << "\nData indices: " << from << " - " << to << '\n';
-			formatDataset(inPath, outPath, from, to);
+			formatDataset(session.trainDataPath, outPath, from, to);
 			std::cout << "Formatting finished.\n";
+
+			// Immediately load and concatenate the formatted matrix
+			matrixLoader.load(outPath, arma::coord_ascii);
+			trainData = arma::join_cols(trainData, matrixLoader);
 		}
+		// Save the concatenated matrix
+		trainData.save(modelPath + "\\trainData\\concat.csv", arma::coord_ascii);
 
 		// Save the data boundaries
 		dataFile << dataMinIndex << "," << dataMaxIndex << "\n";
 
 		// Create a new folder for the predictions to be saved into
-		std::string predictionsPath = path + "\\predictionsFrom" + std::to_string(epochsOffset + epochsPerTraining * i);
+		std::string predictionsPath = modelPath + "\\predictionsFromEpoch" + std::to_string(i);
 		_mkdir(predictionsPath.c_str());
 
 		// Train
 		std::cout << "Starting training #" << i + 1 << "...\n";
-		std::array<int, 10> arr;
-		arr.fill(1);
-		train(/*i == 0*/false, path, arr, 0.0001, 1000, dataPerTraining * epochsPerTraining, validationDataPath, path + "\\trainData\\", predictionsPath);
-		std::cout << "\nTraining finished.\nExecuting prediction test.....\n";
-
-		// Predict
-		//predictTest(path, "C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\validation2and3.csv",
-		//	"\\predictions" + std::to_string((i+1) * epochsPerTraining));
+		train((i == 0) && newNet, modelPath, modelPath + "\\trainData\\concat.csv", session.valDataPath, stepSize, batchSize, session.dataPerTraining * session.epochsPerTraining, predictionsPath);
+		std::cout << "\nTraining finished.\n\n";
 	}
 	dataFile.close();
 }
@@ -489,11 +363,6 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 	}
 
 	return cl;
-}
-
-void NNUE::getHalfKPvector(bool white, char* features, Board* board) {
-	// Clear feature vector
-	memset(features, '0', sizeof(features));
 }
 
 void NNUE::loadModel(std::string path) {

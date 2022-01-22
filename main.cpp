@@ -15,6 +15,18 @@ int main() {
 	cout << "Press any other key to launch integrated GUI.\n";
 
 	string line;
+	ifstream input("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv");
+	ofstream output("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals_nomates.csv");
+
+	while (getline(input, line)) {
+		if (line.find('#') == string::npos) {
+			output << line << '\n';
+		}
+	}
+
+	input.close();
+	output.close();
+	return 0;
 
 	getline(cin, line);
 
@@ -54,9 +66,6 @@ int main() {
 	else if (line == "train") {
 		NNUE nnue;
 
-		nnue.autoTrain();
-		return 0;
-
 		cout << "Train a NEW network? (Y for yes) ";
 		cin >> line;
 		bool newNet = line == 'Y';
@@ -65,19 +74,63 @@ int main() {
 		cout << "Model path: ";
 		cin >> modelPath;
 
-		array<int, 10> batchCounts;
-		batchCounts.fill(0);
+		cout << "Start automated train session? (Y for yes) ";
+		cin >> line;
+		if (line == 'Y') {
+			cout << "Enter path of the UNFORMATTED traindata: ";
+			cin >> dataPath;
 
-		for (int i = 0; i < 10; i++) {
-			cout << "How many k of the " << (i + 1) << ". 50k do you want to use? ";
+			cout << "Enter path of the FORMATTED validation data: ";
+			cin >> validationPath;
+
+			double stepSize;
+			cout << "Step size: ";
 			cin >> line;
-			try {
-				batchCounts[i] = stoi(line);
-			}
-			catch (...) {
-				break;
-			}
+			stepSize = stod(line);
+
+			int batchSize;
+			cout << "Batch size: ";
+			cin >> line;
+			batchSize = stoi(line);
+
+			int t, o, d, c, e;
+			float s;
+			
+
+			cout << "Enter Train Session Details:\n";
+			cout << "Trainings: ";
+			cin >> line;
+			t = stoi(line);
+
+			cout << "Traindata Offset: ";
+			cin >> line;
+			o = stoi(line);
+
+			cout << "Traindata per Training: ";
+			cin >> line;
+			d = stoi(line);
+
+			cout << "Amount of Datachunks to split Traindata: ";
+			cin >> line;
+			c = stoi(line);
+
+			cout << "Shift through the datachunks after each Training (0.1 to 1): ";
+			cin >> line;
+			s = stof(line);
+
+			cout << "Epochs per Training: ";
+			cin >> line;
+			e = stoi(line);
+
+			NNUE::TrainSession session(t, o, d, c, e, s, dataPath, validationPath);
+
+			nnue.train(newNet, modelPath, stepSize, batchSize, session);
+
+			return 0;
 		}
+		// else
+		cout << "Train Data path: ";
+		cin >> dataPath;
 
 		cout << "Validation Data path: ";
 		cin >> validationPath;
@@ -103,10 +156,7 @@ int main() {
 			<< "Step size: " << to_string(stepSize) << ", batch size: " << to_string(batchSize) << '\n'
 			<< "Max iterations: " << to_string(maxIterations) << '\n';
 
-		if (validationPath != "n")
-			nnue.train(newNet, modelPath, batchCounts, stepSize, batchSize, maxIterations, validationPath);
-		else
-			nnue.train(newNet, modelPath, batchCounts, stepSize, batchSize, maxIterations);
+		nnue.train(newNet, modelPath, dataPath, validationPath, stepSize, batchSize, maxIterations);
 	}
 	else if (line == "predict") {
 		NNUE nnue;
