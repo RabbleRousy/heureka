@@ -1,31 +1,12 @@
 #pragma once
 #include "Piece.h"
+#include "util.h"
 #include <iostream>
 #include <fstream>
 #include <random>
 #include <assert.h>
 
-typedef unsigned __int64 bitboard;
-#define C64(constantU64) constantU64##ULL
-#define Bitloop(X) for(;X;X &= (X-1))
-#ifdef __GNUC__
-#define getSquare(X) _tzcnt_u64(X)
-#else
-unsigned long __inline getSquare(bitboard value)
-{
-	unsigned long trailing_zero = 0;
 
-	if (_BitScanForward64(&trailing_zero, value))
-	{
-		return trailing_zero;
-	}
-	else
-	{
-		// This is undefined, I better choose 32 than 0
-		return 32;
-	}
-}
-#endif
 
 struct AttackData {
 	bool pinsExist, checkExists, doubleCheck;
