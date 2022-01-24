@@ -97,7 +97,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 
 	if (newNet) {
 		// L0
-		network.Add<mlpack::ann::LinearSplit<> >(2 * N, 2 * M);
+		network.Add<mlpack::ann::LinearBitSplit<> >(2 * N, 2 * M);
 		network.Add<mlpack::ann::ClippedReLULayer<>>();
 		// L1									 
 		network.Add<mlpack::ann::Linear<> >(2 * M, K);
@@ -254,7 +254,7 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 			// <row> <column> <nonzero-value>
 			std::string coordinateList = getHalfKPcoordinateList(row, &board);
 			// Append value
-			coordinateList += std::to_string(row) + " 83200 " + std::to_string(eval) + '\n';
+			coordinateList += std::to_string(row) + " 1300 " + std::to_string(eval) + '\n';
 
 			output << coordinateList;
 			row++;
@@ -324,6 +324,10 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 	unsigned short kingSquare = whiteToMove ? board->whiteKingPos : board->blackKingPos;
 	unsigned short pieceSquare;
 
+	// Each word holds 64 features
+	unsigned long long* words = new unsigned long long[(2 * N) / 64];
+	memset(words, 0ull, sizeof(words) * ((2 * N) / 64));
+
 	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
 		for (short color = Piece::WHITE; color <= Piece::BLACK; color+=8) {
 
@@ -331,13 +335,14 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
 				unsigned int halfKPindex = getHalfKPindex(board->currentPlayer, piece, color, pieceSquare, kingSquare);
-				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
+
 				if (!whiteToMove) {
 					// First perspective is black, flip board
 					pieceSquare ^= 56;
 				}
 				unsigned int halfPieceIndex = getHalfPieceIndex(pieceSquare, piece, color == board->currentPlayer);
-				cl += std::to_string(row) + ' ' + std::to_string(halfPieceIndex) + " 1.0\n";
+				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
 			}
 		}
 	}
@@ -351,17 +356,27 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
 				unsigned int halfKPindex = 41600 + getHalfKPindex(Piece::getOppositeColor(board->currentPlayer), piece, color, pieceSquare, kingSquare);
-				cl += std::to_string(row) + ' ' + std::to_string(halfKPindex) + " 1.0\n";
+				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
+
 				if (whiteToMove) {
 					// Second perspective is black, flip board
 					pieceSquare ^= 56;
 				}
 				unsigned int halfPieceIndex = 41600 + getHalfPieceIndex(pieceSquare, piece, color == board->currentPlayer);
-				cl += std::to_string(row) + ' ' + std::to_string(halfPieceIndex) + " 1.0\n";
+				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
 			}
 		}
 	}
 
+	// Write the words into the coordinate list
+	for (int i = 0; i < (2 * N) / 64; i++) {
+		unsigned long long wordValue = words[i];
+		if (wordValue == 0ull)
+			continue;
+		cl += std::to_string(row) + ' ' + std::to_string(i) + ' ' + std::to_string(words[i]) + '\n';
+	}
+	delete[] words;
+	
 	return cl;
 }
 

@@ -175,7 +175,7 @@
     <ClCompile Include="Move.cpp" />
     <ClCompile Include="NNUE.cpp" />
     <ClCompile Include="Piece.cpp" />
-    <ClCompile Include="LinearSplit_impl.hpp" />
+    <ClCompile Include="LinearBitSplit_impl.hpp" />
     <ClCompile Include="Testing.cpp" />
     <ClCompile Include="TranspositionTable.cpp" />
     <ClCompile Include="uci.cpp" />
@@ -196,7 +196,7 @@
     <ClInclude Include="ValidationLoss.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Profiling.h" />
-    <ClInclude Include="LinearSplit.hpp" />
+    <ClInclude Include="LinearBitSplit.hpp" />
     <ClInclude Include="Testing.h" />
     <ClInclude Include="TranspositionTable.h" />
     <ClInclude Include="uci.h" />

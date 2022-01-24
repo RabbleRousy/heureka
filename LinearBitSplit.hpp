@@ -1,14 +1,15 @@
-#ifndef MLPACK_METHODS_ANN_LAYER_LINEARSPLIT_HPP
-#define MLPACK_METHODS_ANN_LAYER_LINEARSPLIT_HPP
+#ifndef MLPACK_METHODS_ANN_LAYER_LINEARBITSPLIT_HPP
+#define MLPACK_METHODS_ANN_LAYER_LINEARBITSPLIT_HPP
 
 #include <mlpack/prereqs.hpp>
 #include <mlpack/methods/ann/regularizer/no_regularizer.hpp>
+#include "util.h"
 
 namespace mlpack {
     namespace ann /** Artificial Neural Network. */ {
 
         /**
-         * Implementation of the LinearSplit layer class. The LinearSplit class represents a
+         * Implementation of the LinearBitSplit layer class. The LinearBitSplit class represents a
          * single layer of a neural network.
          *
          * @tparam InputDataType Type of the input data (arma::colvec, arma::mat,
@@ -21,39 +22,43 @@ namespace mlpack {
             typename OutputDataType = arma::mat,
             typename RegularizerType = NoRegularizer
         >
-            class LinearSplit
+            class LinearBitSplit
         {
         public:
-            //! Create the LinearSplit object.
-            LinearSplit();
+            //! Create the LinearBitSplit object.
+            LinearBitSplit();
 
             /**
-             * Create the LinearSplit layer object using the specified number of units.
+             * Create the LinearBitSplit layer object using the specified number of units.
              *
              * @param inSize The number of input units.
              * @param outSize The number of output units.
              * @param regularizer The regularizer to use, optional.
              */
-            LinearSplit(const size_t inSize,
+            LinearBitSplit(const size_t inSize,
                 const size_t outSize,
                 RegularizerType regularizer = RegularizerType());
 
             //! Copy constructor.
-            LinearSplit(const LinearSplit& layer);
+            LinearBitSplit(const LinearBitSplit& layer);
 
             //! Move constructor.
-            LinearSplit(LinearSplit&&);
+            LinearBitSplit(LinearBitSplit&&);
 
             //! Copy assignment operator.
-            LinearSplit& operator=(const LinearSplit& layer);
+            LinearBitSplit& operator=(const LinearBitSplit& layer);
 
             //! Move assignment operator.
-            LinearSplit& operator=(LinearSplit&& layer);
+            LinearBitSplit& operator=(LinearBitSplit&& layer);
 
             /*
              * Reset the layer parameter.
              */
             void Reset();
+
+            // Constructs a (inputSize * 64) x outputSize matrix with 0 and 1 values from a inputSize x outputSize bitword matrix
+            template<typename eT>
+            void bitToFeatureMatrix(arma::sp_mat& featureMatrix, const arma::Mat<eT>& bitwordMatrix);
 
             /**
              * Ordinary feed forward pass of a neural network, evaluating the function
@@ -135,7 +140,7 @@ namespace mlpack {
             //! Get the size of the weights.
             size_t WeightSize() const
             {
-                return (inSize * outSize) + outSize;
+                return (((inSize * 64) / 2) * outSize) + outSize;
             }
 
             /**
@@ -174,11 +179,11 @@ namespace mlpack {
 
             //! Locally-stored regularizer object.
             RegularizerType regularizer;
-        }; // class LinearSplit
+        }; // class LinearBitSplit
 
     } // namespace ann
 } // namespace mlpack
 
-#include "LinearSplit_impl.hpp"
+#include "LinearBitSplit_impl.hpp"
 
 #endif
