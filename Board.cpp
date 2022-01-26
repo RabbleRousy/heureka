@@ -17,13 +17,12 @@ const std::string Board::squareNames[] = {
 		"a8","b8","c8","d8","e8","f8","g8","h8"
 };
 
-short Board::castleRights = 0b1111;
-unsigned short Board::enPassantSquare = 64;
-unsigned short Board::fullMoveCount = 1;
-unsigned short Board::halfMoveCount = 0;
+Board::GameState Board::gameState = Board::GameState();
 Bitboard Board::bb = Bitboard();
+short Board::blackKingPos = 60;
+short Board::whiteKingPos = 4;
 
-Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false), currentPlayer(Piece::WHITE) { 
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false) { 
 	Zobrist::initializeHashes();
 	TranspositionTable::setSize(128);
 }
@@ -39,11 +38,8 @@ void Board::reset() {
 	possibleMoves = std::vector<Move>();
 	moveHistory = std::stack<Move>();
 	futureMovesBuffer = std::stack<Move>();
-	halfMoveCount = 0;
-	fullMoveCount = 1;
+	gameState = GameState();
 	wantsToPromote = false;
-	checkMate = false;
-	remis = false;
 	TranspositionTable::clear();
 	readPosFromFEN();
 	generateMoves();
@@ -53,7 +49,7 @@ void Board::init(std::string fen) {
 	if (!readPosFromFEN(fen)) {
 		readPosFromFEN();
 	}
-	currentZobristKey = Zobrist::getZobristKey(&bb, castleRights, enPassantSquare, currentPlayer == Piece::WHITE);
+	currentZobristKey = Zobrist::getZobristKey(&bb, gameState.castleRights, gameState.enPassantSquare, gameState.whiteToMove());
 	DEBUG_COUT("Zobrist key for this position: " + std::to_string(currentZobristKey) + '\n');
 	generateMoves();
 }
@@ -63,8 +59,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	DEBUG_COUT("Trying to parse FEN: " + fen + '\n');
 	clearBoard();
 	// Default values
-	currentPlayer = Piece::WHITE;
-	castleRights = 0b1111;
+	gameState = GameState();
 
 	// FEN starts at the top left corner of the board
 	unsigned short column = 0;
@@ -169,35 +164,35 @@ bool Board::readPosFromFEN(std::string fen) {
 	// Player to move
 	switch (fen[++i]) {
 	case 'b':
-		currentPlayer = Piece::BLACK;
+		gameState.currentPlayer = Piece::BLACK;
 		break;
 	default:
-		currentPlayer = Piece::WHITE;
+		gameState.currentPlayer = Piece::WHITE;
 		break;
 	}
 	//DEBUG_COUT("Current player read from FEN: " + fen[i] + '\n');
 
 	// Castling rights
-	castleRights = 0;
+	gameState.castleRights = 0;
 	int j = i+2;
 	for (j; j < fen.size() && fen[j] != ' '; j++) {
 		switch (fen[j]) {
 		case '-':
 			return true;
 		case 'K':
-			castleRights |= 0b1000;
+			gameState.castleRights |= 0b1000;
 			break;
 		case 'Q':
-			castleRights |= 0b0100;
+			gameState.castleRights |= 0b0100;
 			break;
 		case 'k':
-			castleRights |= 0b0010;
+			gameState.castleRights |= 0b0010;
 			break;
 		case 'q':
-			castleRights |= 0b0001;
+			gameState.castleRights |= 0b0001;
 			break;
 		default:
-			castleRights = 0b1111;
+			gameState.castleRights = 0b1111;
 			return true;
 		}
 	}
@@ -261,14 +256,14 @@ bool Board::readPosFromFEN(std::string fen) {
 		// Remove the pawn and make the move manually
 		swapCurrentPlayer();
 
-		unsigned short from = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? -1 : 1);
-		unsigned short to = column + 8 * (int)row + ((currentPlayer == Piece::WHITE) ? 1 : -1);
+		unsigned short from = column + 8 * (int)row + (gameState.whiteToMove() ? -1 : 1);
+		unsigned short to = column + 8 * (int)row + (gameState.whiteToMove() ? 1 : -1);
 
 		// Undo the move
 		removePiece(to);
-		setPiece(from, Piece::PAWN | currentPlayer);
+		setPiece(from, Piece::PAWN | gameState.currentPlayer);
 
-		Move epMove = Move(Piece::PAWN | currentPlayer, Piece::NONE, from, (currentPlayer == Piece::WHITE) ? from + 16 : from - 16);
+		Move epMove = Move(Piece::PAWN | gameState.currentPlayer, Piece::NONE, from, gameState.whiteToMove() ? from + 16 : from - 16);
 	
 		doMove(&epMove);
 	}
@@ -277,12 +272,12 @@ bool Board::readPosFromFEN(std::string fen) {
 
 	// Halfmove Clock
 	if (++i < fen.size()) {
-		halfMoveCount = std::atoi(&fen[i]);
+		gameState.halfMoveCount = std::atoi(&fen[i]);
 	}
 
 	// Fullmoves
 	if (++i < fen.size() - 1) {
-		fullMoveCount = std::atoi(&fen[++i]);
+		gameState.fullMoveCount = std::atoi(&fen[++i]);
 	}
 	/*
 
@@ -326,31 +321,31 @@ std::string Board::getFENfromPos() {
 	}
 
 	// who's turn to move
-	fen += (currentPlayer == Piece::WHITE) ? " w" : " b";
+	fen += gameState.whiteToMove() ? " w" : " b";
 
 	// Castling rights
-	if (castleRights == 0) {
+	if (gameState.castleRights == 0) {
 		fen += " -";
 	}
 	else {
 		fen += ' ';
-		if ((castleRights & 0b1000) != 0) fen += 'K';
-		if ((castleRights & 0b0100) != 0) fen += 'Q';
-		if ((castleRights & 0b0010) != 0) fen += 'k';
-		if ((castleRights & 0b0001) != 0) fen += 'q';
+		if ((gameState.castleRights & 0b1000) != 0) fen += 'K';
+		if ((gameState.castleRights & 0b0100) != 0) fen += 'Q';
+		if ((gameState.castleRights & 0b0010) != 0) fen += 'k';
+		if ((gameState.castleRights & 0b0001) != 0) fen += 'q';
 	}
 	
 	fen += ' ';
 
 	// En passant captures
-	if (enPassantSquare != 64) {
-		fen += getSquareName(enPassantSquare);
+	if (gameState.enPassantSquare != 64) {
+		fen += getSquareName(gameState.enPassantSquare);
 	}
 	else {
 		fen +=  '-';
 	}
 
-	fen += ' ' + std::to_string(halfMoveCount) + ' ' + std::to_string(fullMoveCount);
+	fen += ' ' + std::to_string(gameState.halfMoveCount) + ' ' + std::to_string(gameState.fullMoveCount);
 
 	return fen;
 }
@@ -488,34 +483,34 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 bool Board::checkForMateOrRemis() {
 	if (checkForRepetition()) {
-		remis = true;
+		gameState.remis = true;
 		return true;
 	}
 
 	generateMoves();
 	if (possibleMoves.size() == 0) {
 		if (attackData.checkExists) {
-			checkMate = true;
+			gameState.checkMate = true;
 		}
 		else {
-			remis = true;
+			gameState.remis = true;
 		}
 		return true;
 	}
 
-	if (halfMoveCount >= 100) {
-		remis = true;
+	if (gameState.halfMoveCount >= 100) {
+		gameState.remis = true;
 	}
 
-	return remis | checkMate;
+	return gameState.remis | gameState.checkMate;
 }
 
 bool Board::checkForRepetition() {
-	if (halfMoveCount > 7) {
+	if (gameState.halfMoveCount > 7) {
 		unsigned int halfMovesPlayed = positionHistory.size();
 		unsigned short repetitions = 0;
 
-		for (int i = halfMovesPlayed - 4; i >= int(halfMovesPlayed - halfMoveCount); i -= 4) {
+		for (int i = halfMovesPlayed - 4; i >= int(halfMovesPlayed - gameState.halfMoveCount); i -= 4) {
 			repetitions += (positionHistory[i] == currentZobristKey);
 		}
 		if (repetitions >= 2) {
@@ -549,8 +544,8 @@ void Board::doMove(const Move* move) {
 	// Save the old position
 	positionHistory.push_back(currentZobristKey);
 
-	unsigned short oldEpSquare = enPassantSquare;
-	enPassantSquare = 64;
+	unsigned short oldEpSquare = gameState.enPassantSquare;
+	gameState.enPassantSquare = 64;
 	const unsigned short from = move->startSquare;
 	const unsigned short to = move->targetSquare;
 
@@ -558,14 +553,14 @@ void Board::doMove(const Move* move) {
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
 
-	if (currentPlayer == Piece::BLACK)
-		fullMoveCount++;
+	if (!gameState.whiteToMove())
+		gameState.fullMoveCount++;
 
-	halfMoveCount++;
+	gameState.halfMoveCount++;
 	if (Piece::getType(pieceTo) != Piece::NONE ||
 		Piece::getType(pieceFrom) == Piece::PAWN) {
 		// If there was a capture or pawn move, halfmove clock is resetted
-		halfMoveCount = 0;
+		gameState.halfMoveCount = 0;
 	}
 
 	setPiece(to, promoResult);
@@ -586,87 +581,87 @@ void Board::doMove(const Move* move) {
 	
 	// En passant 
 	if (move->isEnPassant()) {
-		unsigned short square = currentPlayer == Piece::WHITE ? to - 8 : to + 8;
+		unsigned short square = gameState.whiteToMove() ? to - 8 : to + 8;
 		removePiece(square);
 		// Remove captured pawn from hash
 		Zobrist::updatePieceHash(currentZobristKey, pieceTo, square);
 	}
 	else if (Piece::getType(pieceFrom) == Piece::PAWN && (abs(to - from) == 16)) {
 		// Double pawn step
-		enPassantSquare = from + ((to - from) / 2);
+		gameState.enPassantSquare = from + ((to - from) / 2);
 	}
 	// Update Zobrist Key w.r.t. ep Square (might have changed or dissapeared)
-	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, enPassantSquare);
+	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, gameState.enPassantSquare);
 
 	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
 		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
 		unsigned short rookTo = from + (to - from) / 2;
 		// Castle detected, Rook has to be moved
 		removePiece(rookFrom);
-		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | currentPlayer, rookFrom);
-		setPiece(rookTo, Piece::ROOK | currentPlayer);
-		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | currentPlayer, rookTo);
+		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | gameState.currentPlayer, rookFrom);
+		setPiece(rookTo, Piece::ROOK | gameState.currentPlayer);
+		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | gameState.currentPlayer, rookTo);
 	}
 
 	//----------- UPDATE CASTLE RIGHTS ---------------------
-	if (castleRights != 0) {
-		short oldCastleRights = castleRights;
+	if (gameState.castleRights != 0) {
+		short oldCastleRights = gameState.castleRights;
 		// If king moved, delete that player's castle rights
 		if (Piece::getType(pieceFrom) == Piece::KING) {
-			castleRights &= (currentPlayer == Piece::WHITE) ? 0b0011 : 0b1100;
+			gameState.castleRights &= gameState.whiteToMove() ? 0b0011 : 0b1100;
 		}
 		// If rook moved
 		else if (Piece::getType(pieceFrom) == Piece::ROOK) {
-			if (currentPlayer == Piece::WHITE && bb.containsSquare(~bb.notFirstRank, from)) {
+			if (gameState.whiteToMove() && bb.containsSquare(~bb.notFirstRank, from)) {
 				if (from == 0) {
 					// Remove right for white's long castle
-					castleRights &= 0b1011;
+					gameState.castleRights &= 0b1011;
 				}
 				else if (from == 7) {
 					// Remove right for white's short castle
-					castleRights &= 0b0111;
+					gameState.castleRights &= 0b0111;
 				}
 			}
-			else if (currentPlayer == Piece::BLACK && bb.containsSquare(~bb.notEightRank, from)) {
+			else if (!gameState.whiteToMove() && bb.containsSquare(~bb.notEightRank, from)) {
 				if (from == 56) {
 					// Remove right for black's long castle
-					castleRights &= 0b1110;
+					gameState.castleRights &= 0b1110;
 				}
 				else if (from == 63) {
 					// Remove right for black's short castle
-					castleRights &= 0b1101;
+					gameState.castleRights &= 0b1101;
 				}
 			}
 		}
 		// If rook got captured
 		else if (Piece::getType(pieceTo) == Piece::ROOK) {
-			if (currentPlayer == Piece::BLACK && bb.containsSquare(~bb.notFirstRank, to)) {
+			if (!gameState.whiteToMove() && bb.containsSquare(~bb.notFirstRank, to)) {
 				if (to == 0) {
 					// Remove right for white's long castle
-					castleRights &= 0b1011;
+					gameState.castleRights &= 0b1011;
 				}
 				else if (to == 7) {
 					// Remove right for white's short castle
-					castleRights &= 0b0111;
+					gameState.castleRights &= 0b0111;
 				}
 			}
-			else if (currentPlayer == Piece::WHITE && bb.containsSquare(~bb.notEightRank, to)) {
+			else if (gameState.whiteToMove() && bb.containsSquare(~bb.notEightRank, to)) {
 				if (to == 56) {
 					// Remove right for black's long castle
-					castleRights &= 0b1110;
+					gameState.castleRights &= 0b1110;
 				}
 				else if (to == 63) {
 					// Remove right for black's short castle
-					castleRights &= 0b1101;
+					gameState.castleRights &= 0b1101;
 				}
 			}
 		}
-		Zobrist::updateZobristKey(currentZobristKey, oldCastleRights, castleRights);
+		Zobrist::updateZobristKey(currentZobristKey, oldCastleRights, gameState.castleRights);
 	}
 
 	//----------- UPDATE KING POS --------------------------
 	if (Piece::getType(pieceFrom) == Piece::KING) {
-		if (currentPlayer == Piece::WHITE) {
+		if (gameState.whiteToMove()) {
 			whiteKingPos = to;
 		}
 		else {
@@ -678,7 +673,7 @@ void Board::doMove(const Move* move) {
 	//printPositionHistory();
 
 	if (Piece::getType(pieceFrom) == Piece::KING) {
-		nnue.recalculateAccumulators(this);
+		nnue.recalculateAccumulators();
 	}
 	else {
 		// Update white accumulator
@@ -777,15 +772,15 @@ void Board::undoMove(const Move* move) {
 	}
 
 	// Restore the castlerights and epsquare from before that move
-	Zobrist::updateZobristKey(currentZobristKey, castleRights, move->previousCastlerights);
-	Zobrist::updateZobristKey(currentZobristKey, enPassantSquare, move->previousEPsquare);
-	castleRights = move->previousCastlerights;
-	enPassantSquare = move->previousEPsquare;
-	halfMoveCount = move->previousHalfMoves;
+	Zobrist::updateZobristKey(currentZobristKey, gameState.castleRights, move->previousCastlerights);
+	Zobrist::updateZobristKey(currentZobristKey, gameState.enPassantSquare, move->previousEPsquare);
+	gameState.castleRights = move->previousCastlerights;
+	gameState.enPassantSquare = move->previousEPsquare;
+	gameState.halfMoveCount = move->previousHalfMoves;
 
-	if (currentPlayer == Piece::WHITE) {
+	if (gameState.whiteToMove()) {
 		// Black's move was undone
-		fullMoveCount--;
+		gameState.fullMoveCount--;
 	}
 
 	swapCurrentPlayer();
@@ -817,7 +812,7 @@ bool Board::redoLastMove() {
 
 bool Board::inCheckAfter(const Move* move) {
 	doMove(move);
-	bool check = bb.getAttackData(Piece::getOppositeColor(currentPlayer)).checkExists;
+	bool check = bb.getAttackData(Piece::getOppositeColor(gameState.currentPlayer)).checkExists;
 	undoMove(move);
 	return check;
 }
@@ -829,7 +824,7 @@ void Board::generateMoves(bool onlyCaptures)
 	//Instrumentor::Get().BeginSession("Generate Moves Profiling", "moves.json");
 	possibleMoves.clear();
 
-	attackData = bb.getAttackData(currentPlayer);
+	attackData = bb.getAttackData(gameState.currentPlayer);
 
 	generateKingMoves(onlyCaptures);
 
@@ -847,8 +842,7 @@ void Board::generateMoves(bool onlyCaptures)
 
 void Board::generatePawnMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
-	bool white = currentPlayer == Piece::WHITE;
-	bitboard pawns = bb.getBitboard(Piece::PAWN | currentPlayer);
+	bitboard pawns = bb.getBitboard(Piece::PAWN | gameState.currentPlayer);
 	// Pinned pawns can't move if there is a check
 	pawns &= pawns ^ (attackData.checkExists * attackData.allPins);
 
@@ -859,7 +853,7 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 	if (onlyCaptures) goto captures;
 
 	//---------- Moves one step ahead -----------------
-	moves = bb.getSinglePawnSteps(pawns, currentPlayer);
+	moves = bb.getSinglePawnSteps(pawns, gameState.currentPlayer);
 	// Pawns may only step on empty fields
 	moves &= empty;
 
@@ -868,32 +862,32 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 	// Loop over all pawns that can move one step ahead
 	Bitloop (moves) {
 		targetIndex = getSquare(moves);
-		unsigned short originIndex = targetIndex + (white ? -8 : 8);
+		unsigned short originIndex = targetIndex + (gameState.whiteToMove() ? -8 : 8);
 		
 		// If not moving along existing pinray, skip Move
 		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
-		short promotionFlag = (white && (targetIndex > 55)) ||
-							 (!white && (targetIndex < 8));
+		short promotionFlag = (gameState.whiteToMove() && (targetIndex > 55)) ||
+							 (!gameState.whiteToMove() && (targetIndex < 8));
 		
-		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, promotionFlag);
+		Move move(Piece::PAWN | gameState.currentPlayer, Piece::NONE, originIndex, targetIndex, promotionFlag);
 		possibleMoves.push_back(move);
 
 		if (promotionFlag) {
 			// Add all other possible promotions
 			for (int i = 2; i < 5; i++) {
-				Move promoMove(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex, i);
+				Move promoMove(Piece::PAWN | gameState.currentPlayer, Piece::NONE, originIndex, targetIndex, i);
 				possibleMoves.push_back(promoMove);
 			}
 		}
 	}
 
 	//---------- Moves two steps ahead ----------------
-	moves = bb.getDoublePawnSteps(pawns, currentPlayer);
+	moves = bb.getDoublePawnSteps(pawns, gameState.currentPlayer);
 	// Target field must be empty
 	moves &= empty;
 	// Previous field must also be empty
-	moves &= white ? (empty << 8) : (empty >> 8);
+	moves &= gameState.whiteToMove() ? (empty << 8) : (empty >> 8);
 
 	// If player is in check, pawns may only step inbetween the check ray
 	moves &= attackData.allChecks;
@@ -901,31 +895,31 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 	// Loop over all pawns that can move two steps ahead
 	Bitloop (moves) {
 		targetIndex = getSquare(moves);
-		unsigned short originIndex = targetIndex + (white ? -16 : 16);
+		unsigned short originIndex = targetIndex + (gameState.whiteToMove() ? -16 : 16);
 
 		// Pinned piece can only move on pin ray
 		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
-		Move move(Piece::PAWN | currentPlayer, Piece::NONE, originIndex, targetIndex);
+		Move move(Piece::PAWN | gameState.currentPlayer, Piece::NONE, originIndex, targetIndex);
 		possibleMoves.push_back(move);
 	}
 
 	captures:
 	//---------- Captures left ------------------------
-	moves = bb.getPawnAttacks(pawns, true, currentPlayer);
+	moves = bb.getPawnAttacks(pawns, true, gameState.currentPlayer);
 	// Capture field has to be occupied by enemy or marked as ep square
-	bitboard captures = bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+	bitboard captures = bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 	// Or marked as en passant
-	captures |= bitboard(enPassantSquare != 64) << enPassantSquare;
+	captures |= bitboard(gameState.enPassantSquare != 64) << gameState.enPassantSquare;
 	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
 	bitboard checkRays = attackData.allChecks;
-	if (enPassantSquare != 64) {
+	if (gameState.enPassantSquare != 64) {
 		if (bb.count(checkRays) == 1) {
 			if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
 				// Or on the enpassant square if it's the pawn giving check
-				checkRays |= bitboard(1) << enPassantSquare;
+				checkRays |= bitboard(1) << gameState.enPassantSquare;
 			}
 		}
 	}
@@ -934,20 +928,20 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 	// Loop over all pawn captures to the left
 	Bitloop (moves) {
 		targetIndex = getSquare(moves);
-		unsigned short originIndex = targetIndex + (white ? -7 : 9);
+		unsigned short originIndex = targetIndex + (gameState.whiteToMove() ? -7 : 9);
 
 		// Pinned pawn can only capture the pinning piece
 		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
 
-		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
-			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
+		short promotionFlag = (gameState.whiteToMove() && (1ULL << targetIndex & ~bb.notEightRank)) ||
+			(!gameState.whiteToMove() && (1ULL << targetIndex & ~bb.notFirstRank));
 		short epFlag = 0;
-		if (targetIndex == enPassantSquare) {
+		if (targetIndex == gameState.enPassantSquare) {
 			epFlag |= 0b1000;
 		}
-		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(currentPlayer) : getPiece(targetIndex));
-		Move move(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
+		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(gameState.currentPlayer) : getPiece(targetIndex));
+		Move move(Piece::PAWN | gameState.currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
 
 		if (epFlag && inCheckAfter(&move)) continue;
 
@@ -956,27 +950,27 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 		if (promotionFlag) {
 			// Add all other possible promotions
 			for (int i = 2; i < 5; i++) {
-				Move promoMove(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, i | epFlag);
+				Move promoMove(Piece::PAWN | gameState.currentPlayer, capture, originIndex, targetIndex, i | epFlag);
 				possibleMoves.push_back(promoMove);
 			}
 		}
 	}
 
 	//---------- Captures right -----------------------
-	moves = bb.getPawnAttacks(pawns, false, currentPlayer);
+	moves = bb.getPawnAttacks(pawns, false, gameState.currentPlayer);
 	// Capture field has to be occupied by enemy
-	captures = bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+	captures = bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 	// Or marked as enpassant
-	captures |= bitboard(enPassantSquare != 64) << enPassantSquare;
+	captures |= bitboard(gameState.enPassantSquare != 64) << gameState.enPassantSquare;
 	moves &= captures;
 
 	// If player is in check, pawns may only capture checking pieces
 	checkRays = attackData.allChecks;
-	if (enPassantSquare != 64) {
+	if (gameState.enPassantSquare != 64) {
 		if (bb.count(checkRays) == 1) {
 			if (Piece::getType(getPiece(getSquare(checkRays))) == Piece::PAWN) {
 				// Or on the enpassant square if it's the pawn giving check
-				checkRays |= bitboard(1) << enPassantSquare;
+				checkRays |= bitboard(1) << gameState.enPassantSquare;
 			}
 		}
 	}
@@ -985,19 +979,19 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 	// Loop over all pawn captures to the right
 	Bitloop (moves) {
 		targetIndex = getSquare(moves);
-		unsigned short originIndex = targetIndex + (white ? -9 : 7);
+		unsigned short originIndex = targetIndex + (gameState.whiteToMove() ? -9 : 7);
 
 		// Pinned pawn can only capture the pinning piece
 		if (!bb.containsSquare(attackData.pins[originIndex], targetIndex)) continue;
 
-		short promotionFlag = (white && (1ULL << targetIndex & ~bb.notEightRank)) ||
-			(!white && (1ULL << targetIndex & ~bb.notFirstRank));
+		short promotionFlag = (gameState.whiteToMove() && (1ULL << targetIndex & ~bb.notEightRank)) ||
+			(!gameState.whiteToMove() && (1ULL << targetIndex & ~bb.notFirstRank));
 		short epFlag = 0;
-		if (targetIndex == enPassantSquare) {
+		if (targetIndex == gameState.enPassantSquare) {
 			epFlag |= 0b1000;
 		}
-		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(currentPlayer) : getPiece(targetIndex));
-		Move move(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
+		short capture = (epFlag ? Piece::PAWN | Piece::getOppositeColor(gameState.currentPlayer) : getPiece(targetIndex));
+		Move move(Piece::PAWN | gameState.currentPlayer, capture, originIndex, targetIndex, promotionFlag | epFlag);
 
 		if (epFlag && inCheckAfter(&move)) continue;
 
@@ -1006,7 +1000,7 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 		if (promotionFlag) {
 			// Add all other possible promotions
 			for (int i = 2; i < 5; i++) {
-				Move promoMove(Piece::PAWN | currentPlayer, capture, originIndex, targetIndex, i | epFlag);
+				Move promoMove(Piece::PAWN | gameState.currentPlayer, capture, originIndex, targetIndex, i | epFlag);
 				possibleMoves.push_back(promoMove);
 			}
 		}
@@ -1015,15 +1009,15 @@ void Board::generatePawnMoves(bool onlyCaptures) {
 
 void Board::generateKingMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
-	unsigned short kingPos = (currentPlayer == Piece::WHITE) ? whiteKingPos : blackKingPos;
+	unsigned short kingPos = gameState.whiteToMove() ? whiteKingPos : blackKingPos;
 	bitboard kingMoves = bb.getKingAttacks(kingPos, true);
 	// Don't move to squares occupied by your own color
-	kingMoves &= ~bb.getBitboard(currentPlayer);
+	kingMoves &= ~bb.getBitboard(gameState.currentPlayer);
 	// Don't move onto attacked squares
 	kingMoves &= ~attackData.allAttacks;
 
 	if (onlyCaptures)
-		kingMoves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+		kingMoves &= bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 
 	// Index of the current move
 	unsigned short targetIndex = 0;
@@ -1037,12 +1031,12 @@ void Board::generateKingMoves(bool onlyCaptures) {
 			bool castleFailed = false;
 			if (targetIndex > kingPos) {
 				// Short castle
-				if (currentPlayer == Piece::WHITE && (castleRights & 0b1000)) {
+				if (gameState.whiteToMove() && (gameState.castleRights & 0b1000)) {
 					// Check white's short castle
 					// Two squares next to king have to be empty and not attacked
 					castleFailed |= (bb.OO & (bb.getOccupied() | attackData.allAttacks));
 				}
-				else if (castleRights & 0b0010) {
+				else if (gameState.castleRights & 0b0010) {
 					// Check black's short castle
 					// Two squares next to king have to be empty and not attacked
 					castleFailed |= (bb.oo & (bb.getOccupied() | attackData.allAttacks));
@@ -1053,19 +1047,19 @@ void Board::generateKingMoves(bool onlyCaptures) {
 
 				if (!castleFailed) {
 					// Rook has to be on the right square
-					castleFailed |= !(getPiece(targetIndex + 1) == (Piece::ROOK | currentPlayer));
+					castleFailed |= !(getPiece(targetIndex + 1) == (Piece::ROOK | gameState.currentPlayer));
 				}
 			}
 			else if (targetIndex < kingPos) {
 				// Long castle
-				if (currentPlayer == Piece::WHITE && (castleRights & 0b0100)) {
+				if (gameState.whiteToMove() && (gameState.castleRights & 0b0100)) {
 					// Check white's long castle
 					// Three squares next to king have to be empty
 					castleFailed |= (bb.OOO & bb.getOccupied());
 					// Two squares next to king must not be attacked
 					castleFailed |= (0x000000000000000C & attackData.allAttacks);
 				}
-				else if (castleRights & 0b0001) {
+				else if (gameState.castleRights & 0b0001) {
 					// Check black's long castle
 					// Three squares next to king have to be empty
 					castleFailed |= (bb.ooo & bb.getOccupied());
@@ -1076,16 +1070,16 @@ void Board::generateKingMoves(bool onlyCaptures) {
 
 				if (!castleFailed) {
 					// Rook has to be on the right square
-					castleFailed = !(getPiece(targetIndex - 2) == (Piece::ROOK | currentPlayer));
+					castleFailed = !(getPiece(targetIndex - 2) == (Piece::ROOK | gameState.currentPlayer));
 				}
 			}
 			if (!castleFailed) {
-				Move move(Piece::KING | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
+				Move move(Piece::KING | gameState.currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
 				possibleMoves.push_back(move);
 			}
 		}
 		else {
-			Move move(Piece::KING | currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
+			Move move(Piece::KING | gameState.currentPlayer, getPiece(targetIndex), kingPos, targetIndex);
 			possibleMoves.push_back(move);
 		}
 	}
@@ -1093,7 +1087,7 @@ void Board::generateKingMoves(bool onlyCaptures) {
 
 void Board::generateKnightMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
-	bitboard knights = bb.getBitboard(Piece::KNIGHT | currentPlayer);
+	bitboard knights = bb.getBitboard(Piece::KNIGHT | gameState.currentPlayer);
 	// Pinned knights can't move
 	knights &= ~attackData.allPins;
 
@@ -1104,13 +1098,13 @@ void Board::generateKnightMoves(bool onlyCaptures) {
 
 		bitboard knightMoves = bb.getKnightAttacks(knightPos);
 		// Possible Knight moves can't go on squares occupied by own color
-		knightMoves &= ~(bb.getBitboard(currentPlayer));
+		knightMoves &= ~(bb.getBitboard(gameState.currentPlayer));
 
 		// If in check, only try moves that move onto the checking ray
 		knightMoves &= attackData.allChecks;
 
 		if (onlyCaptures)
-			knightMoves &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+			knightMoves &= bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 
 		// Index of the current move
 		unsigned short targetIndex = 0;
@@ -1118,7 +1112,7 @@ void Board::generateKnightMoves(bool onlyCaptures) {
 			// Increase index
 			targetIndex = getSquare(knightMoves);
 
-			Move move(Piece::KNIGHT | currentPlayer, getPiece(targetIndex), knightPos, targetIndex);
+			Move move(Piece::KNIGHT | gameState.currentPlayer, getPiece(targetIndex), knightPos, targetIndex);
 			possibleMoves.push_back(move);
 		}
 	}
@@ -1126,7 +1120,7 @@ void Board::generateKnightMoves(bool onlyCaptures) {
 
 void Board::generateRookMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
-	bitboard rooks = bb.getBitboard(Piece::ROOK | currentPlayer);
+	bitboard rooks = bb.getBitboard(Piece::ROOK | gameState.currentPlayer);
 	// Pinned rooks can't move when in check
 	rooks &= rooks ^ (attackData.checkExists * attackData.allPins);
 	unsigned short rookPos = 0;
@@ -1137,7 +1131,7 @@ void Board::generateRookMoves(bool onlyCaptures) {
 
 		bitboard rookAttacks = bb.getRookAttacks(rookPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
-		rookAttacks &= ~bb.getBitboard(currentPlayer);
+		rookAttacks &= ~bb.getBitboard(gameState.currentPlayer);
 
 		// If pinned, move along your pin ray
 		rookAttacks &= attackData.pins[rookPos];
@@ -1146,7 +1140,7 @@ void Board::generateRookMoves(bool onlyCaptures) {
 		rookAttacks &= attackData.allChecks;
 
 		if (onlyCaptures)
-			rookAttacks &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+			rookAttacks &= bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 
 		//if (debugLogs) std::cout << "\nRook Attacks Bitboard:\n" << bb.toString(rookAttacks);
 
@@ -1154,7 +1148,7 @@ void Board::generateRookMoves(bool onlyCaptures) {
 		Bitloop (rookAttacks) {
 			targetIndex = getSquare(rookAttacks);
 
-			Move move(Piece::ROOK | currentPlayer, getPiece(targetIndex), rookPos, targetIndex);
+			Move move(Piece::ROOK | gameState.currentPlayer, getPiece(targetIndex), rookPos, targetIndex);
 			possibleMoves.push_back(move);
 		}
 	}
@@ -1162,7 +1156,7 @@ void Board::generateRookMoves(bool onlyCaptures) {
 
 void Board::generateBishopMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
-	bitboard bishops = bb.getBitboard(Piece::BISHOP | currentPlayer);
+	bitboard bishops = bb.getBitboard(Piece::BISHOP | gameState.currentPlayer);
 	// Pinned bishops can't move when in check
 	bishops &= bishops ^ (attackData.checkExists * attackData.allPins);
 
@@ -1174,7 +1168,7 @@ void Board::generateBishopMoves(bool onlyCaptures) {
 
 		bitboard bishopAttacks = bb.getBishopAttacks(bishopPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
-		bishopAttacks &= ~bb.getBitboard(currentPlayer);
+		bishopAttacks &= ~bb.getBitboard(gameState.currentPlayer);
 
 		// If pinned, move along your pin ray
 		bishopAttacks &= attackData.pins[bishopPos];
@@ -1183,7 +1177,7 @@ void Board::generateBishopMoves(bool onlyCaptures) {
 		bishopAttacks &= attackData.allChecks;
 
 		if (onlyCaptures)
-			bishopAttacks &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+			bishopAttacks &= bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 
 		//if (debugLogs) std::cout << "\Bishop Attacks Bitboard:\n" << bb.toString(bishopAttacks);
 
@@ -1191,7 +1185,7 @@ void Board::generateBishopMoves(bool onlyCaptures) {
 		Bitloop (bishopAttacks) {
 			targetIndex = getSquare(bishopAttacks);
 
-			Move move(Piece::BISHOP | currentPlayer, getPiece(targetIndex), bishopPos, targetIndex);
+			Move move(Piece::BISHOP | gameState.currentPlayer, getPiece(targetIndex), bishopPos, targetIndex);
 			possibleMoves.push_back(move);
 		}
 	}
@@ -1199,7 +1193,7 @@ void Board::generateBishopMoves(bool onlyCaptures) {
 
 void Board::generateQueenMoves(bool onlyCaptures) {
 	PROFILE_FUNCTION();
-	bitboard queens = bb.getBitboard(Piece::QUEEN | currentPlayer);
+	bitboard queens = bb.getBitboard(Piece::QUEEN | gameState.currentPlayer);
 	// Pinned queens can't move when in check
 	queens &= queens ^ (attackData.checkExists * attackData.allPins);
 
@@ -1211,7 +1205,7 @@ void Board::generateQueenMoves(bool onlyCaptures) {
 
 		bitboard queenAttacks = bb.getRookAttacks(queenPos, bb.getOccupied()) | bb.getBishopAttacks(queenPos, bb.getOccupied());
 		// Remove squares that are blocked by friendly pieces
-		queenAttacks &= ~bb.getBitboard(currentPlayer);
+		queenAttacks &= ~bb.getBitboard(gameState.currentPlayer);
 
 		// If pinned, only move along your pin ray
 		queenAttacks &= attackData.pins[queenPos];
@@ -1220,7 +1214,7 @@ void Board::generateQueenMoves(bool onlyCaptures) {
 		queenAttacks &= attackData.allChecks;
 
 		if (onlyCaptures)
-			queenAttacks &= bb.getBitboard(Piece::getOppositeColor(currentPlayer));
+			queenAttacks &= bb.getBitboard(Piece::getOppositeColor(gameState.currentPlayer));
 
 		//if (debugLogs) std::cout << "\Queen Attacks Bitboard:\n" << bb.toString(queenAttacks);
 
@@ -1228,7 +1222,7 @@ void Board::generateQueenMoves(bool onlyCaptures) {
 		Bitloop (queenAttacks) {
 			targetIndex = getSquare(queenAttacks);
 
-			Move move(Piece::QUEEN | currentPlayer, getPiece(targetIndex), queenPos, targetIndex);
+			Move move(Piece::QUEEN | gameState.currentPlayer, getPiece(targetIndex), queenPos, targetIndex);
 			possibleMoves.push_back(move);
 		}
 	}
@@ -1245,7 +1239,7 @@ void Board::orderMoves() {
 }
 
 int Board::staticEvaluation() {
-	int perspective = (currentPlayer == Piece::WHITE) ? 1 : -1;
+	int perspective = gameState.whiteToMove() ? 1 : -1;
 
 	int sum = evaluateMaterial();
 
@@ -1425,7 +1419,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 	}
 
 	// Remis by 50 Move rule (Mate has precedence)
-	if (halfMoveCount >= 100) {
+	if (gameState.halfMoveCount >= 100) {
 		TranspositionTable::add(currentZobristKey, Move::NULLMOVE, 0, TableEntry::scoreType::EXACT, depth);
 		return 0;
 	}
@@ -1474,7 +1468,7 @@ int Board::negaMax(unsigned int depth, int alpha, int beta, SearchResults* resul
 		const int reduction = (i < 10) ? 1 : 2;
 		bool tryReduction = (i >= 5) && (depth > reduction);
 		// Don't apply late move reduction when: in check; capturing; promoting; giving check;
-		tryReduction &= (!attackData.checkExists && (move.capturedPiece == Piece::NONE) && !move.isPromotion() && !bb.getAttackData(currentPlayer).checkExists);
+		tryReduction &= (!attackData.checkExists && (move.capturedPiece == Piece::NONE) && !move.isPromotion() && !bb.getAttackData(gameState.currentPlayer).checkExists);
 		if (tryReduction) {
 			DEBUG_COUT("DEPTH: " + std::to_string(depth) + ", MOVE #" + std::to_string(i)
 				+ ": " + Move::toString(move) + ", alpha: " + std::to_string(alpha) + ". Doing reduced depth search... ");
@@ -1547,7 +1541,7 @@ int Board::negaMaxQuiescence(int alpha, int beta, SearchResults* results, int de
 		// Remis by repetition
 		return 0;
 	}
-	if (halfMoveCount >= 100) {
+	if (gameState.halfMoveCount >= 100) {
 		// Remis by 50 Move Rule
 		return 0;
 	}
@@ -1647,10 +1641,10 @@ void Board::stepsToDirection(int steps, short dir[2]) {
 }
 
 void Board::swapCurrentPlayer() {
-	if (currentPlayer == Piece::WHITE)
-		currentPlayer = Piece::BLACK;
+	if (gameState.whiteToMove())
+		gameState.currentPlayer = Piece::BLACK;
 	else
-		currentPlayer = Piece::WHITE;
+		gameState.currentPlayer = Piece::WHITE;
 
 	Zobrist::swapPlayerHash(currentZobristKey);
 	//DEBUG_COUT("Incrementally Updated Zobrist Key: " + std::to_string(currentZobristKey) + '\n');

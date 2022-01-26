@@ -89,8 +89,8 @@ void ChessGraphics::mainLoop() {
 
 	while (window->isOpen()) {
 
-		if (board.checkMate) {
-			std::cout << Piece::name(board.currentPlayer) << " lost. New game? (Y/N)";
+		if (Board::gameState.checkMate) {
+			std::cout << Piece::name(Board::gameState.currentPlayer) << " lost. New game? (Y/N)";
 			std::string input;
 			std::cin >> input;
 			if (input == "Y" || input == "y")
@@ -98,7 +98,7 @@ void ChessGraphics::mainLoop() {
 			else window->close();
 		}
 
-		if (board.remis) {
+		if (Board::gameState.remis) {
 			std::cout << "Remis. New game? (Y/N)";
 			std::string input;
 			std::cin >> input;
@@ -134,7 +134,7 @@ void ChessGraphics::mainLoop() {
 					if (pieceSelected && board.handleMoveInput(selectedSquare, clickedSquare)) {
 						pieceSelected = false;
 						draw();
-						if (aiPlayer && !(board.checkMate || board.remis))
+						if (aiPlayer && !(Board::gameState.checkMate || Board::gameState.remis))
 							board.makeAiMove();
 					}
 					// Try to select a hovered piece
@@ -165,7 +165,7 @@ void ChessGraphics::mainLoop() {
 
 						if (promotionSuccess) {
 							draw();
-							if (aiPlayer && !(board.checkMate || board.remis))
+							if (aiPlayer && !(Board::gameState.checkMate || Board::gameState.remis))
 								board.makeAiMove();
 						}
 					}
@@ -175,7 +175,7 @@ void ChessGraphics::mainLoop() {
 						// Move could be made
 						pieceSelected = false;
 						draw();
-						if (aiPlayer && !(board.checkMate || board.remis))
+						if (aiPlayer && !(Board::gameState.checkMate || Board::gameState.remis))
 							board.makeAiMove();
 					}
 				}
@@ -265,17 +265,17 @@ void ChessGraphics::draw()
 		window->draw(highlightSquare);
 
 		// Display possible promotion pieces
-		setPieceSquare(Piece::QUEEN | board.currentPlayer, 3, 4);
-		window->draw(getPieceSprite(Piece::QUEEN | board.currentPlayer));
+		setPieceSquare(Piece::QUEEN | Board::gameState.currentPlayer, 3, 4);
+		window->draw(getPieceSprite(Piece::QUEEN | Board::gameState.currentPlayer));
 
-		setPieceSquare(Piece::ROOK | board.currentPlayer, 4, 4);
-		window->draw(getPieceSprite(Piece::ROOK | board.currentPlayer));
+		setPieceSquare(Piece::ROOK | Board::gameState.currentPlayer, 4, 4);
+		window->draw(getPieceSprite(Piece::ROOK | Board::gameState.currentPlayer));
 
-		setPieceSquare(Piece::BISHOP | board.currentPlayer, 3, 3);
-		window->draw(getPieceSprite(Piece::BISHOP | board.currentPlayer));
+		setPieceSquare(Piece::BISHOP | Board::gameState.currentPlayer, 3, 3);
+		window->draw(getPieceSprite(Piece::BISHOP | Board::gameState.currentPlayer));
 
-		setPieceSquare(Piece::KNIGHT | board.currentPlayer, 4, 3);
-		window->draw(getPieceSprite(Piece::KNIGHT | board.currentPlayer));
+		setPieceSquare(Piece::KNIGHT | Board::gameState.currentPlayer, 4, 3);
+		window->draw(getPieceSprite(Piece::KNIGHT | Board::gameState.currentPlayer));
 	}
 
 	window->display();

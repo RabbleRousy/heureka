@@ -238,23 +238,24 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 		board.readPosFromFEN(fen);
 		//board.print();
 		std::string e = line.substr(line.find(',')+1); 
-		float eval;
+		int evalCP;
+		float evalWDL;
 
 		// Ignore samples were there is a forced mate
 		if (e.find('#') == std::string::npos) {
-			eval = std::stof(e);
-			if (board.currentPlayer == Piece::BLACK) {
-				eval = -eval;
+			evalCP = std::stoi(e);
+			if (!board.gameState.whiteToMove()) {
+				evalCP = -evalCP;
 			}
 			// Transform evaluation from centipawns to win/draw/loss (0/0.5/1.0)
-			eval = utils::math::sigmoid(eval, 0, 1.0f / 410.0f);
+			evalWDL = utils::math::sigmoid(evalCP, 0, 1.0f / 410.0f);
 
 
 			// Coordinate list format for sparse matrices:
 			// <row> <column> <nonzero-value>
-			std::string coordinateList = getHalfKPcoordinateList(row, &board);
+			std::string coordinateList = getHalfKPcoordinateList(row);
 			// Append value
-			coordinateList += std::to_string(row) + " 1300 " + std::to_string(eval) + '\n';
+			coordinateList += std::to_string(row) + " 1300 " + std::to_string(evalWDL) + '\n';
 
 			output << coordinateList;
 			row++;
@@ -316,12 +317,11 @@ unsigned int NNUE::getHalfKPindex(short perspective, short pieceType, short piec
 	return p + kingSquare + 1;
 }
 
-std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) {
+std::string NNUE::getHalfKPcoordinateList(unsigned long long row) {
 	std::string cl;
-	bool whiteToMove = board->currentPlayer == Piece::WHITE;
 
 	// Perspective of side to move (first HalfKP)
-	unsigned short kingSquare = whiteToMove ? board->whiteKingPos : board->blackKingPos;
+	unsigned short kingSquare = Board::gameState.whiteToMove() ? Board::whiteKingPos : Board::blackKingPos;
 	unsigned short pieceSquare;
 
 	// Each word holds 64 features
@@ -331,38 +331,38 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row, Board* board) 
 	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
 		for (short color = Piece::WHITE; color <= Piece::BLACK; color+=8) {
 
-			bitboard pieces = board->bb.getBitboard(piece | color);
+			bitboard pieces = Board::bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
-				unsigned int halfKPindex = getHalfKPindex(board->currentPlayer, piece, color, pieceSquare, kingSquare);
+				unsigned int halfKPindex = getHalfKPindex(Board::gameState.currentPlayer, piece, color, pieceSquare, kingSquare);
 				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
 
-				if (!whiteToMove) {
+				if (!Board::gameState.whiteToMove()) {
 					// First perspective is black, flip board
 					pieceSquare ^= 56;
 				}
-				unsigned int halfPieceIndex = getHalfPieceIndex(pieceSquare, piece, color == board->currentPlayer);
+				unsigned int halfPieceIndex = getHalfPieceIndex(pieceSquare, piece, color == Board::gameState.currentPlayer);
 				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
 			}
 		}
 	}
 
 	// Perspective of the other side (second HalfKP)
-	kingSquare = whiteToMove ?  board->blackKingPos : board->whiteKingPos;
+	kingSquare = Board::gameState.whiteToMove() ?  Board::blackKingPos : Board::whiteKingPos;
 
 	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
 		for (short color = Piece::WHITE; color <= Piece::BLACK; color+=8) {
-			bitboard pieces = board->bb.getBitboard(piece | color);
+			bitboard pieces = Board::bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
-				unsigned int halfKPindex = 41600 + getHalfKPindex(Piece::getOppositeColor(board->currentPlayer), piece, color, pieceSquare, kingSquare);
+				unsigned int halfKPindex = 41600 + getHalfKPindex(Piece::getOppositeColor(Board::gameState.currentPlayer), piece, color, pieceSquare, kingSquare);
 				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
 
-				if (whiteToMove) {
+				if (Board::gameState.whiteToMove()) {
 					// Second perspective is black, flip board
 					pieceSquare ^= 56;
 				}
-				unsigned int halfPieceIndex = 41600 + getHalfPieceIndex(pieceSquare, piece, color == board->currentPlayer);
+				unsigned int halfPieceIndex = 41600 + getHalfPieceIndex(pieceSquare, piece, color == Board::gameState.currentPlayer);
 				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
 			}
 		}

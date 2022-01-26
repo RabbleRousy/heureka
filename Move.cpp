@@ -7,7 +7,7 @@ flags(0), score(0.0f), previousCastlerights(0), previousEPsquare(0), previousHal
 
 Move::Move(short p, short capture, unsigned short start, unsigned short target, short f)
 	: piece(p), capturedPiece(capture), startSquare(start), targetSquare(target), flags(f), score(0.0f),
-	previousCastlerights(Board::castleRights), previousEPsquare(Board::enPassantSquare), previousHalfMoves(Board::halfMoveCount) {
+	previousCastlerights(Board::gameState.castleRights), previousEPsquare(Board::gameState.enPassantSquare), previousHalfMoves(Board::gameState.halfMoveCount) {
 	// Capturing with less valuable pieces is better
 	if (Piece::getType(capturedPiece) != Piece::NONE) {
 		float myValue = Piece::getPieceValue(p);

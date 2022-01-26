@@ -135,29 +135,33 @@ public:
 
 		SearchResults() : positionsSearched(0), evaluation(0), depth(0), bestMove(Move::NULLMOVE) {}
 	};
+
+	struct GameState {
+		// Whose turn it is, either Piece::WHITE or Piece::BLACK
+		short currentPlayer;
+		// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
+		short castleRights;
+		unsigned short enPassantSquare;
+		unsigned short fullMoveCount, halfMoveCount;
+		bool checkMate, remis;
+
+		GameState() : currentPlayer(Piece::WHITE), castleRights(0b1111), enPassantSquare(64), fullMoveCount(1), halfMoveCount(0), checkMate(false), remis(false) {}
+		inline bool whiteToMove() { return currentPlayer == Piece::WHITE; }
+	};
+
+	static GameState gameState;
+
 	float searchTime;
 	bool processing;
 	bool stopDemanded;
 
-	short whiteKingPos;
-	short blackKingPos;
-	
-	// Castle rights as bits: O-O, O-O-O, o-o, o-o-o
-	static short castleRights;
-
-	static unsigned short enPassantSquare;
-
-	static unsigned short fullMoveCount, halfMoveCount;
+	static short whiteKingPos;
+	static short blackKingPos;
 
 	/// <summary>
 	/// Constructor for the Board.
 	/// </summary>
 	Board();
-
-	// Whose turn it is, either Piece::WHITE or Piece::BLACK
-	short currentPlayer;
-
-	bool checkMate, remis;
 
 	SearchResults currentSearch;
 
@@ -167,6 +171,8 @@ public:
 	std::vector<Move> possibleMoves;
 
 	std::stack<Move> moveHistory;
+
+	// Zobrist keys of the past positions
 	std::vector<unsigned long long> positionHistory;
 
 	std::stack<Move> futureMovesBuffer;

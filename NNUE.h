@@ -87,7 +87,7 @@ private:
 	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
 	void relu(int size, const float* input, float* output);
 
-	std::string getHalfKPcoordinateList(unsigned long long row, Board* board);
+	std::string getHalfKPcoordinateList(unsigned long long row);
 
 	void loadModel(std::string path);
 

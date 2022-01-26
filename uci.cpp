@@ -180,7 +180,7 @@ void uci::parseGo(string input) {
 	}
 
 	// Calculate time for search w.r.t. collected parameters
-	movetime = (board.currentPlayer == Piece::WHITE) ? wtime : btime;
+	movetime = Board::gameState.whiteToMove() ? wtime : btime;
 	movetime /= movestogo;
 
 	search:
