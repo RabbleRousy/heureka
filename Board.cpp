@@ -437,7 +437,7 @@ bool Board::handleMoveInput(const unsigned short from[2], const unsigned short t
 
 		makePlayerMove(&promoMoveBuffer);
 
-		DEBUG_COUT("Promotion to " + Piece::name(promotionChoice | currentPlayer) + " performed.\n");
+		DEBUG_COUT("Promotion to " + Piece::name(promotionChoice | gameState.currentPlayer) + " performed.\n");
 		DEBUG_COUT("New FEN: " + getFENfromPos() + '\n');
 
 		return true;
@@ -546,12 +546,17 @@ void Board::doMove(const Move* move) {
 
 	unsigned short oldEpSquare = gameState.enPassantSquare;
 	gameState.enPassantSquare = 64;
+	short oldCastleRights = gameState.castleRights;
+
 	const unsigned short from = move->startSquare;
 	const unsigned short to = move->targetSquare;
 
 	short pieceFrom = move->piece;
 	short pieceTo = move->capturedPiece;
 	short promoResult = move->getPromotionResult();
+
+	// NNUE features
+	std::vector<int> removedFeaturesW, addedFeaturesW, removedFeaturesB, addedFeaturesB;
 
 	if (!gameState.whiteToMove())
 		gameState.fullMoveCount++;
@@ -565,52 +570,82 @@ void Board::doMove(const Move* move) {
 
 	setPiece(to, promoResult);
 	if ((Piece::getType(pieceTo) != Piece::NONE) && !move->isEnPassant()) {
-		// Remove captured piece from hash
+		// Remove captured piece from hash and NNUE feature halves
 		Zobrist::updatePieceHash(currentZobristKey, pieceTo, to);
+		removedFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, Piece::getType(pieceTo), Piece::getColor(pieceTo), to, whiteKingPos));
+		removedFeaturesB.push_back(nnue.getHalfKPindex(Piece::BLACK, Piece::getType(pieceTo), Piece::getColor(pieceTo), to, blackKingPos));
 	}
 	// Add piece to hash on target square
 	Zobrist::updatePieceHash(currentZobristKey, promoResult, to);
+	// Add piece to feature vector halves
+	addedFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, Piece::getType(promoResult), Piece::getColor(promoResult), to, whiteKingPos));
+	addedFeaturesW.push_back(nnue.getHalfKPindex(Piece::BLACK, Piece::getType(promoResult), Piece::getColor(promoResult), to, blackKingPos));
 	
 	removePiece(from);
 
 	// Remove piece from hash at origin position
 	Zobrist::updatePieceHash(currentZobristKey, pieceFrom, from);
-	
+	// Remove piece from feature vector halves
+	removedFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, Piece::getType(pieceFrom), Piece::getColor(pieceFrom), from, whiteKingPos));
+	removedFeaturesB.push_back(nnue.getHalfKPindex(Piece::BLACK, Piece::getType(pieceFrom), Piece::getColor(pieceFrom), from, blackKingPos));
+
 	//std::cout << "\nBishops bitboard after " << Move::toString(*move) << ":\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
 
-	
-	// En passant 
-	if (move->isEnPassant()) {
-		unsigned short square = gameState.whiteToMove() ? to - 8 : to + 8;
-		removePiece(square);
-		// Remove captured pawn from hash
-		Zobrist::updatePieceHash(currentZobristKey, pieceTo, square);
-	}
-	else if (Piece::getType(pieceFrom) == Piece::PAWN && (abs(to - from) == 16)) {
-		// Double pawn step
-		gameState.enPassantSquare = from + ((to - from) / 2);
-	}
-	// Update Zobrist Key w.r.t. ep Square (might have changed or dissapeared)
-	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, gameState.enPassantSquare);
-
-	if ((Piece::getType(pieceFrom) == Piece::KING) && (abs(to-from) == 2)) {
-		unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
-		unsigned short rookTo = from + (to - from) / 2;
-		// Castle detected, Rook has to be moved
-		removePiece(rookFrom);
-		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | gameState.currentPlayer, rookFrom);
-		setPiece(rookTo, Piece::ROOK | gameState.currentPlayer);
-		Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | gameState.currentPlayer, rookTo);
-	}
-
-	//----------- UPDATE CASTLE RIGHTS ---------------------
-	if (gameState.castleRights != 0) {
-		short oldCastleRights = gameState.castleRights;
-		// If king moved, delete that player's castle rights
-		if (Piece::getType(pieceFrom) == Piece::KING) {
-			gameState.castleRights &= gameState.whiteToMove() ? 0b0011 : 0b1100;
+	if (Piece::getType(pieceFrom) == Piece::KING) {
+		if (abs(to - from) == 2) {
+			// Castle detected, Rook has to be moved
+			unsigned short rookFrom = to + (to - from) / ((to - from == 2) ? 2 : 1);
+			unsigned short rookTo = from + (to - from) / 2;
+			removePiece(rookFrom);
+			Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | gameState.currentPlayer, rookFrom);
+			removedFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, Piece::ROOK, gameState.currentPlayer, rookFrom, whiteKingPos));
+			removedFeaturesB.push_back(nnue.getHalfKPindex(Piece::BLACK, Piece::ROOK, gameState.currentPlayer, rookFrom, blackKingPos));
+			setPiece(rookTo, Piece::ROOK | gameState.currentPlayer);
+			Zobrist::updatePieceHash(currentZobristKey, Piece::ROOK | gameState.currentPlayer, rookTo);
+			addedFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, Piece::ROOK, gameState.currentPlayer, rookTo, whiteKingPos));
+			addedFeaturesB.push_back(nnue.getHalfKPindex(Piece::BLACK, Piece::ROOK, gameState.currentPlayer, rookTo, blackKingPos));
 		}
-		// If rook moved
+		//----------- REMOVE CASTLE RIGHT ---------------------
+		gameState.castleRights &= gameState.whiteToMove() ? 0b0011 : 0b1100;
+
+		// Update king positions
+		if (gameState.whiteToMove()) {
+			whiteKingPos = to;
+		}
+		else {
+			blackKingPos = to;
+		}
+		//----------- RECALCULATE STM'S ACCUMULATOR -----------------------
+		std::vector<int> activeFeatures;
+		short kingSquare = gameState.whiteToMove() ? whiteKingPos : blackKingPos;
+		// Collect the feature vector halves for both perspectives
+		for (short color = Piece::WHITE; color <= Piece::BLACK; color += Piece::WHITE) {
+			for (short type = Piece::PAWN; type <= Piece::QUEEN; type++) {
+				bitboard pieces = bb.getBitboard(color | type);
+				Bitloop(pieces) {
+					activeFeatures.push_back(nnue.getHalfKPindex(gameState.currentPlayer, type, color, getSquare(pieces), kingSquare));
+				}
+			}
+		}
+		nnue.recalculateAccumulator(activeFeatures, gameState.whiteToMove());
+	}
+	else {
+		if (Piece::getType(pieceFrom) == Piece::PAWN) {
+			// En passant 
+			if (move->isEnPassant()) {
+				unsigned short square = gameState.whiteToMove() ? to - 8 : to + 8;
+				removePiece(square);
+				// Remove captured pawn from hash
+				Zobrist::updatePieceHash(currentZobristKey, pieceTo, square);
+				// Remove captured pawn from halfKP features
+				removedFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, Piece::PAWN, Piece::getOppositeColor(gameState.currentPlayer), square, whiteKingPos));
+				removedFeaturesB.push_back(nnue.getHalfKPindex(Piece::BLACK, Piece::PAWN, Piece::getOppositeColor(gameState.currentPlayer), square, blackKingPos));
+			}
+			else if (abs(to - from) == 16) {
+				// Double pawn step
+				gameState.enPassantSquare = from + ((to - from) / 2);
+			}
+		}
 		else if (Piece::getType(pieceFrom) == Piece::ROOK) {
 			if (gameState.whiteToMove() && bb.containsSquare(~bb.notFirstRank, from)) {
 				if (from == 0) {
@@ -633,58 +668,42 @@ void Board::doMove(const Move* move) {
 				}
 			}
 		}
-		// If rook got captured
-		else if (Piece::getType(pieceTo) == Piece::ROOK) {
-			if (!gameState.whiteToMove() && bb.containsSquare(~bb.notFirstRank, to)) {
-				if (to == 0) {
-					// Remove right for white's long castle
-					gameState.castleRights &= 0b1011;
-				}
-				else if (to == 7) {
-					// Remove right for white's short castle
-					gameState.castleRights &= 0b0111;
-				}
+
+		// Incrementally update both accumulators
+		nnue.updateAccumulator(removedFeaturesW, addedFeaturesW, true);
+		nnue.updateAccumulator(removedFeaturesB, addedFeaturesB, false);
+	}
+	// If rook got captured, castle rights might have to be updated
+	if (Piece::getType(pieceTo) == Piece::ROOK) {
+		if (!gameState.whiteToMove() && bb.containsSquare(~bb.notFirstRank, to)) {
+			if (to == 0) {
+				// Remove right for white's long castle
+				gameState.castleRights &= 0b1011;
 			}
-			else if (gameState.whiteToMove() && bb.containsSquare(~bb.notEightRank, to)) {
-				if (to == 56) {
-					// Remove right for black's long castle
-					gameState.castleRights &= 0b1110;
-				}
-				else if (to == 63) {
-					// Remove right for black's short castle
-					gameState.castleRights &= 0b1101;
-				}
+			else if (to == 7) {
+				// Remove right for white's short castle
+				gameState.castleRights &= 0b0111;
 			}
 		}
-		Zobrist::updateZobristKey(currentZobristKey, oldCastleRights, gameState.castleRights);
+		else if (gameState.whiteToMove() && bb.containsSquare(~bb.notEightRank, to)) {
+			if (to == 56) {
+				// Remove right for black's long castle
+				gameState.castleRights &= 0b1110;
+			}
+			else if (to == 63) {
+				// Remove right for black's short castle
+				gameState.castleRights &= 0b1101;
+			}
+		}
 	}
 
-	//----------- UPDATE KING POS --------------------------
-	if (Piece::getType(pieceFrom) == Piece::KING) {
-		if (gameState.whiteToMove()) {
-			whiteKingPos = to;
-		}
-		else {
-			blackKingPos = to;
-		}
-	}
+	// Update Zobrist Key w.r.t castle rights
+	Zobrist::updateZobristKey(currentZobristKey, oldCastleRights, gameState.castleRights);
+	// Update Zobrist Key w.r.t. ep Square (might have changed or dissapeared)
+	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, gameState.enPassantSquare);
 
 	swapCurrentPlayer();
-	//printPositionHistory();
-
-	if (Piece::getType(pieceFrom) == Piece::KING) {
-		nnue.recalculateAccumulators();
-	}
-	else {
-		// Update white accumulator
-		std::vector<int> removedFeatures, addedFeatures;
-		// ...
-		nnue.updateAccumulator(removedFeatures, addedFeatures, true);
-
-		// Update black accumulator
-		// ...
-		nnue.updateAccumulator(removedFeatures, addedFeatures, false);
-	}
+	printPositionHistory();
 }
 
 void Board::doMove(std::string move) {

@@ -184,11 +184,6 @@ public:
 	/// <returns>the HalfKP Index between 0 and 41.599, calculated by halfPieceIndex + <paramref name="kingSquare"/> + 1</returns>
 	unsigned int getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare);
 	/// <summary>
-	/// Recalculates the accumulators for both sides using the information on the <paramref name="board"/>
-	/// and passing it to recalculateAccumulator().
-	/// </summary>
-	void recalculateAccumulators(const Board* board);
-	/// <summary>
 	/// Recalculates a single accumulator from scratch for the given side.
 	/// </summary>
 	/// <param name="activeFeatures">list of the indeces of all active (1) HalfKP features</param>

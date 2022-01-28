@@ -11,6 +11,12 @@ NNUE::NNUE(std::string modelPath) {
 }
 
 void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool white) {
+
+	if (white) 
+		DEBUG_COUT("White accumulator recalculated from scratch.\n");
+	else
+		DEBUG_COUT("Black accumulator recalculated from scratch.\n");
+
 	// Copy L0's bias
 	for (int i = 0; i < M; i++) {
 		accumulator[white][i] = L0.biases[i];
@@ -24,6 +30,11 @@ void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool w
 }
 
 void NNUE::updateAccumulator(const std::vector<int>& removedFeatures, const std::vector<int>& addedFeatures, bool white) {
+	if (white)
+		DEBUG_COUT("White accumulator updated incrementally.\n");
+	else
+		DEBUG_COUT("Black accumulator updated incrementally.\n");
+
 	// Subtract weights of removed Features
 	for (int r : removedFeatures) {
 		for (int i = 0; i < M; i++) {
@@ -296,10 +307,6 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath, std::str
 		predictOut << pred << ',' << label << ',' << error << '\n';
 	}
 	std::cout << "AVERAGE ERROR: " << errorSum / data.n_cols;
-}
-
-void NNUE::recalculateAccumulators(const Board* board) {
-
 }
 
 unsigned int NNUE::getHalfPieceIndex(short square, short pieceType, short our) {
