@@ -49,10 +49,10 @@ void NNUE::updateAccumulator(const std::vector<int>& removedFeatures, const std:
 	}
 }
 
-void NNUE::relu(int size, const float* input, float* output) {
+void NNUE::crelu(int size, const float* input, float* output) {
 	for (int i = 0; i < size; i++) {
 		// Clip value between 0 and 1
-		output[i] = std::max(0.0f, input[i]);
+		output[i] = std::min(std::max(0.0f, input[i]), 1.0f);
 	}
 }
 
@@ -66,15 +66,15 @@ float NNUE::evaluate(bool whiteToMove) {
 
 	float output[2 * M];
 	// Activation function for accumulator results
-	relu(2 * M, input, output);
+	crelu(2 * M, input, output);
 
 	// First hidden layer (write output into old input buffer)
 	linear<M * 2, K>(L1, output, input);
-	relu(K, input, output);
+	crelu(K, input, output);
 
 	// Second hidden layer
 	linear<K, K>(L2, output, input);
-	relu(K, input, output);
+	crelu(K, input, output);
 
 	// Output layer
 	linear<K, 1>(L3, output, input);

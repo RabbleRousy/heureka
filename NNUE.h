@@ -85,7 +85,7 @@ private:
 
 	template <int inputSize, int outputSize>
 	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
-	void relu(int size, const float* input, float* output);
+	void crelu(int size, const float* input, float* output);
 
 	std::string getHalfKPcoordinateList(unsigned long long row);
 
