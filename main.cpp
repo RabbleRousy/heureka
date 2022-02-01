@@ -6,6 +6,7 @@
 using namespace std;
 
 int main() {
+
 	cout << "Welcome to Heureka Engine (Version 0.2.4), developed by Simon Hetzer.\n";
 	cout << "Enter \"uci\" to start UCI communication (for debugging or Chess GUIs only).\n";
 	cout << "Enter \"test\" to run the current test suite.\n";
@@ -15,8 +16,11 @@ int main() {
 	cout << "Press any other key to launch integrated GUI.\n";
 
 	string line;
-	ifstream input("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals.csv");
-	ofstream output("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\random_evals_nomates.csv");
+	/*
+	* Remove mates from raw data set
+	* 
+	ifstream input("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessData.csv");
+	ofstream output("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainingSets\\chessData_nomates.csv");
 
 	while (getline(input, line)) {
 		if (line.find('#') == string::npos) {
@@ -26,7 +30,7 @@ int main() {
 
 	input.close();
 	output.close();
-	return 0;
+	return 0;*/
 
 	getline(cin, line);
 

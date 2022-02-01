@@ -3,11 +3,10 @@
 #include "Board.h"
 
 NNUE::NNUE() {
-	//loadModel("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\CustomLayer\\CustomLayer1k.txt");
 }
 
 NNUE::NNUE(std::string modelPath) {
-	//loadModel(modelPath);
+	loadModel(modelPath);
 }
 
 void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool white) {
@@ -21,6 +20,7 @@ void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool w
 	for (int i = 0; i < M; i++) {
 		accumulator[white][i] = L0.biases[i];
 	}
+
 	// Add the weights for active feature's column
 	for (int a : activeFeatures) {
 		for (int i = 0; i < M; i++) {
@@ -88,11 +88,11 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 	arma::mat trainData = (arma::mat) sparseMatrix.t();
 	
 	// Shuffle data
-	srand(time(NULL));
+	/*srand(time(NULL));
 	for (int i = 0; i < trainData.n_cols; i++) {
 		// Swap 2 random columns
 		trainData.swap_cols(rand() % trainData.n_cols, rand() % trainData.n_cols);
-	}
+	}*/
 
 	// Cut the trainLabels from the last row of the trainingData
 	arma::mat trainLabels = trainData.submat(trainData.n_rows - 1, 0, trainData.n_rows - 1, trainData.n_cols - 1);
@@ -126,7 +126,9 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 	}
 	
 	// Stochastic Gradient Descent
-	ens::StandardSGD optimizer(stepSize, batchSize, maxIterations, -1);
+	//ens::StandardSGD optimizer(stepSize, batchSize, maxIterations, -1);
+	//ens::SPALeRASGD<> optimizer(stepSize, batchSize, maxIterations, -1);
+	ens::Adam optimizer(stepSize, batchSize, 0.9, 0.9999999999, 1e-08, maxIterations, -1);
 
 	// Open log streams
 	std::ofstream lossOutput, valLossOutput, reportOutput, dataOutput;
@@ -139,8 +141,9 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 
 	// TRAIN THE MODEL
 	network.Train(trainData, trainLabels, optimizer,
-		/*Callbacks*/ens::ProgressBar(), ens::Report(0.1, reportOutput, 1), ens::PrintLoss(lossOutput),
-		ens::ValidationLoss(network, validationData, validationLabels, predPath, 50, valLossOutput, true, 10));
+		/*Callbacks*/
+		ens::ProgressBar(), /*ens::Report(0.1, reportOutput, 1),*/ ens::PrintLoss(lossOutput),
+		ens::ValidationLoss(network, validationData, validationLabels, predPath, 1, valLossOutput, true, 10));
 
 	mlpack::data::Save(modelPath + "\\net.bin", "network", network, false);
 
@@ -390,8 +393,6 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row) {
 void NNUE::loadModel(std::string path) {
 	mlpack::ann::FFN<> model;
 	mlpack::data::Load(path, "model", model);
-
-	auto layer = model.Model()[0];
 	
 	// L0
 	arma::mat parameters;
@@ -409,7 +410,7 @@ void NNUE::loadModel(std::string path) {
 	}
 
 	// L1
-	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[1]);
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[2]);
 	for (int i = 0; i < L1.in_size; i++) {
 		for (int j = 0; j < L1.out_size; j++) {
 			L1.weights[i][j] = parameters[L1.out_size * i + j];
@@ -421,7 +422,7 @@ void NNUE::loadModel(std::string path) {
 	}
 
 	// L2
-	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[2]);
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[4]);
 	for (int i = 0; i < L2.in_size; i++) {
 		for (int j = 0; j < L2.out_size; j++) {
 			L2.weights[i][j] = parameters[L2.out_size * i + j];
@@ -432,7 +433,7 @@ void NNUE::loadModel(std::string path) {
 	}
 
 	// L3
-	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[3]);
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[6]);
 	for (int i = 0; i < L3.in_size; i++) {
 		L3.weights[i][0] = parameters[i];
 	}

@@ -23,6 +23,9 @@ using namespace std::literals::chrono_literals;
 class Board
 {
 private:
+
+	const bool NNUE_EVAL = true;
+
 	NNUE nnue;
 	static const std::string squareNames[64];
 
@@ -307,6 +310,8 @@ public:
 	void orderMoves();
 
 	int staticEvaluation();
+
+	int evaluateNNUE();
 
 	int evaluateMaterial();
 

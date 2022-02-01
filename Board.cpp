@@ -1285,6 +1285,11 @@ void Board::orderMoves() {
 }
 
 int Board::staticEvaluation() {
+
+	if (NNUE_EVAL) {
+		return evaluateNNUE();
+	}
+
 	int perspective = gameState.whiteToMove() ? 1 : -1;
 
 	int sum = evaluateMaterial();
@@ -1301,6 +1306,12 @@ int Board::evaluateMaterial() {
 	result += evaluateRooks<Piece::WHITE>() - evaluateRooks<Piece::BLACK>();
 	result += evaluateQueens<Piece::WHITE>() - evaluateQueens<Piece::BLACK>();
 	return result;
+}
+
+int Board::evaluateNNUE() {
+	float wdlEval = nnue.evaluate(gameState.whiteToMove());
+	int cpEval = utils::math::invSigmoid(wdlEval, 0, 1.0f / 410.0f);
+	return cpEval;
 }
 
 template<short color>

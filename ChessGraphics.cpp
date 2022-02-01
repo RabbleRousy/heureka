@@ -220,6 +220,9 @@ void ChessGraphics::mainLoop() {
 					<< "; Depth: " << results.depth << "; Positions: " << results.positionsSearched << "; Time: " << (end - start) << " ms\n";
 				Instrumentor::Get().EndSession();
 			}
+			else if (Keyboard::isKeyPressed(Keyboard::Key::E)) {
+				std::cout << "NNUE Evaluation for current position: " << board.evaluateNNUE() << '\n';
+			}
 		}
 
 		draw();
