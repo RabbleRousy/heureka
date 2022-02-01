@@ -72,7 +72,7 @@ public:
 	/// </summary>
 	struct Accumulator {
 		// These will be the input vector of L1
-		float* v[2];
+		float v[2][M];
 
 		/// <summary>
 		/// Access one half of the 2 accumulators by perspective.
@@ -81,16 +81,6 @@ public:
 		/// <returns>that perspective's accumulator as a floatarray</returns>
 		float* operator[](bool white) {
 			return v[white];
-		}
-
-		Accumulator() {
-			v[0] = new float[M];
-			v[1] = new float[M];
-		}
-
-		~Accumulator() {
-			delete[] v[0];
-			delete[] v[1];
 		}
 	};
 

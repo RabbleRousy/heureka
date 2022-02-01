@@ -561,11 +561,33 @@ void Board::makeAiMove() {
 	checkForMateOrRemis();
 }
 
+void Board::saveAccumulators() {
+	// Create new accumulator array
+	NNUE::Accumulator acc;
+	// Copy contents of current accumulator
+	for (int i = 0; i < M; i++) {
+		acc[0][i] = nnue.accumulator[0][i];
+		acc[1][i] = nnue.accumulator[1][i];
+	}
+	// Save to history
+	accumulatorHistory.push(acc);
+}
+
+void Board::restoreAccumulators() {
+	for (int i = 0; i < M; i++) {
+		nnue.accumulator[0][i] = accumulatorHistory.top()[0][i];
+		nnue.accumulator[1][i] = accumulatorHistory.top()[1][i];
+	}
+	// Remove from history
+	accumulatorHistory.pop();
+}
+
 void Board::doMove(const Move* move) {
 	PROFILE_FUNCTION();
 	// Save the old position
 	positionHistory.push_back(currentZobristKey);
-	accumulatorHistory.push(nnue.accumulator);
+	saveAccumulators();
+	
 
 	unsigned short oldEpSquare = gameState.enPassantSquare;
 	gameState.enPassantSquare = 64;
@@ -726,7 +748,7 @@ void Board::doMove(const Move* move) {
 	Zobrist::updateZobristKey(currentZobristKey, oldEpSquare, gameState.enPassantSquare);
 
 	swapCurrentPlayer();
-	printPositionHistory();
+	//printPositionHistory();
 }
 
 void Board::doMove(std::string move) {
@@ -825,14 +847,12 @@ void Board::undoMove(const Move* move) {
 		gameState.fullMoveCount--;
 	}
 
-	// Restore accumulator
-	nnue.accumulator = accumulatorHistory.top();
-	accumulatorHistory.pop();
+	restoreAccumulators();
 
 	swapCurrentPlayer();
 
 	positionHistory.pop_back();
-	printPositionHistory();
+	//printPositionHistory();
 }
 
 bool Board::undoLastMove()

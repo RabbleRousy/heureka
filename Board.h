@@ -199,6 +199,10 @@ public:
 	/// </summary>
 	void initAccumulators();
 
+	void saveAccumulators();
+
+	void restoreAccumulators();
+
 	/// <summary>
 	/// Fills the board with the information given in form of a FEN string.
 	/// </summary>
