@@ -22,7 +22,8 @@ Bitboard Board::bb = Bitboard();
 short Board::blackKingPos = 60;
 short Board::whiteKingPos = 4;
 
-Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false) { 
+Board::Board() : possibleMoves(), moveHistory(), futureMovesBuffer(), wantsToPromote(false),
+nnue("C:\\Users\\simon\\Documents\\Hochschule\\Schachengine\\TrainedNets\\OneTraining\\net.bin") {
 	Zobrist::initializeHashes();
 	TranspositionTable::setSize(128);
 }
@@ -41,7 +42,10 @@ void Board::reset() {
 	gameState = GameState();
 	wantsToPromote = false;
 	TranspositionTable::clear();
+	// Restores the starting position on the board
 	readPosFromFEN();
+	// Resets both NNUE accumulators
+	initAccumulators();
 	generateMoves();
 }
 
@@ -51,6 +55,7 @@ void Board::init(std::string fen) {
 	}
 	currentZobristKey = Zobrist::getZobristKey(&bb, gameState.castleRights, gameState.enPassantSquare, gameState.whiteToMove());
 	DEBUG_COUT("Zobrist key for this position: " + std::to_string(currentZobristKey) + '\n');
+	initAccumulators();
 	generateMoves();
 }
 
@@ -158,6 +163,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	// No additional infos
 	if (i >= fen.size()-1) {
 		DEBUG_COUT("End of FEN reached.\n");
+		initAccumulators();
 		return true;
 	}
 
@@ -178,7 +184,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	for (j; j < fen.size() && fen[j] != ' '; j++) {
 		switch (fen[j]) {
 		case '-':
-			return true;
+			break;
 		case 'K':
 			gameState.castleRights |= 0b1000;
 			break;
@@ -193,7 +199,7 @@ bool Board::readPosFromFEN(std::string fen) {
 			break;
 		default:
 			gameState.castleRights = 0b1111;
-			return true;
+			return false;
 		}
 	}
 
@@ -241,7 +247,7 @@ bool Board::readPosFromFEN(std::string fen) {
 			row = std::atoi(&fen[i]) - 1;
 			break;
 		default:
-			return true;
+			return false;
 		}
 		//DEBUG_COUT("EP Capture input: " + fen[i] + '\n');
 	}
@@ -249,7 +255,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	// Parsing failed
 	if (column == 8 || !(row == 2 || row == 5)) {
 		DEBUG_COUT("EP capture parsing failed\n");
-		return true;
+		return false;
 	}
 
 	{
@@ -286,7 +292,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	std::cout << "\nBishops bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::BISHOP | currentPlayer) | bb.getBitboard(Piece::BISHOP | Piece::getOppositeColor(currentPlayer)));
 	std::cout << "\nPawns bitboard after start:\n" << bb.toString(bb.getBitboard(Piece::PAWN | currentPlayer) | bb.getBitboard(Piece::PAWN | Piece::getOppositeColor(currentPlayer)));
 	*/
-
+	initAccumulators();
 	return true;
 }
 
@@ -348,6 +354,22 @@ std::string Board::getFENfromPos() {
 	fen += ' ' + std::to_string(gameState.halfMoveCount) + ' ' + std::to_string(gameState.fullMoveCount);
 
 	return fen;
+}
+
+void Board::initAccumulators() {
+	std::vector<int> activeFeaturesW, activeFeaturesB;
+	// Collect the feature vector halves for both perspectives
+	for (short color = Piece::WHITE; color <= Piece::BLACK; color += Piece::WHITE) {
+		for (short type = Piece::PAWN; type <= Piece::QUEEN; type++) {
+			bitboard pieces = bb.getBitboard(color | type);
+			Bitloop(pieces) {
+				activeFeaturesW.push_back(nnue.getHalfKPindex(Piece::WHITE, type, color, getSquare(pieces), whiteKingPos));
+				activeFeaturesB.push_back(nnue.getHalfKPindex(Piece::BLACK, type, color, getSquare(pieces), blackKingPos));
+			}
+		}
+	}
+	nnue.recalculateAccumulator(activeFeaturesW, true);
+	nnue.recalculateAccumulator(activeFeaturesB, false);
 }
 
 short Board::getPiece(unsigned short column, unsigned short row)

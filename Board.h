@@ -188,10 +188,15 @@ public:
 	void init(std::string fen);
 
 	/// <summary>
-	/// 
+	/// Collects the active features for both sides and calls NNUE::recalculateAccumulator for both.
+	/// For use after new game started / new fen was read.
 	/// </summary>
-	/// <param name="fen"></param>
-	/// <returns></returns>
+	void initAccumulators();
+
+	/// <summary>
+	/// Fills the board with the information given in form of a FEN string.
+	/// </summary>
+	/// <returns>true if the FEN could be parsed without errors.</returns>
 	bool readPosFromFEN(std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
 
 	/// <summary>
