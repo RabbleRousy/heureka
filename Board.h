@@ -175,6 +175,9 @@ public:
 	// Zobrist keys of the past positions
 	std::vector<unsigned long long> positionHistory;
 
+	// Accumulators of past positions
+	std::stack<NNUE::Accumulator> accumulatorHistory;
+
 	std::stack<Move> futureMovesBuffer;
 
 	// Stores the pawn move while waiting for input on the promotion choice

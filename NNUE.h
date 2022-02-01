@@ -49,6 +49,24 @@ private:
 		}
 	};
 
+	
+
+	Linear<N, M> L0;
+	Linear<M * 2, K> L1;
+	Linear<K, K> L2;
+	Linear<K, 1> L3;
+
+	template <int inputSize, int outputSize>
+	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
+	void crelu(int size, const float* input, float* output);
+
+	std::string getHalfKPcoordinateList(unsigned long long row);
+
+	void loadModel(std::string path);
+
+public:
+	using lossFunction = mlpack::ann::MeanSquaredError<>;
+
 	/// <summary>
 	/// One class which actually holds 2 accumulators for each perspective and allows access to them.
 	/// </summary>
@@ -77,22 +95,6 @@ private:
 	};
 
 	Accumulator accumulator;
-
-	Linear<N, M> L0;
-	Linear<M * 2, K> L1;
-	Linear<K, K> L2;
-	Linear<K, 1> L3;
-
-	template <int inputSize, int outputSize>
-	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
-	void crelu(int size, const float* input, float* output);
-
-	std::string getHalfKPcoordinateList(unsigned long long row);
-
-	void loadModel(std::string path);
-
-public:
-	using lossFunction = mlpack::ann::MeanSquaredError<>;
 
 	// Struct that holds all the parameters for a training session started with the overloaded train() function
 	/// test

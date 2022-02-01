@@ -39,13 +39,13 @@ void Board::reset() {
 	possibleMoves = std::vector<Move>();
 	moveHistory = std::stack<Move>();
 	futureMovesBuffer = std::stack<Move>();
+	positionHistory = std::vector<unsigned long long>();
+	accumulatorHistory = std::stack<NNUE::Accumulator>();
 	gameState = GameState();
 	wantsToPromote = false;
 	TranspositionTable::clear();
 	// Restores the starting position on the board
 	readPosFromFEN();
-	// Resets both NNUE accumulators
-	initAccumulators();
 	generateMoves();
 }
 
@@ -55,7 +55,6 @@ void Board::init(std::string fen) {
 	}
 	currentZobristKey = Zobrist::getZobristKey(&bb, gameState.castleRights, gameState.enPassantSquare, gameState.whiteToMove());
 	DEBUG_COUT("Zobrist key for this position: " + std::to_string(currentZobristKey) + '\n');
-	initAccumulators();
 	generateMoves();
 }
 
@@ -259,6 +258,7 @@ bool Board::readPosFromFEN(std::string fen) {
 	}
 
 	{
+		initAccumulators();
 		// Remove the pawn and make the move manually
 		swapCurrentPlayer();
 
@@ -565,6 +565,7 @@ void Board::doMove(const Move* move) {
 	PROFILE_FUNCTION();
 	// Save the old position
 	positionHistory.push_back(currentZobristKey);
+	accumulatorHistory.push(nnue.accumulator);
 
 	unsigned short oldEpSquare = gameState.enPassantSquare;
 	gameState.enPassantSquare = 64;
@@ -824,10 +825,14 @@ void Board::undoMove(const Move* move) {
 		gameState.fullMoveCount--;
 	}
 
+	// Restore accumulator
+	nnue.accumulator = accumulatorHistory.top();
+	accumulatorHistory.pop();
+
 	swapCurrentPlayer();
 
 	positionHistory.pop_back();
-	//printPositionHistory();
+	printPositionHistory();
 }
 
 bool Board::undoLastMove()
