@@ -51,10 +51,10 @@ private:
 
 	
 
-	Linear<N, M> L0;
-	Linear<M * 2, K> L1;
-	Linear<K, K> L2;
-	Linear<K, 1> L3;
+	Linear<N, M> L1;
+	Linear<M * 2, K> L2;
+	Linear<K, K> L3;
+	Linear<K, 1> L4;
 
 	template <int inputSize, int outputSize>
 	void linear(const Linear<inputSize, outputSize>& layer, const float* input, float* output);
@@ -71,7 +71,7 @@ public:
 	/// One class which actually holds 2 accumulators for each perspective and allows access to them.
 	/// </summary>
 	struct Accumulator {
-		// These will be the input vector of L1
+		// These will be the input vector of L2
 		float v[2][M];
 
 		/// <summary>

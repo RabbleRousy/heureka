@@ -16,15 +16,15 @@ void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool w
 	else
 		DEBUG_COUT("Black accumulator recalculated from scratch.\n");
 
-	// Copy L0's bias
+	// Copy L1's bias
 	for (int i = 0; i < M; i++) {
-		accumulator[white][i] = L0.biases[i];
+		accumulator[white][i] = L1.biases[i];
 	}
 
 	// Add the weights for active feature's column
 	for (int a : activeFeatures) {
 		for (int i = 0; i < M; i++) {
-			accumulator[white][i] += L0.weights[a][i];
+			accumulator[white][i] += L1.weights[a][i];
 		}
 	}
 }
@@ -38,13 +38,13 @@ void NNUE::updateAccumulator(const std::vector<int>& removedFeatures, const std:
 	// Subtract weights of removed Features
 	for (int r : removedFeatures) {
 		for (int i = 0; i < M; i++) {
-			accumulator[white][i] -= L0.weights[r][i];
+			accumulator[white][i] -= L1.weights[r][i];
 		}
 	}
 	// Add weights of added features
 	for (int a : addedFeatures) {
 		for (int i = 0; i < M; i++) {
-			accumulator[white][i] += L0.weights[a][i];
+			accumulator[white][i] += L1.weights[a][i];
 		}
 	}
 }
@@ -58,26 +58,26 @@ void NNUE::crelu(int size, const float* input, float* output) {
 
 float NNUE::evaluate(bool whiteToMove) {
 	float input[2 * M];
-	// Use the accumulator to fill the input vector
+	// Get the accumulators as one vector in the right order
 	for (int i = 0; i < M; i++) {
 		input[i] = accumulator[whiteToMove][i];
 		input[i + M] = accumulator[!whiteToMove][i];
 	}
 
 	float output[2 * M];
-	// Activation function for accumulator results
+	// Activation function for accumulator results (first hidden layer)
 	crelu(2 * M, input, output);
 
-	// First hidden layer (write output into old input buffer)
-	linear<M * 2, K>(L1, output, input);
+	// second hidden layer (write output into old input buffer)
+	linear<M * 2, K>(L2, output, input);
 	crelu(K, input, output);
 
-	// Second hidden layer
-	linear<K, K>(L2, output, input);
+	// third hidden layer
+	linear<K, K>(L3, output, input);
 	crelu(K, input, output);
 
 	// Output layer
-	linear<K, 1>(L3, output, input);
+	linear<K, 1>(L4, output, input);
 
 	return input[0];
 }
@@ -107,16 +107,16 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 	mlpack::ann::FFN<lossFunction> network;
 
 	if (newNet) {
-		// L0
+		// L1
 		network.Add<mlpack::ann::LinearBitSplit<> >(2 * N, 2 * M);
 		network.Add<mlpack::ann::ClippedReLULayer<>>();
-		// L1									 
+		// L2									 
 		network.Add<mlpack::ann::Linear<> >(2 * M, K);
 		network.Add<mlpack::ann::ClippedReLULayer<>>();
-		// L2									 
+		// L3									 
 		network.Add<mlpack::ann::Linear<> >(K, K);
 		network.Add<mlpack::ann::ClippedReLULayer<>>();
-		// L3
+		// L4
 		network.Add<mlpack::ann::Linear<> >(K, 1);
 	}
 	else {
@@ -394,27 +394,15 @@ void NNUE::loadModel(std::string path) {
 	mlpack::ann::FFN<> model;
 	mlpack::data::Load(path, "model", model);
 	
-	// L0
+	// L1
 	arma::mat parameters;
 	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[0]);
 	// Get the weights (first part of parameters)
-	for (int i = 0; i < L0.in_size; i++) {
-		for (int j = 0; j < L0.out_size; j++) {
-			L0.weights[i][j] = parameters[L0.out_size * i + j];
-		}
-
-	}
-	// Get the biases (stored last in parameters)
-	for (int i = 0; i < L0.out_size; i++) {
-		L0.biases[i] = parameters[L0.in_size * L0.out_size + i];
-	}
-
-	// L1
-	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[2]);
 	for (int i = 0; i < L1.in_size; i++) {
 		for (int j = 0; j < L1.out_size; j++) {
 			L1.weights[i][j] = parameters[L1.out_size * i + j];
 		}
+
 	}
 	// Get the biases (stored last in parameters)
 	for (int i = 0; i < L1.out_size; i++) {
@@ -422,22 +410,34 @@ void NNUE::loadModel(std::string path) {
 	}
 
 	// L2
-	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[4]);
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[2]);
 	for (int i = 0; i < L2.in_size; i++) {
 		for (int j = 0; j < L2.out_size; j++) {
 			L2.weights[i][j] = parameters[L2.out_size * i + j];
 		}
-	}// Get the biases (stored last in parameters)
+	}
+	// Get the biases (stored last in parameters)
 	for (int i = 0; i < L2.out_size; i++) {
 		L2.biases[i] = parameters[L2.in_size * L2.out_size + i];
 	}
 
 	// L3
-	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[6]);
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[4]);
 	for (int i = 0; i < L3.in_size; i++) {
-		L3.weights[i][0] = parameters[i];
+		for (int j = 0; j < L3.out_size; j++) {
+			L3.weights[i][j] = parameters[L3.out_size * i + j];
+		}
+	}// Get the biases (stored last in parameters)
+	for (int i = 0; i < L3.out_size; i++) {
+		L3.biases[i] = parameters[L3.in_size * L3.out_size + i];
 	}
-	L3.biases[0] = parameters[L3.in_size];
+
+	// L4
+	boost::apply_visitor(mlpack::ann::ParametersVisitor(parameters), model.Model()[6]);
+	for (int i = 0; i < L4.in_size; i++) {
+		L4.weights[i][0] = parameters[i];
+	}
+	L4.biases[0] = parameters[L4.in_size];
 }
 
 void NNUE::printHalfKPindeces() {
