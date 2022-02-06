@@ -125,7 +125,7 @@ void NNUE::train(bool newNet, std::string modelPath, std::string dataPath, std::
 		mlpack::data::Save(modelPath + "\\net_backup.bin", "network", network, false);
 	}
 	
-	// Stochastic Gradient Descent
+	// Instantiate some Optimizer (Based on SGD)
 	//ens::StandardSGD optimizer(stepSize, batchSize, maxIterations, -1);
 	//ens::SPALeRASGD<> optimizer(stepSize, batchSize, maxIterations, -1);
 	ens::Adam optimizer(stepSize, batchSize, 0.9, 0.9999999999, 1e-08, maxIterations, -1);
@@ -233,20 +233,6 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 	}
 
 	while (std::getline(input, line) && row < (to - from)) {
-		/*
-		* FOR SKIPPING RANDOM SAMPLES
-		* 
-		float limit = RAND_MAX / 10.0f;
-		std::cout << "Limit is " << limit << '\n';
-		int x = rand();
-		std::cout << "Rolled: " << x << " >> ";
-		if (x > limit) {
-			std::cout << "Skipped.\n";
-			continue;
-		}
-		std::cout << "Accepted.\n";
-		*/
-
 		// label and value are comma-separated
 		fen = line.substr(0, line.find(','));
 		board.readPosFromFEN(fen);
@@ -272,8 +258,8 @@ void NNUE::formatDataset(std::string inPath, std::string outPath, int from, int 
 			coordinateList += std::to_string(row) + " 1300 " + std::to_string(evalWDL) + '\n';
 
 			output << coordinateList;
-			row++;
 		}
+		row++;
 	}
 
 	input.close();

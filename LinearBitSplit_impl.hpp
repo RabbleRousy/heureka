@@ -95,15 +95,20 @@ namespace mlpack {
                 outSize / 2, 1, false, false);
         }
 
+        // Class template parameters
         template<typename InputDataType, typename OutputDataType,
             typename RegularizerType>
-            template<typename eT>
+        // Matrix elements type, for us this is always double
+        template<typename eT>
         void LinearBitSplit<InputDataType, OutputDataType, RegularizerType>::bitToFeatureMatrix(arma::sp_mat& featureMatrix, const arma::Mat<eT>& bitwordMatrix) {
+	        // Create the feature matrix filled with zeros
             featureMatrix.zeros(bitwordMatrix.n_rows * 64, bitwordMatrix.n_cols);
 
+    	    // Loop over the 64 bitword matrix
             for (int row = 0; row < bitwordMatrix.n_rows; row++) {
                 for (int column = 0; column < bitwordMatrix.n_cols; column++) {
                     unsigned long long word = bitwordMatrix.at(row, column);
+                    // Read the word bit by bit using Bitboard helper methods
                     Bitloop(word) {
                         auto index = getSquare(word);
                         featureMatrix.at(row * 64 + index, column) = 1.0;

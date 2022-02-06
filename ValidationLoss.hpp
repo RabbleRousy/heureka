@@ -46,14 +46,14 @@ namespace ens {
         }
 
         /**
-         * Callback function called at the end of a pass over the data.
-         *
-         * @param optimizer The optimizer used to update the function.
-         * @param function Function to optimize.
-         * @param coordinates Starting point.
-         * @param epoch The index of the current epoch.
-         * @param objective Objective value of the current point.
-         */
+            * Callback function called at the end of a pass over the data.
+            *
+            * @param optimizer The optimizer used to update the function.
+            * @param function Function to optimize.
+            * @param coordinates Starting point.
+            * @param epoch The index of the current epoch.
+            * @param objective Objective value of the current point.
+            */
         template<typename OptimizerType, typename FunctionType, typename MatType>
         bool EndEpoch(OptimizerType& /* optimizer */,
             FunctionType& /* function */,
@@ -69,7 +69,6 @@ namespace ens {
                 predictions.save(predictionsPath + "\\predictions" + std::to_string(epoch) + ".csv", arma::csv_ascii);
             }
 
-            // TODO: ABS statt SQUARE
             // Calculate the mean squared error
             double loss = arma::accu(arma::square(predictions - validationLabels)) / predictions.n_cols;
 

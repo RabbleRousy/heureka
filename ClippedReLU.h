@@ -23,23 +23,15 @@ namespace mlpack {
         class ClippedRectifierFunction
         {
         public:
-            /**
-             * Computes the clipped rectifier function.
-             *
-             * @param x Input data.
-             * @return f(x).
-             */
+
+            // Returns CReLU(x)
             static double Fn(const double x)
             {
                 return std::max(0.0, std::min(x, 1.0));
             }
 
-            /**
-             * Computes the clipped rectifier function using a dense matrix as input.
-             *
-             * @param x Input data.
-             * @param y The resulting output activation.
-             */
+            // y = CReLU(x)
+            // Matrix variant
             template<typename eT>
             static void Fn(const arma::Mat<eT>& x, arma::Mat<eT>& y)
             {
@@ -49,12 +41,8 @@ namespace mlpack {
                 y = arma::max(y, arma::min(x, z));
             }
 
-            /**
-             * Computes the rectifier function using a 3rd-order tensor as input.
-             *
-             * @param x Input data.
-             * @param y The resulting output activation.
-             */
+            // y = CReLU(x)
+            // Cube variant
             template<typename eT>
             static void Fn(const arma::Cube<eT>& x, arma::Cube<eT>& y)
             {
@@ -64,23 +52,13 @@ namespace mlpack {
                 y = arma::max(y, arma::min(x, z));
             }
 
-            /**
-             * Computes the first derivative of the rectifier function.
-             *
-             * @param x Input data.
-             * @return f'(x)
-             */
+            // Returns CReLU'(x)
             static double Deriv(const double x)
             {
                 return (double)((x > 0.0) && (x < 1.0));
             }
 
-            /**
-             * Computes the first derivatives of the rectifier function.
-             *
-             * @param y Input data.
-             * @param x The resulting derivatives.
-             */
+            // x = CReLU'(y)
             template<typename InputType, typename OutputType>
             static void Deriv(const InputType& y, OutputType& x)
             {

@@ -87,7 +87,6 @@ public:
 	Accumulator accumulator;
 
 	// Struct that holds all the parameters for a training session started with the overloaded train() function
-	/// test
 	struct TrainSession {
 		const std::string trainDataPath, valDataPath;
 		// How many calls to the train() function with different data matrices
