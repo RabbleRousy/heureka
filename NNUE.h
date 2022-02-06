@@ -166,7 +166,7 @@ public:
 	/// <param name="pieceType">from Pawn (2) to Queen (6)</param>
 	/// <param name="our"> piece (1) or theirs (0)</param>
 	/// <returns>the HalfPiece Index between 0 and 41.535, calculated by: 65 * (10 * square + 5 * our + pieceType - 2)</returns>
-	unsigned int getHalfPieceIndex(short square, short pieceType, short our);
+	unsigned int getHalfPieceIndex(short perspective, short square, short pieceType, short our);
 	/// <param name="perspective">of the position, black's perspective get's flipped</param>
 	/// <param name="pieceType">from Pawn (2) to Queen (6)</param>
 	/// <param name="pieceColor">to check if it's "our" piece</param>

@@ -318,7 +318,7 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row) {
 
 	unsigned short kingSTM = Board::gameState.whiteToMove() ? Board::whiteKingPos : Board::blackKingPos;
 	unsigned short kingNotSTM = Board::gameState.whiteToMove() ? Board::blackKingPos : Board::whiteKingPos;
-	unsigned short pieceSquare, pieceSquareFlipped;
+	unsigned short pieceSquare;
 
 	// Each word holds 64 features
 	unsigned long long* words = new unsigned long long[(2 * N) / 64];
@@ -330,17 +330,16 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row) {
 			bitboard pieces = Board::bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
-				pieceSquareFlipped = pieceSquare ^= 56;
 
 				// Side to move perspective
-				unsigned int halfKPindex = getHalfKPindex(Board::gameState.currentPlayer, piece, color, pieceSquare, kingSquare);
+				unsigned int halfKPindex = getHalfKPindex(Board::gameState.currentPlayer, piece, color, pieceSquare, kingSTM);
 				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
 				unsigned int halfPieceIndex = getHalfPieceIndex(Board::gameState.currentPlayer, pieceSquare, piece, color == Board::gameState.currentPlayer);
 				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
 
 				// Not side to move perspective
 				short notSTM = Piece::getOppositeColor(Board::gameState.currentPlayer);
-				halfKPindex = 41600 + getHalfKPindex(notSTM, piece, color, pieceSquare, kingSquare);
+				halfKPindex = 41600 + getHalfKPindex(notSTM, piece, color, pieceSquare, kingNotSTM);
 				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
 				halfPieceIndex = 41600 + getHalfPieceIndex(notSTM, pieceSquare, piece, color == notSTM);
 				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
@@ -412,7 +411,7 @@ void NNUE::loadModel(std::string path) {
 
 void NNUE::printHalfKPindeces() {
 	using namespace std;
-	ofstream file("virtual features indices list.txt");
+	ofstream file("docs/virtual features indices list.txt");
 
 	for (int pieceSquare = 0; pieceSquare < 64; pieceSquare++) {
 		for (int our = 0; our < 2; our++) {
