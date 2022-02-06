@@ -298,27 +298,27 @@ void NNUE::predictTest(std::string modelPath, std::string testdataPath, std::str
 	std::cout << "AVERAGE ERROR: " << errorSum / data.n_cols;
 }
 
-unsigned int NNUE::getHalfPieceIndex(short square, short pieceType, short our) {
+unsigned int NNUE::getHalfPieceIndex(short perspective, short square, short pieceType, short our) {
+	if (perspective == Piece::BLACK)
+		square ^= 56;
 	return 65 * (10 * square + 5 * our + pieceType - 2);
 }
 
 unsigned int NNUE::getHalfKPindex(short perspective, short pieceType, short pieceColor, short square, short kingSquare) {
-	if (perspective == Piece::BLACK) {
-		// If it's black's perspective, flip board
+	// If it's black's perspective, flip board
+	if (perspective == Piece::BLACK)
 		kingSquare ^= 56;
-		square ^= 56;
-	}
 	// Half P feature from 0 to 65 * 639
-	unsigned int p = getHalfPieceIndex(square, pieceType, pieceColor == perspective);
+	unsigned int p = getHalfPieceIndex(perspective, square, pieceType, pieceColor == perspective);
 	return p + kingSquare + 1;
 }
 
 std::string NNUE::getHalfKPcoordinateList(unsigned long long row) {
 	std::string cl;
 
-	// Perspective of side to move (first HalfKP)
-	unsigned short kingSquare = Board::gameState.whiteToMove() ? Board::whiteKingPos : Board::blackKingPos;
-	unsigned short pieceSquare;
+	unsigned short kingSTM = Board::gameState.whiteToMove() ? Board::whiteKingPos : Board::blackKingPos;
+	unsigned short kingNotSTM = Board::gameState.whiteToMove() ? Board::blackKingPos : Board::whiteKingPos;
+	unsigned short pieceSquare, pieceSquareFlipped;
 
 	// Each word holds 64 features
 	unsigned long long* words = new unsigned long long[(2 * N) / 64];
@@ -330,35 +330,19 @@ std::string NNUE::getHalfKPcoordinateList(unsigned long long row) {
 			bitboard pieces = Board::bb.getBitboard(piece | color);
 			Bitloop(pieces) {
 				pieceSquare = getSquare(pieces);
+				pieceSquareFlipped = pieceSquare ^= 56;
+
+				// Side to move perspective
 				unsigned int halfKPindex = getHalfKPindex(Board::gameState.currentPlayer, piece, color, pieceSquare, kingSquare);
 				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
-
-				if (!Board::gameState.whiteToMove()) {
-					// First perspective is black, flip board
-					pieceSquare ^= 56;
-				}
-				unsigned int halfPieceIndex = getHalfPieceIndex(pieceSquare, piece, color == Board::gameState.currentPlayer);
+				unsigned int halfPieceIndex = getHalfPieceIndex(Board::gameState.currentPlayer, pieceSquare, piece, color == Board::gameState.currentPlayer);
 				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
-			}
-		}
-	}
 
-	// Perspective of the other side (second HalfKP)
-	kingSquare = Board::gameState.whiteToMove() ?  Board::blackKingPos : Board::whiteKingPos;
-
-	for (short piece = Piece::PAWN; piece <= Piece::QUEEN; piece++) {
-		for (short color = Piece::WHITE; color <= Piece::BLACK; color+=8) {
-			bitboard pieces = Board::bb.getBitboard(piece | color);
-			Bitloop(pieces) {
-				pieceSquare = getSquare(pieces);
-				unsigned int halfKPindex = 41600 + getHalfKPindex(Piece::getOppositeColor(Board::gameState.currentPlayer), piece, color, pieceSquare, kingSquare);
+				// Not side to move perspective
+				short notSTM = Piece::getOppositeColor(Board::gameState.currentPlayer);
+				halfKPindex = 41600 + getHalfKPindex(notSTM, piece, color, pieceSquare, kingSquare);
 				words[int(halfKPindex / 64)] |= (1ull << halfKPindex % 64);
-
-				if (Board::gameState.whiteToMove()) {
-					// Second perspective is black, flip board
-					pieceSquare ^= 56;
-				}
-				unsigned int halfPieceIndex = 41600 + getHalfPieceIndex(pieceSquare, piece, color == Board::gameState.currentPlayer);
+				halfPieceIndex = 41600 + getHalfPieceIndex(notSTM, pieceSquare, piece, color == notSTM);
 				words[int(halfPieceIndex / 64)] |= (1ull << halfPieceIndex % 64);
 			}
 		}
@@ -436,7 +420,7 @@ void NNUE::printHalfKPindeces() {
 				for (short kingSquare = 0; kingSquare < 64; kingSquare++) {
 					if (kingSquare == 0)
 						file << "\n\nP Index of (piece on " << Board::getSquareName(pieceSquare) << (our ? ", our, " : ", their, ") << Piece::name(pieceType) << "): "
-						<< getHalfPieceIndex(pieceSquare, pieceType, our);
+						<< getHalfPieceIndex(Piece::WHITE, pieceSquare, pieceType, our);
 
 					file << "\nHalfKP Index of (king on " << Board::getSquareName(kingSquare) << ", piece on " << Board::getSquareName(pieceSquare)
 						<< (our ? ", our, " : ", their, ") << Piece::name(pieceType) << "): "
