@@ -23,8 +23,11 @@ void NNUE::recalculateAccumulator(const std::vector<int> &activeFeatures, bool w
 
 	// Add the weights for active feature's column
 	for (int a : activeFeatures) {
+		// Calculate Half Piece feature index
+		int halfP = a - (a % 65);
 		for (int i = 0; i < M; i++) {
 			accumulator[white][i] += L1.weights[a][i];
+			accumulator[white][i] += L1.weights[halfP][i];
 		}
 	}
 }
@@ -37,14 +40,19 @@ void NNUE::updateAccumulator(const std::vector<int>& removedFeatures, const std:
 
 	// Subtract weights of removed Features
 	for (int r : removedFeatures) {
+		// Calculate Half Piece Feature index
+		int halfP = r - (r % 65);
 		for (int i = 0; i < M; i++) {
 			accumulator[white][i] -= L1.weights[r][i];
+			accumulator[white][i] -= L1.weights[halfP][i];
 		}
 	}
 	// Add weights of added features
 	for (int a : addedFeatures) {
+		int halfP = a - (a % 65);
 		for (int i = 0; i < M; i++) {
 			accumulator[white][i] += L1.weights[a][i];
+			accumulator[white][i] += L1.weights[halfP][i];
 		}
 	}
 }
