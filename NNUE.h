@@ -13,7 +13,7 @@ class Board;
 class PrintValidationLoss;
 
 // 2*FeatureSet[N]->M*2->K->K->1
-// 2*HalfKP[40960]->256x2->32->32->1
+// 2*HalfKP[40960](+640 virtual features)->256x2->32->32->1
 const int N = 41600;
 const int M = 256;
 const int K = 32;

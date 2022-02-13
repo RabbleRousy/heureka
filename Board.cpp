@@ -1330,7 +1330,10 @@ int Board::evaluateMaterial() {
 
 int Board::evaluateNNUE() {
 	float wdlEval = nnue.evaluate(gameState.whiteToMove());
+	// Clamp to 0-1 for broken nets
+	wdlEval = std::max(0.0f, std::min(1.0f, wdlEval));
 	int cpEval = utils::math::invSigmoid(wdlEval, 0, 1.0f / 410.0f);
+	DEBUG_COUT("wdlEval=" + std::to_string(wdlEval) + ", cpEval=" + std::to_string(cpEval) + '\n');
 	return cpEval;
 }
 

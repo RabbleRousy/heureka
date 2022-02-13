@@ -7,7 +7,7 @@ using namespace std;
 
 int main() {
 
-	cout << "Welcome to Heureka Engine (Version 0.2.4), developed by Simon Hetzer.\n";
+	cout << "Welcome to Heureka Engine (Version 0.3), developed by Simon Hetzer.\n";
 	cout << "Enter \"uci\" to start UCI communication (for debugging or Chess GUIs only).\n";
 	cout << "Enter \"test\" to run the current test suite.\n";
 	cout << "Enter \"train\" to start a training session of the NNUE.\n";
