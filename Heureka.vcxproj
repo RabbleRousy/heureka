@@ -178,7 +178,7 @@
     <ClCompile Include="LinearBitSplit_impl.hpp" />
     <ClCompile Include="Testing.cpp" />
     <ClCompile Include="TranspositionTable.cpp" />
-    <ClCompile Include="uci.cpp" />
+    <ClCompile Include="UCI.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="Zobrist.cpp" />
   </ItemGroup>
@@ -199,7 +199,7 @@
     <ClInclude Include="LinearBitSplit.hpp" />
     <ClInclude Include="Testing.h" />
     <ClInclude Include="TranspositionTable.h" />
-    <ClInclude Include="uci.h" />
+    <ClInclude Include="UCI.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="Zobrist.h" />
   </ItemGroup>

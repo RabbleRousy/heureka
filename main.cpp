@@ -35,8 +35,8 @@ int main() {
 	getline(cin, line);
 
 	if (line == "uci" || line == "xboard") {
-		// Creates UCI object that handles coming uci communication
-		uci interface;
+		// Creates UCI object that handles coming UCI communication
+		UCI interface;
 	}
 	else if (line == "test") {
 		// Run Testsuite

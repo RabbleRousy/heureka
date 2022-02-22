@@ -10,7 +10,7 @@
 
 using namespace std;
 
-class uci
+class UCI
 {
 private:
 	bool running;
@@ -22,7 +22,7 @@ private:
 	future<Board::SearchResults> searchResults;
 
 public:
-	uci();
+	UCI();
 	void mainLoop();
 	string getWordAfter(const string& s, const string& w);
 	void handleInputLoop();

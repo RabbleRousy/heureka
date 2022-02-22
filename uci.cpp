@@ -1,6 +1,6 @@
 #include "uci.h"
 
-uci::uci() {
+UCI::UCI() {
 	cout << "id name Heureka Engine" << endl;
 	cout << "id author SimonHetzer" << endl;
 	cout << "id version 0.2.4" << endl;
@@ -12,7 +12,7 @@ uci::uci() {
 	mainLoop();
 }
 
-void uci::handleInputLoop() {
+void UCI::handleInputLoop() {
 	unsigned int d = 0, p = 0;
 	int e = 0;
 	Move* m;
@@ -81,14 +81,14 @@ void uci::handleInputLoop() {
 	running = false;
 }
 
-void uci::mainLoop() {
+void UCI::mainLoop() {
 	running = true;
 
 	// Create thread that continuesly reads input
-	thread inputReader(&uci::inputLoop, this);
+	thread inputReader(&UCI::inputLoop, this);
 
 	// Create thread that continuesly parses input
-	thread inputProcessor(&uci::handleInputLoop, this);
+	thread inputProcessor(&UCI::handleInputLoop, this);
 
 	while (running) {
 		if (!output.empty()) {
@@ -106,7 +106,7 @@ void uci::mainLoop() {
 	inputReader.join();
 }
 
-void uci::inputLoop() {
+void UCI::inputLoop() {
 	while (running) {
 		if (input.empty()) {
 			getline(cin, input);
@@ -116,7 +116,7 @@ void uci::inputLoop() {
 	}
 }
 
-void uci::parsePosition(std::string input) {
+void UCI::parsePosition(std::string input) {
 	if (input.substr(0, 17) == "position startpos") {
 		// Load start position
 		board.readPosFromFEN();
@@ -141,7 +141,7 @@ void uci::parsePosition(std::string input) {
 	}
 }
 
-string uci::getWordAfter(const string& sentence, const string& word) {
+string UCI::getWordAfter(const string& sentence, const string& word) {
 	size_t startIndex = sentence.find(word);
 	if (startIndex == string::npos)
 		return "";
@@ -152,7 +152,7 @@ string uci::getWordAfter(const string& sentence, const string& word) {
 }
 
 // go wtime 300000 btime 300000 movestogo 40
-void uci::parseGo(string input) {
+void UCI::parseGo(string input) {
 	float movetime = 5000.0f;
 	float wtime = 5000.0f;
 	float btime = 5000.0f;
@@ -192,7 +192,7 @@ void uci::parseGo(string input) {
 	waitingForBoard = true;
 }
 
-void uci::parseOption(std::string input) {
+void UCI::parseOption(std::string input) {
 	string optionType = getWordAfter(input, "name");
 	DEBUG_COUT("Option Name: " + optionType + '\n');
 
