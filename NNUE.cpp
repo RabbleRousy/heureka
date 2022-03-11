@@ -212,7 +212,7 @@ void NNUE::train(bool newNet, std::string modelPath, double stepSize, int batchS
 		dataFile << dataMinIndex << "," << dataMaxIndex << "\n";
 
 		// Create a new folder for the predictions to be saved into
-		std::string predictionsPath = modelPath + "\\predictionsFromEpoch" + std::to_string(i);
+		std::string predictionsPath = modelPath + "\\predictionsFromTraining" + std::to_string(i);
 		_mkdir(predictionsPath.c_str());
 
 		// Train
