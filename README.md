@@ -9,7 +9,7 @@
 - *WIP: Position evaluation using [NNUE](https://www.chessprogramming.org/NNUE)*
 ## A from-the-scratch C++ chess engine
 Heureka Engine was written in 2021 as preparation for my final Bachelor's semester, to refresh and train my C++ skills.
-The initial development was mainly driven by [this amazing video by Sebastian Lauge](https://youtu.be/U4ogK0MIzqk), but I quickly fell down the rabbithole which is chess programming, and started tackling more advanced concepts.
+The initial development was mainly driven by [this amazing video by Sebastian Lague](https://youtu.be/U4ogK0MIzqk), but I quickly fell down the rabbithole which is chess programming, and started tackling more advanced concepts.
 
 My current goal and topic of my Bachelor's thesis is to implement a positional evaluation function using an "Efficiently Updatable Neural Network", which is trained using [mlpack](https://github.com/mlpack/mlpack).
 ## Results
